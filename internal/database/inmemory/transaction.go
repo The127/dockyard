@@ -1,0 +1,69 @@
+package inmemory
+
+import (
+	"github.com/hashicorp/go-memdb"
+	db "github.com/the127/dockyard/internal/database"
+	"github.com/the127/dockyard/internal/repositories"
+	"github.com/the127/dockyard/internal/repositories/inmemory"
+)
+
+type transaction struct {
+	txn *memdb.Txn
+
+	tenants  repositories.TenantRepository
+	projects repositories.ProjectRepository
+	users    repositories.UserRepository
+	repos    repositories.RepositoryRepository
+	manifest repositories.ManifestRepository
+}
+
+func newTransaction(txn *memdb.Txn) db.Transaction {
+	return &transaction{
+		txn: txn,
+	}
+}
+
+func (t *transaction) Tenants() repositories.TenantRepository {
+	if t.tenants == nil {
+		t.tenants = inmemory.NewInMemoryTenantRepository(t.txn)
+	}
+	return t.tenants
+}
+
+func (t *transaction) Projects() repositories.ProjectRepository {
+	if t.projects == nil {
+		t.projects = inmemory.NewInMemoryProjectRepository(t.txn)
+	}
+	return t.projects
+}
+
+func (t *transaction) Users() repositories.UserRepository {
+	if t.users == nil {
+		t.users = inmemory.NewInMemoryUserRepository(t.txn)
+	}
+	return t.users
+}
+
+func (t *transaction) Repositories() repositories.RepositoryRepository {
+	if t.repos == nil {
+		t.repos = inmemory.NewInMemoryRepositoryRepository(t.txn)
+	}
+	return t.repos
+}
+
+func (t *transaction) Manifests() repositories.ManifestRepository {
+	if t.manifest == nil {
+		t.manifest = inmemory.NewInMemoryManifestRepository(t.txn)
+	}
+	return t.manifest
+}
+
+func (t *transaction) Commit() error {
+	t.txn.Commit()
+	return nil
+}
+
+func (t *transaction) Rollback() error {
+	t.txn.Abort()
+	return nil
+}

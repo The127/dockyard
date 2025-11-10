@@ -1,0 +1,6 @@
+server:
+  port: 8082
+database:
+  mode: memory
+cache:
+  mode: memory

@@ -1,0 +1,8 @@
+### create a tenant
+POST http://localhost:8082/admin/api/v1/tenants
+Content-Type: application/json
+
+{
+  "slug": "tenant1",
+  "displayName": "Tenant 1"
+}

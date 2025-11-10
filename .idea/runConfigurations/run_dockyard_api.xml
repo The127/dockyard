@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="run dockyard api" type="GoApplicationRunConfiguration" factoryName="Go Application">
+    <module name="dockyard" />
+    <working_directory value="$PROJECT_DIR$" />
+    <parameters value="--environment DEVELOPMENT --config config.yml" />
+    <EXTENSION ID="com.fapiko.jetbrains.plugins.better_direnv.runconfigs.GolandRunConfigurationExtension">
+      <option name="DIRENV_ENABLED" value="false" />
+      <option name="DIRENV_TRUSTED" value="false" />
+    </EXTENSION>
+    <kind value="PACKAGE" />
+    <package value="github.com/the127/dockyard/cmd/dockyard" />
+    <directory value="$PROJECT_DIR$" />
+    <filePath value="$PROJECT_DIR$/cmd/dockyard/main.go" />
+    <method v="2" />
+  </configuration>
+</component>

@@ -1,0 +1,2 @@
+### determine support for oci spec
+GET http://localhost:8082/v2/
