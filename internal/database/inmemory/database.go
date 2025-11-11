@@ -3,8 +3,10 @@ package inmemory
 import (
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
 	db "github.com/the127/dockyard/internal/database"
+	"github.com/the127/dockyard/internal/repositories"
 )
 
 type database struct {
@@ -60,12 +62,10 @@ func NewInMemoryDatabase() (db.Database, error) {
 					"id": {
 						Name:   "id",
 						Unique: true,
-						Indexer: &memdb.CompoundIndex{
-							Indexes: []memdb.Indexer{
-								&memdb.UUIDFieldIndex{Field: "repositoryId"},
-								&memdb.UUIDFieldIndex{Field: "blobId"},
-							},
-						},
+						Indexer: &UUIDValueIndexer{Getter: func(obj interface{}) uuid.UUID {
+							repositoryBlob := obj.(repositories.RepositoryBlob)
+							return repositoryBlob.GetId()
+						}},
 					},
 				},
 			},

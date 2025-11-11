@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/the127/dockyard/internal/args"
+	"github.com/the127/dockyard/internal/logging"
 )
 
 type OciErrorCode string
@@ -99,6 +100,7 @@ func HandleHttpError(w http.ResponseWriter, err error) {
 			Errors: []*OciError{ociError},
 		}
 
+		logging.Logger.Errorf("HTTP Error: %d %s", ociError.HttpCode, ociError.Error())
 		w.WriteHeader(ociError.HttpCode)
 		err = json.NewEncoder(w).Encode(wrapper)
 	}
@@ -110,6 +112,7 @@ func HandleHttpError(w http.ResponseWriter, err error) {
 			message = err.Error()
 		}
 
+		logging.Logger.Errorf("HTTP Error: %d %s", http.StatusInternalServerError, message)
 		w.WriteHeader(http.StatusInternalServerError)
 		err = json.NewEncoder(w).Encode(message)
 	}
@@ -121,6 +124,7 @@ func HandleHttpError(w http.ResponseWriter, err error) {
 			message = err.Error()
 		}
 
+		logging.Logger.Errorf("HTTP Error: %d %s", http.StatusInternalServerError, message)
 		http.Error(w, message, http.StatusInternalServerError)
 	}
 }

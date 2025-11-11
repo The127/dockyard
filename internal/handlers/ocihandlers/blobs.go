@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
@@ -206,7 +205,7 @@ func UploadChunk(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lengthHeader := r.Header.Get("Content-Length")
+	/*lengthHeader := r.Header.Get("Content-Length")
 	if lengthHeader == "" {
 		ociError.HandleHttpError(w, ociError.NewOciError(ociError.Unsupported).
 			WithMessage("missing content length"))
@@ -247,7 +246,7 @@ func UploadChunk(w http.ResponseWriter, r *http.Request) {
 		ociError.HandleHttpError(w, ociError.NewOciError(ociError.Unsupported).
 			WithMessage("content range differs from content length"))
 		return
-	}
+	}*/
 
 	vars := mux.Vars(r)
 	sessionIdString := vars["reference"]
@@ -263,14 +262,14 @@ func UploadChunk(w http.ResponseWriter, r *http.Request) {
 	scope := middlewares.GetScope(ctx)
 	blobService := ioc.GetDependency[blobStorage.Service](scope)
 
-	err = blobService.UploadWriteChunk(ctx, sessionId, r.Body, int64(length))
+	uploadResponse, err := blobService.UploadWriteChunk(ctx, sessionId, r.Body)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
 		return
 	}
 
 	w.Header().Set("Location", r.URL.String())
-	w.Header().Set("Range", "0-"+strconv.Itoa(rangeEnd))
+	w.Header().Set("Range", "0-"+strconv.FormatInt(uploadResponse.Size, 10))
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -297,7 +296,7 @@ func FinishUpload(w http.ResponseWriter, r *http.Request) {
 	scope := middlewares.GetScope(ctx)
 	blobService := ioc.GetDependency[blobStorage.Service](scope)
 
-	lengthHeader := r.Header.Get("Content-Length")
+	/*lengthHeader := r.Header.Get("Content-Length")
 	if lengthHeader != "" {
 		if r.Header.Get("Content-Type") != "application/octet-stream" {
 			ociError.HandleHttpError(w, ociError.NewOciError(ociError.Unsupported).
@@ -312,11 +311,17 @@ func FinishUpload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = blobService.UploadWriteChunk(ctx, sessionId, r.Body, int64(length))
+		err := blobService.UploadWriteChunk(ctx, sessionId, r.Body)
 		if err != nil {
 			ociError.HandleHttpError(w, err)
 			return
 		}
+	}*/
+
+	_, err = blobService.UploadWriteChunk(ctx, sessionId, r.Body)
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
 	}
 
 	completeResponse, err := blobService.CompleteUpload(ctx, sessionId)

@@ -97,22 +97,22 @@ func (m *memoryService) setBlob(digest string, blob []byte) {
 	m.blobs["blob:"+digest] = blob
 }
 
-func (m *memoryService) UploadWriteChunk(ctx context.Context, sessionId uuid.UUID, reader io.Reader, length int64) error {
+func (m *memoryService) UploadWriteChunk(ctx context.Context, sessionId uuid.UUID, reader io.Reader) (*UploadWriteChunkResponse, error) {
 	scope := middlewares.GetScope(ctx)
 	kvStore := ioc.GetDependency[kv.Store](scope)
 
 	value, ok, err := kvStore.Get(ctx, buildSessionCacheKey(sessionId))
 	if err != nil {
-		return fmt.Errorf("failed to get session: %w", err)
+		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 	if !ok {
-		return fmt.Errorf("session not found")
+		return nil, fmt.Errorf("session not found")
 	}
 
 	var session jsontypes.UploadSession
 	err = json.Unmarshal([]byte(value), &session)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal session: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal session: %w", err)
 	}
 
 	blobBytes := m.getTempBlob(sessionId)
@@ -121,35 +121,37 @@ func (m *memoryService) UploadWriteChunk(ctx context.Context, sessionId uuid.UUI
 	hasher := sha256.New()
 	err = hasher.(encoding.BinaryUnmarshaler).UnmarshalBinary(session.DigestState)
 	if err != nil {
-		return fmt.Errorf("failed to unmarshal digest state: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal digest state: %w", err)
 	}
 
 	multiWriter := io.MultiWriter(writer, hasher)
-	_, err = io.CopyN(multiWriter, reader, length)
+	written, err := io.Copy(multiWriter, reader)
 	if err != nil {
-		return fmt.Errorf("failed to copy reader: %w", err)
+		return nil, fmt.Errorf("failed to copy reader: %w", err)
 	}
 
 	digestState, err := hasher.(encoding.BinaryMarshaler).MarshalBinary()
 	if err != nil {
-		return fmt.Errorf("failed to marshal digest state: %w", err)
+		return nil, fmt.Errorf("failed to marshal digest state: %w", err)
 	}
 
 	session.DigestState = digestState
-	session.RangeEnd += length
+	session.RangeEnd += written
 
 	jsonBytes, err := json.Marshal(session)
 	if err != nil {
-		return fmt.Errorf("failed to marshal session: %w", err)
+		return nil, fmt.Errorf("failed to marshal session: %w", err)
 	}
 
 	err = kvStore.Set(ctx, buildSessionCacheKey(session.Id), string(jsonBytes), kv.WithExpiration(time.Minute*5))
 	if err != nil {
-		return fmt.Errorf("failed to set session: %w", err)
+		return nil, fmt.Errorf("failed to set session: %w", err)
 	}
 
 	m.setTempBlob(sessionId, writer.Bytes())
-	return nil
+	return &UploadWriteChunkResponse{
+		Size: session.RangeEnd,
+	}, nil
 }
 
 func (m *memoryService) CompleteUpload(ctx context.Context, sessionId uuid.UUID) (*CompleteUploadResponse, error) {

@@ -30,9 +30,13 @@ type CompleteUploadResponse struct {
 	RepositoryId   uuid.UUID
 }
 
+type UploadWriteChunkResponse struct {
+	Size int64
+}
+
 type Service interface {
 	StartUploadSession(ctx context.Context, params StartUploadSessionParams) (*StartUploadSessionResponse, error)
-	UploadWriteChunk(ctx context.Context, sessionId uuid.UUID, reader io.Reader, length int64) error
+	UploadWriteChunk(ctx context.Context, sessionId uuid.UUID, reader io.Reader) (*UploadWriteChunkResponse, error)
 	CompleteUpload(ctx context.Context, sessionId uuid.UUID) (*CompleteUploadResponse, error)
 	GetUploadRangeEnd(ctx context.Context, sessionId uuid.UUID) (int64, error)
 }
