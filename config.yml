@@ -4,3 +4,5 @@ database:
   mode: memory
 cache:
   mode: memory
+blob:
+  mode: memory

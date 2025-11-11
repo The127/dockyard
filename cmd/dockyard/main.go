@@ -28,6 +28,7 @@ func main() {
 
 	setup.Kv(dc, config.C.Kv)
 	setup.Mediator(dc)
+	setup.Blob(dc, config.C.Blob)
 
 	dp := dc.BuildProvider()
 

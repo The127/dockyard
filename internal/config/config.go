@@ -18,6 +18,7 @@ type Config struct {
 	Server   ServerConfig
 	Database DatabaseConfig
 	Kv       KvConfig
+	Blob     BlobStorageConfig
 }
 
 type ServerConfig struct {
@@ -117,6 +118,7 @@ func setDefaultsOrPanic() {
 	setServerDefaultsOrPanic()
 	setDatabaseDefaultsOrPanic()
 	setKvDefaultsOrPanic()
+	setBlobDefaultsOrPanic()
 }
 
 func setServerDefaultsOrPanic() {
@@ -161,8 +163,15 @@ func setKvDefaultsOrPanic() {
 		C.Kv.Mode = KvModeInMemory
 	}
 
-	if C.Kv.Mode == KvModeRedis {
+	switch C.Kv.Mode {
+	case KvModeInMemory:
+		return
+
+	case KvModeRedis:
 		setKvRedisDefaultsOrPanic()
+
+	default:
+		panic(fmt.Errorf("unsupported kv mode: %s", C.Kv.Mode))
 	}
 }
 
@@ -177,5 +186,23 @@ func setKvRedisDefaultsOrPanic() {
 
 	if C.Kv.Redis.Port == 0 {
 		C.Kv.Redis.Port = 6379
+	}
+}
+
+func setBlobDefaultsOrPanic() {
+	if C.Blob.Mode == "" {
+		if args.IsProduction() {
+			panic("Blob.Mode must be set in production.")
+		}
+
+		C.Blob.Mode = BlobStorageModeInMemory
+	}
+
+	switch C.Blob.Mode {
+	case BlobStorageModeInMemory:
+		return
+
+	default:
+		panic(fmt.Errorf("unsupported blob storage mode: %s", C.Blob.Mode))
 	}
 }
