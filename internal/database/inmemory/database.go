@@ -30,7 +30,27 @@ var schema = &memdb.DBSchema{
 				"id": {
 					Name:    "id",
 					Unique:  true,
-					Indexer: &memdb.UUIDFieldIndex{Field: "id"},
+					Indexer: &memdb.StringFieldIndex{Field: "slug"},
+				},
+			},
+		},
+		"projects": {
+			Name: "projects",
+			Indexes: map[string]*memdb.IndexSchema{
+				"id": {
+					Name:    "id",
+					Unique:  true,
+					Indexer: &memdb.StringFieldIndex{Field: "slug"},
+				},
+			},
+		},
+		"repositories": {
+			Name: "repositories",
+			Indexes: map[string]*memdb.IndexSchema{
+				"id": {
+					Name:    "id",
+					Unique:  true,
+					Indexer: &memdb.StringFieldIndex{Field: "slug"},
 				},
 			},
 		},

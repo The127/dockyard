@@ -10,6 +10,7 @@ import (
 )
 
 var ErrApiBadRequest = errors.New("bad Request")
+var ErrApiUnsupportedMediaType = errors.New("unsupported media type")
 
 var ErrApiNotFound = errors.New("not found")
 var ErrApiTenantNotFound = fmt.Errorf("tenant not found: %w", ErrApiNotFound)
@@ -29,6 +30,10 @@ func HandleHttpError(w http.ResponseWriter, err error) {
 
 	case errors.Is(err, ErrApiNotFound):
 		code = http.StatusNotFound
+		message = err.Error()
+
+	case errors.Is(err, ErrApiUnsupportedMediaType):
+		code = http.StatusUnsupportedMediaType
 		message = err.Error()
 
 	default:

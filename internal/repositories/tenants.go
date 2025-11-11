@@ -15,6 +15,14 @@ type Tenant struct {
 	displayName string
 }
 
+func NewTenant(slug string, displayName string) *Tenant {
+	return &Tenant{
+		BaseModel:   NewBaseModel(),
+		slug:        slug,
+		displayName: displayName,
+	}
+}
+
 func (t *Tenant) GetSlug() string {
 	return t.slug
 }

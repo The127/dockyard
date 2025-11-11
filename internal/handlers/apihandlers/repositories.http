@@ -1,0 +1,8 @@
+### create a repository
+POST http://localhost:8082/api/v1/tenants/raccoons/projects/default/repositories
+Content-Type: application/json
+
+{
+  "slug": "my-image",
+  "displayName": "foobar"
+}

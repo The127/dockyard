@@ -16,6 +16,15 @@ type Project struct {
 	displayName string
 }
 
+func NewProject(tenantId uuid.UUID, slug string, displayName string) *Project {
+	return &Project{
+		BaseModel:   NewBaseModel(),
+		tenantId:    tenantId,
+		slug:        slug,
+		displayName: displayName,
+	}
+}
+
 func (p *Project) GetSlug() string {
 	return p.slug
 }

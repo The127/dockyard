@@ -16,6 +16,15 @@ type Repository struct {
 	displayName string
 }
 
+func NewRepository(projectId uuid.UUID, slug string, displayName string) *Repository {
+	return &Repository{
+		BaseModel:   NewBaseModel(),
+		projectId:   projectId,
+		slug:        slug,
+		displayName: displayName,
+	}
+}
+
 func (r *Repository) GetProjectId() uuid.UUID {
 	return r.projectId
 }

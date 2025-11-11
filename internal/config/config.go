@@ -56,6 +56,21 @@ type KvConfig struct {
 	}
 }
 
+type BlobStorageMode string
+
+const (
+	BlobStorageModeInMemory BlobStorageMode = "memory"
+	BlobStorageModeS3       BlobStorageMode = "s3"
+)
+
+type BlobStorageConfig struct {
+	Mode BlobStorageMode
+	S3   struct {
+		// TODO: add config
+		Proxy bool
+	}
+}
+
 var C Config
 
 var k = koanf.New(".")

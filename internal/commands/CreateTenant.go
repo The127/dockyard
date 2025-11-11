@@ -7,6 +7,7 @@ import (
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
 	"github.com/the127/dockyard/internal/middlewares"
+	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/services"
 )
 
@@ -28,9 +29,14 @@ func HandleCreateTenant(ctx context.Context, command CreateTenant) (*CreateTenan
 		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
 
-	tx.Tenants()
+	tenant := repositories.NewTenant(command.Slug, command.DisplayName)
+	tenantRepository := tx.Tenants()
+	err = tenantRepository.Insert(ctx, tenant)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert tenant: %w", err)
+	}
 
 	return &CreateTenantResponse{
-		Id: uuid.New(),
+		Id: tenant.GetId(),
 	}, nil
 }

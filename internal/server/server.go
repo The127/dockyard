@@ -7,6 +7,8 @@ import (
 	"github.com/The127/ioc"
 	"github.com/the127/dockyard/internal/config"
 	"github.com/the127/dockyard/internal/handlers/adminhandlers"
+	"github.com/the127/dockyard/internal/handlers/apihandlers"
+	"github.com/the127/dockyard/internal/handlers/ocihandlers"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/middlewares"
 
@@ -60,16 +62,20 @@ func mapAdminApi(r *mux.Router) {
 }
 
 func mapApi(r *mux.Router) {
-	apiRouter := r.PathPrefix("/api/v1").Subrouter()
+	apiRouter := r.PathPrefix("/api/v1/tenants/{tenant}").Subrouter()
 	apiRouter.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
+
+	apiRouter.HandleFunc("/projects", apihandlers.CreateProject).Methods(http.MethodPost, http.MethodOptions)
+
+	apiRouter.HandleFunc("/projects/{project}/repositories", apihandlers.CreateRepository).Methods(http.MethodPost, http.MethodOptions)
 }
 
 func mapOciApi(r *mux.Router) {
 	apiRouter := r.PathPrefix("/v2").Subrouter()
 
-	// implement end-1 api endpoint that shows the support for the opencontainers oci api specification
+	// implement end-1 api endpoint that shows the support for the oci api specification
 	apiRouter.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
@@ -79,10 +85,10 @@ func mapOciApi(r *mux.Router) {
 	mapNamedOciApi(tenantProjectRepoRouter)
 
 	projectRepoRouter := apiRouter.PathPrefix("/{project}/{repository}").Subrouter()
-	tenantProjectRepoRouter.Use(middlewares.OciNameMiddleware(middlewares.OciTenantSourceRoute))
+	projectRepoRouter.Use(middlewares.OciNameMiddleware(middlewares.OciTenantSourceRoute))
 	mapNamedOciApi(projectRepoRouter)
 }
 
 func mapNamedOciApi(r *mux.Router) {
-	r.HandleFunc("/blobs/uploads")
+	r.HandleFunc("/blobs/uploads", ocihandlers.BlobsUploadPost).Methods(http.MethodPost, http.MethodOptions)
 }
