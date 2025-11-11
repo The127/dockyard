@@ -46,14 +46,20 @@ func (r *manifestRepository) matches(manifest *repositories.Manifest, filter *re
 		}
 	}
 
-	if filter.HasProjectId() {
-		if manifest.GetProjectId() != filter.GetProjectId() {
+	if filter.HasRepositoryId() {
+		if manifest.GetRepositoryId() != filter.GetRepositoryId() {
 			return false
 		}
 	}
 
 	if filter.HasReference() {
 		if manifest.GetReference() != filter.GetReference() {
+			return false
+		}
+	}
+
+	if filter.HasBlobId() {
+		if manifest.GetBlobId() != filter.GetBlobId() {
 			return false
 		}
 	}

@@ -34,11 +34,18 @@ type UploadWriteChunkResponse struct {
 	Size int64
 }
 
+type UploadCompleteBlobResponse struct {
+	Size   int64
+	Digest string
+}
+
 type Service interface {
 	StartUploadSession(ctx context.Context, params StartUploadSessionParams) (*StartUploadSessionResponse, error)
 	UploadWriteChunk(ctx context.Context, sessionId uuid.UUID, reader io.Reader) (*UploadWriteChunkResponse, error)
 	CompleteUpload(ctx context.Context, sessionId uuid.UUID) (*CompleteUploadResponse, error)
 	GetUploadRangeEnd(ctx context.Context, sessionId uuid.UUID) (int64, error)
+
+	UploadCompleteBlob(ctx context.Context, reader io.Reader) (*UploadCompleteBlobResponse, error)
 }
 
 func buildSessionCacheKey(sessionId uuid.UUID) string {

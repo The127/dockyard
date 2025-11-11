@@ -10,28 +10,38 @@ import (
 type Manifest struct {
 	BaseModel
 
-	projectId uuid.UUID
+	repositoryId uuid.UUID
+	blobId       uuid.UUID
 
 	reference string
-	content   string
 }
 
-func (m *Manifest) GetProjectId() uuid.UUID {
-	return m.projectId
+func NewManifest(repositoryId uuid.UUID, blobId uuid.UUID, reference string) *Manifest {
+	return &Manifest{
+		BaseModel:    NewBaseModel(),
+		repositoryId: repositoryId,
+		blobId:       blobId,
+		reference:    reference,
+	}
+}
+
+func (m *Manifest) GetRepositoryId() uuid.UUID {
+	return m.repositoryId
 }
 
 func (m *Manifest) GetReference() string {
 	return m.reference
 }
 
-func (m *Manifest) GetContent() string {
-	return m.content
+func (m *Manifest) GetBlobId() uuid.UUID {
+	return m.blobId
 }
 
 type ManifestFilter struct {
-	id        *uuid.UUID
-	projectId *uuid.UUID
-	reference *string
+	id           *uuid.UUID
+	repositoryId *uuid.UUID
+	blobId       *uuid.UUID
+	reference    *string
 }
 
 func NewManifestFilter() *ManifestFilter {
@@ -57,18 +67,32 @@ func (f *ManifestFilter) GetId() uuid.UUID {
 	return pointer.DerefOrZero(f.id)
 }
 
-func (f *ManifestFilter) ByProjectId(id uuid.UUID) *ManifestFilter {
+func (f *ManifestFilter) ByBlobId(id uuid.UUID) *ManifestFilter {
 	cloned := f.clone()
-	cloned.projectId = &id
+	cloned.blobId = &id
 	return cloned
 }
 
-func (f *ManifestFilter) HasProjectId() bool {
-	return f.projectId != nil
+func (f *ManifestFilter) HasBlobId() bool {
+	return f.blobId != nil
 }
 
-func (f *ManifestFilter) GetProjectId() uuid.UUID {
-	return pointer.DerefOrZero(f.projectId)
+func (f *ManifestFilter) GetBlobId() uuid.UUID {
+	return pointer.DerefOrZero(f.blobId)
+}
+
+func (f *ManifestFilter) ByRepositoryId(id uuid.UUID) *ManifestFilter {
+	cloned := f.clone()
+	cloned.repositoryId = &id
+	return cloned
+}
+
+func (f *ManifestFilter) HasRepositoryId() bool {
+	return f.repositoryId != nil
+}
+
+func (f *ManifestFilter) GetRepositoryId() uuid.UUID {
+	return pointer.DerefOrZero(f.repositoryId)
 }
 
 func (f *ManifestFilter) ByReference(reference string) *ManifestFilter {

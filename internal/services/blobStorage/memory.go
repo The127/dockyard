@@ -212,3 +212,25 @@ func (m *memoryService) GetUploadRangeEnd(ctx context.Context, sessionId uuid.UU
 
 	return session.RangeEnd, nil
 }
+
+func (m *memoryService) UploadCompleteBlob(ctx context.Context, reader io.Reader) (*UploadCompleteBlobResponse, error) {
+	hash := sha256.New()
+
+	var data []byte
+	buffer := bytes.NewBuffer(data)
+
+	multiWriter := io.MultiWriter(buffer, hash)
+
+	bytesWritten, err := io.Copy(multiWriter, reader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to copy reader: %w", err)
+	}
+
+	digest := fmt.Sprintf("sha256:%x", hash.Sum(nil))
+	m.setBlob(digest, buffer.Bytes())
+
+	return &UploadCompleteBlobResponse{
+		Size:   bytesWritten,
+		Digest: digest,
+	}, nil
+}

@@ -46,6 +46,19 @@ func NewInMemoryDatabase() (db.Database, error) {
 					},
 				},
 			},
+			"manifests": {
+				Name: "manifests",
+				Indexes: map[string]*memdb.IndexSchema{
+					"id": {
+						Name:   "id",
+						Unique: true,
+						Indexer: &UUIDValueIndexer{Getter: func(obj interface{}) uuid.UUID {
+							manifest := obj.(repositories.Manifest)
+							return manifest.GetId()
+						}},
+					},
+				},
+			},
 			"blobs": {
 				Name: "blobs",
 				Indexes: map[string]*memdb.IndexSchema{
