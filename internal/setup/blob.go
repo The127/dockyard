@@ -9,10 +9,10 @@ import (
 )
 
 func Blob(dc *ioc.DependencyCollection, c config.BlobStorageConfig) {
-	ioc.RegisterSingleton(dc, func(_ *ioc.DependencyProvider) blob.Service {
+	ioc.RegisterSingleton(dc, func(_ *ioc.DependencyProvider) blobStorage.Service {
 		switch c.Mode {
 		case config.BlobStorageModeInMemory:
-			return blob.NewInMemoryService()
+			return blobStorage.NewInMemoryService()
 
 		default:
 			panic(fmt.Errorf("unsupported blob storage mode: %s", c.Mode))

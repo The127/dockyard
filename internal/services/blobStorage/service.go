@@ -1,4 +1,4 @@
-package blob
+package blobStorage
 
 import (
 	"context"
@@ -14,16 +14,25 @@ type StartUploadSessionParams struct {
 	TenantSlug     string
 	ProjectSlug    string
 	RepositorySlug string
+	RepositoryId   uuid.UUID
 }
 
 type StartUploadSessionResponse struct {
 	SessionId uuid.UUID
 }
 
+type CompleteUploadResponse struct {
+	ComputedDigest string
+	TenantSlug     string
+	ProjectSlug    string
+	RepositorySlug string
+	RepositoryId   uuid.UUID
+}
+
 type Service interface {
 	StartUploadSession(ctx context.Context, params StartUploadSessionParams) (*StartUploadSessionResponse, error)
 	UploadWriteChunk(ctx context.Context, sessionId uuid.UUID, reader io.Reader, length int64) error
-	CompleteUpload(ctx context.Context, sessionId uuid.UUID) (string, error)
+	CompleteUpload(ctx context.Context, sessionId uuid.UUID) (*CompleteUploadResponse, error)
 	GetUploadRangeEnd(ctx context.Context, sessionId uuid.UUID) (int, error)
 }
 

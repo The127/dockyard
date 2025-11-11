@@ -1,4 +1,4 @@
-package blob
+package blobStorage
 
 import (
 	"bytes"
@@ -46,7 +46,9 @@ func (m *memoryService) StartUploadSession(ctx context.Context, params StartUplo
 		TenantSlug:     params.TenantSlug,
 		ProjectSlug:    params.ProjectSlug,
 		RepositorySlug: params.RepositorySlug,
+		RepositoryId:   params.RepositoryId,
 		DigestState:    digestState,
+		RangeEnd:       0,
 	}
 
 	jsonBytes, err := json.Marshal(session)
@@ -150,35 +152,41 @@ func (m *memoryService) UploadWriteChunk(ctx context.Context, sessionId uuid.UUI
 	return nil
 }
 
-func (m *memoryService) CompleteUpload(ctx context.Context, sessionId uuid.UUID) (string, error) {
+func (m *memoryService) CompleteUpload(ctx context.Context, sessionId uuid.UUID) (*CompleteUploadResponse, error) {
 	scope := middlewares.GetScope(ctx)
 	kvStore := ioc.GetDependency[kv.Store](scope)
 
 	value, ok, err := kvStore.Get(ctx, buildSessionCacheKey(sessionId))
 	if err != nil {
-		return "", fmt.Errorf("failed to get session: %w", err)
+		return nil, fmt.Errorf("failed to get session: %w", err)
 	}
 	if !ok {
-		return "", fmt.Errorf("session not found")
+		return nil, fmt.Errorf("session not found")
 	}
 
 	var session jsontypes.UploadSession
 	err = json.Unmarshal([]byte(value), &session)
 	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal session: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal session: %w", err)
 	}
 
 	hash := sha256.New()
 	err = hash.(encoding.BinaryUnmarshaler).UnmarshalBinary(session.DigestState)
 	if err != nil {
-		return "", fmt.Errorf("failed to unmarshal digest state: %w", err)
+		return nil, fmt.Errorf("failed to unmarshal digest state: %w", err)
 	}
 
 	digest := fmt.Sprintf("sha256:%x", hash.Sum(nil))
 	m.setBlob(digest, m.getTempBlob(sessionId))
 	m.removeTempBlob(sessionId)
 
-	return digest, nil
+	return &CompleteUploadResponse{
+		ComputedDigest: digest,
+		TenantSlug:     session.TenantSlug,
+		ProjectSlug:    session.ProjectSlug,
+		RepositorySlug: session.RepositorySlug,
+		RepositoryId:   session.RepositoryId,
+	}, nil
 }
 
 func (m *memoryService) GetUploadRangeEnd(ctx context.Context, sessionId uuid.UUID) (int, error) {

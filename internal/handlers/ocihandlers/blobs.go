@@ -11,7 +11,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/the127/dockyard/internal/jsontypes"
 	"github.com/the127/dockyard/internal/middlewares"
-	"github.com/the127/dockyard/internal/services/blob"
+	"github.com/the127/dockyard/internal/repositories"
+	"github.com/the127/dockyard/internal/services"
+	"github.com/the127/dockyard/internal/services/blobStorage"
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
 
@@ -24,6 +26,50 @@ func BlobExists(w http.ResponseWriter, r *http.Request) {
 }
 
 func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	repoIdentifier := middlewares.GetRepoIdentifier(ctx)
+	scope := middlewares.GetScope(ctx)
+
+	dbService := ioc.GetDependency[services.DbService](scope)
+	tx, err := dbService.GetTransaction()
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+
+	tenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(repoIdentifier.TenantSlug))
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+	if tenant == nil {
+		ociError.HandleHttpError(w, ociError.NewOciError(ociError.NameUnknown).
+			WithMessage(fmt.Sprintf("tenant '%s' does not exist", repoIdentifier.TenantSlug)))
+		return
+	}
+
+	project, err := tx.Projects().First(ctx, repositories.NewProjectFilter().ByTenantId(tenant.GetId()).BySlug(repoIdentifier.ProjectSlug))
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+	if project == nil {
+		ociError.HandleHttpError(w, ociError.NewOciError(ociError.NameUnknown).
+			WithMessage(fmt.Sprintf("project '%s' does not exist", repoIdentifier.ProjectSlug)))
+		return
+	}
+
+	repository, err := tx.Repositories().First(ctx, repositories.NewRepositoryFilter().ByProjectId(project.GetId()).BySlug(repoIdentifier.RepositorySlug))
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+	if repository == nil {
+		ociError.HandleHttpError(w, ociError.NewOciError(ociError.NameUnknown).
+			WithMessage(fmt.Sprintf("repository '%s' does not exist", repoIdentifier.RepositorySlug)))
+		return
+	}
+
 	digest := r.URL.Query().Get("digest")
 	if digest != "" {
 		err := ociError.NewOciError(ociError.Unsupported).
@@ -48,12 +94,13 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	blobService := ioc.GetDependency[blob.Service](scope)
-
-	uploadSession, err := blobService.StartUploadSession(ctx, blob.StartUploadSessionParams{
+	blobService := ioc.GetDependency[blobStorage.Service](scope)
+	uploadSession, err := blobService.StartUploadSession(ctx, blobStorage.StartUploadSessionParams{
 		BlobUploadMode: uploadMode,
+		TenantSlug:     tenant.GetSlug(),
+		ProjectSlug:    project.GetSlug(),
+		RepositorySlug: repository.GetSlug(),
+		RepositoryId:   repository.GetId(),
 	})
 	if err != nil {
 		ociError.HandleHttpError(w, err)
@@ -126,7 +173,7 @@ func UploadChunk(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	scope := middlewares.GetScope(ctx)
-	blobService := ioc.GetDependency[blob.Service](scope)
+	blobService := ioc.GetDependency[blobStorage.Service](scope)
 
 	err = blobService.UploadWriteChunk(ctx, sessionId, r.Body, int64(length))
 	if err != nil {
@@ -160,7 +207,7 @@ func FinishUpload(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	scope := middlewares.GetScope(ctx)
-	blobService := ioc.GetDependency[blob.Service](scope)
+	blobService := ioc.GetDependency[blobStorage.Service](scope)
 
 	lengthHeader := r.Header.Get("Content-Length")
 	if lengthHeader != "" {
@@ -184,21 +231,60 @@ func FinishUpload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	computedDigest, err := blobService.CompleteUpload(ctx, sessionId)
+	completeResponse, err := blobService.CompleteUpload(ctx, sessionId)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
 		return
 	}
 
-	if computedDigest != digest {
+	if completeResponse.ComputedDigest != digest {
 		err = ociError.NewOciError(ociError.DigestInvalid).
 			WithMessage("computed digest does not match")
 		ociError.HandleHttpError(w, err)
 		return
 	}
 
-	// TODO: create reference to blob in database
+	dbService := ioc.GetDependency[services.DbService](scope)
+	tx, err := dbService.GetTransaction()
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
 
-	w.Header().Set("Location", "TODO"+digest)
+	blob, err := tx.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(digest))
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+	if blob == nil {
+		blob = repositories.NewBlob(digest)
+		err = tx.Blobs().Insert(ctx, blob)
+		if err != nil {
+			ociError.HandleHttpError(w, err)
+			return
+		}
+	}
+
+	err = tx.RepositoryBlobs().Insert(ctx, repositories.NewRepositoryBlob(completeResponse.RepositoryId, blob.GetId()))
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+
+	repoIdentifier := middlewares.GetRepoIdentifier(ctx)
+
+	var location string
+	switch repoIdentifier.TenantSource {
+	case middlewares.OciTenantSourcePath:
+		location = fmt.Sprintf("/v2/%s/%s/%s/blobs/%s", repoIdentifier.TenantSlug, repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, digest)
+
+	case middlewares.OciTenantSourceRoute:
+		location = fmt.Sprintf("/v2/%s/%s/blobs/%s", repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, digest)
+
+	default:
+		panic(fmt.Errorf("unsupported tenant source: %s", repoIdentifier.TenantSource))
+	}
+
+	w.Header().Set("Location", location)
 	w.WriteHeader(http.StatusCreated)
 }

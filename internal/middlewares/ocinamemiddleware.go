@@ -24,6 +24,7 @@ type OciRepositoryIdentifier struct {
 	TenantSlug     string
 	ProjectSlug    string
 	RepositorySlug string
+	TenantSource   OciTenantSource
 }
 
 type OciNameContextKey string
@@ -55,6 +56,7 @@ func OciNameMiddleware(tenantSource OciTenantSource) mux.MiddlewareFunc {
 				TenantSlug:     tenant,
 				ProjectSlug:    vars["project"],
 				RepositorySlug: vars["repository"],
+				TenantSource:   tenantSource,
 			}
 
 			r = r.WithContext(ContextWithRepoIdentifier(r.Context(), repoIdentifier))
