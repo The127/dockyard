@@ -8,6 +8,8 @@ type Transaction interface {
 	Users() repositories.UserRepository
 	Repositories() repositories.RepositoryRepository
 	Manifests() repositories.ManifestRepository
+	Blobs() repositories.BlobRepository
+	RepositoryBlobs() repositories.RepositoryBlobRepository
 	Commit() error
 	Rollback() error
 }

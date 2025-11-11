@@ -18,6 +18,8 @@ var ErrApiProjectNotFound = fmt.Errorf("project not found: %w", ErrApiNotFound)
 var ErrApiUserNotFound = fmt.Errorf("user not found: %w", ErrApiNotFound)
 var ErrApiRepositoryNotFound = fmt.Errorf("repository not found: %w", ErrApiNotFound)
 var ErrApiManifestNotFound = fmt.Errorf("manifest not found: %w", ErrApiNotFound)
+var ErrApiBlobNotFound = fmt.Errorf("blob not found: %w", ErrApiNotFound)
+var ErrApiRepositoryBlobNotFound = fmt.Errorf("repository blob not found: %w", ErrApiNotFound)
 
 func HandleHttpError(w http.ResponseWriter, err error) {
 	var code int
