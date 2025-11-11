@@ -12,19 +12,6 @@ type database struct {
 }
 
 func NewInMemoryDatabase() (db.Database, error) {
-	memDb, err := memdb.NewMemDB(schema)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create in-memory database: %w", err)
-	}
-
-	return &database{
-		memDB: memDb,
-	}, nil
-}
-
-var schema *memdb.DBSchema
-
-func (d *database) Migrate() error {
 	schema = &memdb.DBSchema{
 		Tables: map[string]*memdb.TableSchema{
 			"tenants": {
@@ -85,6 +72,19 @@ func (d *database) Migrate() error {
 		},
 	}
 
+	memDb, err := memdb.NewMemDB(schema)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create in-memory database: %w", err)
+	}
+
+	return &database{
+		memDB: memDb,
+	}, nil
+}
+
+var schema *memdb.DBSchema
+
+func (d *database) Migrate() error {
 	return nil
 }
 

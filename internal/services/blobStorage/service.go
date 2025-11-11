@@ -23,6 +23,7 @@ type StartUploadSessionResponse struct {
 
 type CompleteUploadResponse struct {
 	ComputedDigest string
+	Size           int64
 	TenantSlug     string
 	ProjectSlug    string
 	RepositorySlug string
@@ -33,7 +34,7 @@ type Service interface {
 	StartUploadSession(ctx context.Context, params StartUploadSessionParams) (*StartUploadSessionResponse, error)
 	UploadWriteChunk(ctx context.Context, sessionId uuid.UUID, reader io.Reader, length int64) error
 	CompleteUpload(ctx context.Context, sessionId uuid.UUID) (*CompleteUploadResponse, error)
-	GetUploadRangeEnd(ctx context.Context, sessionId uuid.UUID) (int, error)
+	GetUploadRangeEnd(ctx context.Context, sessionId uuid.UUID) (int64, error)
 }
 
 func buildSessionCacheKey(sessionId uuid.UUID) string {

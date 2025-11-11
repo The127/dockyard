@@ -96,7 +96,7 @@ func mapNamedOciApi(r *mux.Router) {
 	r.HandleFunc("/manifests/{reference}", ocihandlers.ManifestsDownload).Methods(http.MethodGet, http.MethodOptions)
 	r.HandleFunc("/manifests/{reference}", ocihandlers.ManifestsExists).Methods(http.MethodHead, http.MethodOptions)
 
-	r.HandleFunc("/blobs/uploads", ocihandlers.BlobsUploadStart).Methods(http.MethodPost, http.MethodOptions)
+	r.HandleFunc("/blobs/uploads/", ocihandlers.BlobsUploadStart).Methods(http.MethodPost, http.MethodOptions)
 	r.HandleFunc("/blobs/uploads/{reference}", ocihandlers.UploadChunk).Methods(http.MethodPatch, http.MethodOptions)
 	r.HandleFunc("/blobs/uploads/{reference}", ocihandlers.FinishUpload).Methods(http.MethodPut, http.MethodOptions)
 

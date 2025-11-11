@@ -22,7 +22,83 @@ func BlobsDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 func BlobExists(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
+	ctx := r.Context()
+	repoIdentifier := middlewares.GetRepoIdentifier(ctx)
+	scope := middlewares.GetScope(ctx)
+
+	vars := mux.Vars(r)
+	digest := vars["digest"]
+
+	dbService := ioc.GetDependency[services.DbService](scope)
+	tx, err := dbService.GetTransaction()
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+
+	blob, err := tx.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(digest))
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+	if blob == nil {
+		ociError.HandleHttpError(w, ociError.NewOciError(ociError.BlobUnknown).
+			WithMessage(fmt.Sprintf("blob '%s' does not exist", digest)).
+			WithHttpCode(http.StatusNotFound))
+		return
+	}
+
+	tenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(repoIdentifier.TenantSlug))
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+	if tenant == nil {
+		ociError.HandleHttpError(w, ociError.NewOciError(ociError.NameUnknown).
+			WithMessage(fmt.Sprintf("tenant '%s' does not exist", repoIdentifier.TenantSlug)).
+			WithHttpCode(http.StatusNotFound))
+		return
+	}
+
+	project, err := tx.Projects().First(ctx, repositories.NewProjectFilter().ByTenantId(tenant.GetId()).BySlug(repoIdentifier.ProjectSlug))
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+	if project == nil {
+		ociError.HandleHttpError(w, ociError.NewOciError(ociError.NameUnknown).
+			WithMessage(fmt.Sprintf("project '%s' does not exist", repoIdentifier.ProjectSlug)).
+			WithHttpCode(http.StatusNotFound))
+		return
+	}
+
+	repository, err := tx.Repositories().First(ctx, repositories.NewRepositoryFilter().ByProjectId(project.GetId()).BySlug(repoIdentifier.RepositorySlug))
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+	if repository == nil {
+		ociError.HandleHttpError(w, ociError.NewOciError(ociError.NameUnknown).
+			WithMessage(fmt.Sprintf("repository '%s' does not exist", repoIdentifier.RepositorySlug)).
+			WithHttpCode(http.StatusNotFound))
+		return
+	}
+
+	repositoryBlob, err := tx.RepositoryBlobs().First(ctx, repositories.NewRepositoryBlobFilter().ByBlobId(blob.GetId()).ByRepositoryId(repository.GetId()))
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+	if repositoryBlob == nil {
+		ociError.HandleHttpError(w, ociError.NewOciError(ociError.BlobUnknown).
+			WithMessage(fmt.Sprintf("blob '%s' does not exist", digest)).
+			WithHttpCode(http.StatusNotFound))
+		return
+	}
+
+	w.Header().Set("Docker-Content-Digest", blob.GetDigest())
+	w.Header().Set("Content-Length", strconv.FormatInt(blob.GetSize(), 10))
+	w.WriteHeader(http.StatusOK)
 }
 
 func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +183,19 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Location", fmt.Sprintf("TODO: %s", uploadSession.SessionId.String()))
+	var location string
+	switch repoIdentifier.TenantSource {
+	case middlewares.OciTenantSourcePath:
+		location = fmt.Sprintf("/v2/%s/%s/%s/blobs/uploads/%s", repoIdentifier.TenantSlug, repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, uploadSession.SessionId.String())
+
+	case middlewares.OciTenantSourceRoute:
+		location = fmt.Sprintf("/v2/%s/%s/blobs/uploads/%s", repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, uploadSession.SessionId.String())
+
+	default:
+		panic(fmt.Errorf("unsupported tenant source: %s", repoIdentifier.TenantSource))
+	}
+
+	w.Header().Set("Location", location)
 	w.WriteHeader(http.StatusAccepted)
 }
 
@@ -257,7 +345,7 @@ func FinishUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if blob == nil {
-		blob = repositories.NewBlob(digest)
+		blob = repositories.NewBlob(completeResponse.ComputedDigest, completeResponse.Size)
 		err = tx.Blobs().Insert(ctx, blob)
 		if err != nil {
 			ociError.HandleHttpError(w, err)

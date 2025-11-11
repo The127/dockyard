@@ -11,17 +11,23 @@ type Blob struct {
 	BaseModel
 
 	digest string
+	size   int64
 }
 
-func NewBlob(digest string) *Blob {
+func NewBlob(digest string, size int64) *Blob {
 	return &Blob{
 		BaseModel: NewBaseModel(),
 		digest:    digest,
+		size:      size,
 	}
 }
 
 func (b *Blob) GetDigest() string {
 	return b.digest
+}
+
+func (b *Blob) GetSize() int64 {
+	return b.size
 }
 
 type BlobFilter struct {

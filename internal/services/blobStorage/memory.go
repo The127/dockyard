@@ -136,7 +136,7 @@ func (m *memoryService) UploadWriteChunk(ctx context.Context, sessionId uuid.UUI
 	}
 
 	session.DigestState = digestState
-	session.RangeEnd += int(length)
+	session.RangeEnd += length
 
 	jsonBytes, err := json.Marshal(session)
 	if err != nil {
@@ -182,6 +182,7 @@ func (m *memoryService) CompleteUpload(ctx context.Context, sessionId uuid.UUID)
 
 	return &CompleteUploadResponse{
 		ComputedDigest: digest,
+		Size:           session.RangeEnd,
 		TenantSlug:     session.TenantSlug,
 		ProjectSlug:    session.ProjectSlug,
 		RepositorySlug: session.RepositorySlug,
@@ -189,7 +190,7 @@ func (m *memoryService) CompleteUpload(ctx context.Context, sessionId uuid.UUID)
 	}, nil
 }
 
-func (m *memoryService) GetUploadRangeEnd(ctx context.Context, sessionId uuid.UUID) (int, error) {
+func (m *memoryService) GetUploadRangeEnd(ctx context.Context, sessionId uuid.UUID) (int64, error) {
 	scope := middlewares.GetScope(ctx)
 	kvStore := ioc.GetDependency[kv.Store](scope)
 

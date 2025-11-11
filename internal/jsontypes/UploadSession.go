@@ -16,6 +16,6 @@ type UploadSession struct {
 	ProjectSlug    string         `json:"projectSlug"`
 	RepositorySlug string         `json:"repositorySlug"`
 	RepositoryId   uuid.UUID      `json:"repositoryId"`
-	RangeEnd       int            `json:"rangeEnd"`
+	RangeEnd       int64          `json:"rangeEnd"`
 	DigestState    []byte         `json:"digestState"`
 }
