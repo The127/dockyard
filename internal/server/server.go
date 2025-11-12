@@ -17,7 +17,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func Serve(root *ioc.DependencyProvider, serverConfig config.ServerConfig) {
+func Serve(root *ioc.DependencyProvider, serverConfig config.ServerConfig, hostBlobApi bool) {
 	r := mux.NewRouter()
 
 	r.Use(middlewares.RecoverMiddleware())
@@ -35,7 +35,10 @@ func Serve(root *ioc.DependencyProvider, serverConfig config.ServerConfig) {
 	mapAdminApi(r)
 	mapApi(r)
 	mapOciApi(r)
-	mapBlobApi(r)
+
+	if hostBlobApi {
+		mapBlobApi(r)
+	}
 
 	addr := fmt.Sprintf("%s:%d", serverConfig.Host, serverConfig.Port)
 	logging.Logger.Infof("Starting server on %s", addr)

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -32,7 +33,19 @@ func main() {
 
 	dp := dc.BuildProvider()
 
-	server.Serve(dp, config.C.Server)
+	var hostBlobApi bool
+	switch config.C.Blob.Mode {
+	case config.BlobStorageModeInMemory:
+		hostBlobApi = true
+
+	case config.BlobStorageModeS3:
+		hostBlobApi = false
+
+	default:
+		panic(fmt.Errorf("unsupported blob storage mode: %s", config.C.Blob.Mode))
+	}
+
+	server.Serve(dp, config.C.Server, hostBlobApi)
 	waitForExit()
 }
 
