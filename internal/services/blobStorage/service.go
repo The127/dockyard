@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/the127/dockyard/internal/jsontypes"
@@ -46,6 +47,9 @@ type Service interface {
 	GetUploadRangeEnd(ctx context.Context, sessionId uuid.UUID) (int64, error)
 
 	UploadCompleteBlob(ctx context.Context, reader io.Reader) (*UploadCompleteBlobResponse, error)
+
+	GetBlobDownloadLink(ctx context.Context, digest string) (string, error)
+	DownloadBlob(ctx context.Context, w http.ResponseWriter, digest string) error
 }
 
 func buildSessionCacheKey(sessionId uuid.UUID) string {

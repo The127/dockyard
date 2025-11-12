@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/http"
 	"sync"
 	"time"
 
@@ -233,4 +234,21 @@ func (m *memoryService) UploadCompleteBlob(ctx context.Context, reader io.Reader
 		Size:   bytesWritten,
 		Digest: digest,
 	}, nil
+}
+
+func (m *memoryService) GetBlobDownloadLink(ctx context.Context, digest string) (string, error) {
+	return fmt.Sprintf("/blobs/api/v1/%s", digest), nil
+}
+
+func (m *memoryService) DownloadBlob(_ context.Context, w http.ResponseWriter, digest string) error {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
+	blob, ok := m.blobs["blob:"+digest]
+	if !ok {
+		return fmt.Errorf("blob not found")
+	}
+
+	_, err := w.Write(blob)
+	return err
 }

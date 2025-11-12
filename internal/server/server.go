@@ -8,6 +8,7 @@ import (
 	"github.com/the127/dockyard/internal/config"
 	"github.com/the127/dockyard/internal/handlers/adminhandlers"
 	"github.com/the127/dockyard/internal/handlers/apihandlers"
+	"github.com/the127/dockyard/internal/handlers/blobhandlers"
 	"github.com/the127/dockyard/internal/handlers/ocihandlers"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/middlewares"
@@ -34,6 +35,7 @@ func Serve(root *ioc.DependencyProvider, serverConfig config.ServerConfig) {
 	mapAdminApi(r)
 	mapApi(r)
 	mapOciApi(r)
+	mapBlobApi(r)
 
 	addr := fmt.Sprintf("%s:%d", serverConfig.Host, serverConfig.Port)
 	logging.Logger.Infof("Starting server on %s", addr)
@@ -50,6 +52,15 @@ func serve(srv *http.Server) {
 	if err != nil {
 		panic(fmt.Errorf("error while running server: %w", err))
 	}
+}
+
+func mapBlobApi(r *mux.Router) {
+	apiRouter := r.PathPrefix("/blobs/api/v1").Subrouter()
+	apiRouter.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	apiRouter.HandleFunc("/{digest}", blobhandlers.DownloadBlob).Methods(http.MethodGet, http.MethodOptions)
 }
 
 func mapAdminApi(r *mux.Router) {
