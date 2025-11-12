@@ -121,37 +121,9 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(repoIdentifier.TenantSlug))
+	repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
-		return
-	}
-	if tenant == nil {
-		ociError.HandleHttpError(w, ociError.NewOciError(ociError.NameUnknown).
-			WithMessage(fmt.Sprintf("tenant '%s' does not exist", repoIdentifier.TenantSlug)))
-		return
-	}
-
-	project, err := tx.Projects().First(ctx, repositories.NewProjectFilter().ByTenantId(tenant.GetId()).BySlug(repoIdentifier.ProjectSlug))
-	if err != nil {
-		ociError.HandleHttpError(w, err)
-		return
-	}
-	if project == nil {
-		ociError.HandleHttpError(w, ociError.NewOciError(ociError.NameUnknown).
-			WithMessage(fmt.Sprintf("project '%s' does not exist", repoIdentifier.ProjectSlug)))
-		return
-	}
-
-	repository, err := tx.Repositories().First(ctx, repositories.NewRepositoryFilter().ByProjectId(project.GetId()).BySlug(repoIdentifier.RepositorySlug))
-	if err != nil {
-		ociError.HandleHttpError(w, err)
-		return
-	}
-	if repository == nil {
-		ociError.HandleHttpError(w, ociError.NewOciError(ociError.NameUnknown).
-			WithMessage(fmt.Sprintf("repository '%s' does not exist", repoIdentifier.RepositorySlug)))
-		return
 	}
 
 	digest := r.URL.Query().Get("digest")
