@@ -59,7 +59,7 @@ func BlobsDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
+	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
 	}
@@ -94,7 +94,7 @@ func BlobExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
+	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
 	}
@@ -121,7 +121,7 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
+	tenant, project, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
 	}

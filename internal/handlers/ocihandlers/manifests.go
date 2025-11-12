@@ -63,7 +63,7 @@ func ManifestsDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
+	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
 		return
@@ -100,7 +100,7 @@ func ManifestsExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
+	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
 		return
@@ -129,7 +129,7 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
+	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
 		return
