@@ -13,7 +13,7 @@ type Manifest struct {
 	repositoryId uuid.UUID
 	blobId       uuid.UUID
 
-	reference string
+	digest string
 }
 
 func NewManifest(repositoryId uuid.UUID, blobId uuid.UUID, reference string) *Manifest {
@@ -21,7 +21,7 @@ func NewManifest(repositoryId uuid.UUID, blobId uuid.UUID, reference string) *Ma
 		BaseModel:    NewBaseModel(),
 		repositoryId: repositoryId,
 		blobId:       blobId,
-		reference:    reference,
+		digest:       reference,
 	}
 }
 
@@ -29,8 +29,8 @@ func (m *Manifest) GetRepositoryId() uuid.UUID {
 	return m.repositoryId
 }
 
-func (m *Manifest) GetReference() string {
-	return m.reference
+func (m *Manifest) GetDigest() string {
+	return m.digest
 }
 
 func (m *Manifest) GetBlobId() uuid.UUID {
@@ -41,7 +41,7 @@ type ManifestFilter struct {
 	id           *uuid.UUID
 	repositoryId *uuid.UUID
 	blobId       *uuid.UUID
-	reference    *string
+	digest       *string
 }
 
 func NewManifestFilter() *ManifestFilter {
@@ -95,18 +95,18 @@ func (f *ManifestFilter) GetRepositoryId() uuid.UUID {
 	return pointer.DerefOrZero(f.repositoryId)
 }
 
-func (f *ManifestFilter) ByReference(reference string) *ManifestFilter {
+func (f *ManifestFilter) ByDigest(digest string) *ManifestFilter {
 	cloned := f.clone()
-	cloned.reference = &reference
+	cloned.digest = &digest
 	return cloned
 }
 
-func (f *ManifestFilter) HasReference() bool {
-	return f.reference != nil
+func (f *ManifestFilter) HasDigest() bool {
+	return f.digest != nil
 }
 
-func (f *ManifestFilter) GetReference() string {
-	return pointer.DerefOrZero(f.reference)
+func (f *ManifestFilter) GetDigest() string {
+	return pointer.DerefOrZero(f.digest)
 }
 
 type ManifestRepository interface {

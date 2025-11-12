@@ -8,6 +8,7 @@ type Transaction interface {
 	Users() repositories.UserRepository
 	Repositories() repositories.RepositoryRepository
 	Manifests() repositories.ManifestRepository
+	Tags() repositories.TagRepository
 	Blobs() repositories.BlobRepository
 	RepositoryBlobs() repositories.RepositoryBlobRepository
 	Commit() error

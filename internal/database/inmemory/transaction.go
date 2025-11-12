@@ -15,6 +15,7 @@ type transaction struct {
 	users           repositories.UserRepository
 	repos           repositories.RepositoryRepository
 	manifest        repositories.ManifestRepository
+	tags            repositories.TagRepository
 	blobs           repositories.BlobRepository
 	repositoryBlobs repositories.RepositoryBlobRepository
 }
@@ -72,6 +73,13 @@ func (t *transaction) RepositoryBlobs() repositories.RepositoryBlobRepository {
 		t.repositoryBlobs = inmemory.NewInMemoryRepositoryBlobRepository(t.txn)
 	}
 	return t.repositoryBlobs
+}
+
+func (t *transaction) Tags() repositories.TagRepository {
+	if t.tags == nil {
+		t.tags = inmemory.NewInMemoryTagRepository(t.txn)
+	}
+	return t.tags
 }
 
 func (t *transaction) Commit() error {

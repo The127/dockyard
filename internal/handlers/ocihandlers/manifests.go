@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
@@ -20,7 +21,11 @@ import (
 )
 
 func getManifestByReference(ctx context.Context, tx database.Transaction, repositoryId uuid.UUID, reference string) (*repositories.Manifest, *repositories.Blob, error) {
-	manifest, err := tx.Manifests().First(ctx, repositories.NewManifestFilter().ByRepositoryId(repositoryId).ByReference(reference))
+	if !strings.HasPrefix(reference, "sha256:") {
+		tag, err
+	}
+
+	manifest, err := tx.Manifests().First(ctx, repositories.NewManifestFilter().ByRepositoryId(repositoryId).ByDigest(reference))
 	if err != nil {
 		return nil, nil, err
 	}

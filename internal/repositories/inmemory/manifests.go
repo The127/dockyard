@@ -52,8 +52,8 @@ func (r *manifestRepository) matches(manifest *repositories.Manifest, filter *re
 		}
 	}
 
-	if filter.HasReference() {
-		if manifest.GetReference() != filter.GetReference() {
+	if filter.HasDigest() {
+		if manifest.GetDigest() != filter.GetDigest() {
 			return false
 		}
 	}
