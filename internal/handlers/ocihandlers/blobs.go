@@ -1,6 +1,7 @@
 package ocihandlers
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -8,6 +9,7 @@ import (
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/jsontypes"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
@@ -16,8 +18,65 @@ import (
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
 
+func getRepositoryBlob(ctx context.Context, tx database.Transaction, repositoryId uuid.UUID, digest string) (*repositories.RepositoryBlob, *repositories.Blob, error) {
+	blob, err := tx.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(digest))
+	if err != nil {
+		return nil, nil, err
+	}
+	if blob == nil {
+		err := ociError.NewOciError(ociError.BlobUnknown).
+			WithMessage(fmt.Sprintf("blob '%s' does not exist", digest)).
+			WithHttpCode(http.StatusNotFound)
+		return nil, nil, err
+	}
+
+	repositoryBlob, err := tx.RepositoryBlobs().First(ctx, repositories.NewRepositoryBlobFilter().ByBlobId(blob.GetId()).ByRepositoryId(repositoryId))
+	if err != nil {
+		return nil, nil, err
+	}
+	if repositoryBlob == nil {
+		err := ociError.NewOciError(ociError.BlobUnknown).
+			WithMessage(fmt.Sprintf("blob '%s' does not exist", digest)).
+			WithHttpCode(http.StatusNotFound)
+		return nil, nil, err
+	}
+
+	return repositoryBlob, blob, nil
+}
+
 func BlobsDownload(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
+	ctx := r.Context()
+	repoIdentifier := middlewares.GetRepoIdentifier(ctx)
+	scope := middlewares.GetScope(ctx)
+
+	vars := mux.Vars(r)
+	digest := vars["digest"]
+
+	dbService := ioc.GetDependency[services.DbService](scope)
+	tx, err := dbService.GetTransaction()
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+
+	repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+	}
+
+	_, blob, err := getRepositoryBlob(ctx, tx, repository.GetId(), digest)
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+	}
+
+	blobService := ioc.GetDependency[blobStorage.Service](scope)
+	redirectUri, err := blobService.GetBlobDownloadLink(ctx, blob.GetDigest())
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+
+	http.Redirect(w, r, redirectUri, http.StatusTemporaryRedirect)
 }
 
 func BlobExists(w http.ResponseWriter, r *http.Request) {
@@ -35,33 +94,14 @@ func BlobExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	blob, err := tx.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(digest))
-	if err != nil {
-		ociError.HandleHttpError(w, err)
-		return
-	}
-	if blob == nil {
-		ociError.HandleHttpError(w, ociError.NewOciError(ociError.BlobUnknown).
-			WithMessage(fmt.Sprintf("blob '%s' does not exist", digest)).
-			WithHttpCode(http.StatusNotFound))
-		return
-	}
-
 	repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
 	}
 
-	repositoryBlob, err := tx.RepositoryBlobs().First(ctx, repositories.NewRepositoryBlobFilter().ByBlobId(blob.GetId()).ByRepositoryId(repository.GetId()))
+	_, blob, err := getRepositoryBlob(ctx, tx, repository.GetId(), digest)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
-		return
-	}
-	if repositoryBlob == nil {
-		ociError.HandleHttpError(w, ociError.NewOciError(ociError.BlobUnknown).
-			WithMessage(fmt.Sprintf("blob '%s' does not exist", digest)).
-			WithHttpCode(http.StatusNotFound))
-		return
 	}
 
 	w.Header().Set("Docker-Content-Digest", blob.GetDigest())
