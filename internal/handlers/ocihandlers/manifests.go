@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/The127/ioc"
+	"github.com/gorilla/mux"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/services"
@@ -19,7 +21,77 @@ func ManifestsDownload(w http.ResponseWriter, r *http.Request) {
 }
 
 func ManifestsExists(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
+	ctx := r.Context()
+	repoIdentifier := middlewares.GetRepoIdentifier(ctx)
+	scope := middlewares.GetScope(ctx)
+
+	vars := mux.Vars(r)
+	reference := vars["reference"]
+
+	dbService := ioc.GetDependency[services.DbService](scope)
+	tx, err := dbService.GetTransaction()
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+
+	tenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(repoIdentifier.TenantSlug))
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+	if tenant == nil {
+		ociError.HandleHttpError(w, ociError.NewOciError(ociError.NameUnknown).
+			WithMessage(fmt.Sprintf("tenant '%s' does not exist", repoIdentifier.TenantSlug)))
+		return
+	}
+
+	project, err := tx.Projects().First(ctx, repositories.NewProjectFilter().ByTenantId(tenant.GetId()).BySlug(repoIdentifier.ProjectSlug))
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+	if project == nil {
+		ociError.HandleHttpError(w, ociError.NewOciError(ociError.NameUnknown).
+			WithMessage(fmt.Sprintf("project '%s' does not exist", repoIdentifier.ProjectSlug)))
+		return
+	}
+
+	repository, err := tx.Repositories().First(ctx, repositories.NewRepositoryFilter().ByProjectId(project.GetId()).BySlug(repoIdentifier.RepositorySlug))
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+	if repository == nil {
+		ociError.HandleHttpError(w, ociError.NewOciError(ociError.NameUnknown).
+			WithMessage(fmt.Sprintf("repository '%s' does not exist", repoIdentifier.RepositorySlug)))
+		return
+	}
+
+	manifest, err := tx.Manifests().First(ctx, repositories.NewManifestFilter().ByRepositoryId(repository.GetId()).ByReference(reference))
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+	if manifest == nil {
+		ociError.HandleHttpError(w, ociError.NewOciError(ociError.ManifestUnknown).
+			WithMessage(fmt.Sprintf("manifest '%s' does not exist", reference)))
+		return
+	}
+
+	blob, err := tx.Blobs().First(ctx, repositories.NewBlobFilter().ById(manifest.GetBlobId()))
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+	}
+	if blob == nil {
+		ociError.HandleHttpError(w, ociError.NewOciError(ociError.BlobUnknown).
+			WithMessage(fmt.Sprintf("blob '%s' does not exist", manifest.GetBlobId())))
+		return
+	}
+
+	w.Header().Set("Docker-Content-Digest", blob.GetDigest())
+	w.Header().Set("Content-Length", strconv.FormatInt(blob.GetSize(), 10))
+	w.WriteHeader(http.StatusOK)
 }
 
 func UploadManifest(w http.ResponseWriter, r *http.Request) {
