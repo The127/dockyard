@@ -159,7 +159,7 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 	// TODO: validate manifest
 
 	blobs := ioc.GetDependency[blobStorage.Service](scope)
-	uploadResponse, err := blobs.UploadCompleteBlob(ctx, bytes.NewReader(bodyBytes))
+	uploadResponse, err := blobs.UploadCompleteBlob(ctx, bytes.NewReader(bodyBytes), blobStorage.BlobContentTypeManifest)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
 		return

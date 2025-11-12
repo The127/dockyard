@@ -21,14 +21,19 @@ import (
 
 // TODO: cleanup temporary blobs of expired sessions
 
+type blobInfo struct {
+	contentType BlobContentType
+	data        []byte
+}
+
 type memoryService struct {
-	blobs map[string][]byte
+	blobs map[string]blobInfo
 	mu    *sync.RWMutex
 }
 
 func NewInMemoryService() Service {
 	return &memoryService{
-		blobs: make(map[string][]byte),
+		blobs: make(map[string]blobInfo),
 		mu:    &sync.RWMutex{},
 	}
 }
@@ -70,18 +75,21 @@ func (m *memoryService) StartUploadSession(ctx context.Context, params StartUplo
 	}, nil
 }
 
-func (m *memoryService) getTempBlob(sessionId uuid.UUID) []byte {
+func (m *memoryService) getTempBlob(sessionId uuid.UUID) blobInfo {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
 
 	return m.blobs["temp:"+sessionId.String()]
 }
 
-func (m *memoryService) setTempBlob(sessionId uuid.UUID, blob []byte) {
+func (m *memoryService) setTempBlob(sessionId uuid.UUID, data []byte) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.blobs["temp:"+sessionId.String()] = blob
+	m.blobs["temp:"+sessionId.String()] = blobInfo{
+		contentType: BlobContentTypeOctetStream,
+		data:        data,
+	}
 }
 
 func (m *memoryService) removeTempBlob(sessionId uuid.UUID) {
@@ -91,7 +99,7 @@ func (m *memoryService) removeTempBlob(sessionId uuid.UUID) {
 	delete(m.blobs, fmt.Sprintf("temp:%s", sessionId))
 }
 
-func (m *memoryService) setBlob(digest string, blob []byte) {
+func (m *memoryService) setBlob(digest string, blob blobInfo) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -116,8 +124,8 @@ func (m *memoryService) UploadWriteChunk(ctx context.Context, sessionId uuid.UUI
 		return nil, fmt.Errorf("failed to unmarshal session: %w", err)
 	}
 
-	blobBytes := m.getTempBlob(sessionId)
-	writer := bytes.NewBuffer(blobBytes)
+	blob := m.getTempBlob(sessionId)
+	writer := bytes.NewBuffer(blob.data)
 
 	hasher := sha256.New()
 	err = hasher.(encoding.BinaryUnmarshaler).UnmarshalBinary(session.DigestState)
@@ -155,7 +163,7 @@ func (m *memoryService) UploadWriteChunk(ctx context.Context, sessionId uuid.UUI
 	}, nil
 }
 
-func (m *memoryService) CompleteUpload(ctx context.Context, sessionId uuid.UUID) (*CompleteUploadResponse, error) {
+func (m *memoryService) CompleteUpload(ctx context.Context, sessionId uuid.UUID, contentType BlobContentType) (*CompleteUploadResponse, error) {
 	scope := middlewares.GetScope(ctx)
 	kvStore := ioc.GetDependency[kv.Store](scope)
 
@@ -180,7 +188,11 @@ func (m *memoryService) CompleteUpload(ctx context.Context, sessionId uuid.UUID)
 	}
 
 	digest := fmt.Sprintf("sha256:%x", hash.Sum(nil))
-	m.setBlob(digest, m.getTempBlob(sessionId))
+
+	blob := m.getTempBlob(sessionId)
+	blob.contentType = contentType
+
+	m.setBlob(digest, blob)
 	m.removeTempBlob(sessionId)
 
 	return &CompleteUploadResponse{
@@ -214,7 +226,7 @@ func (m *memoryService) GetUploadRangeEnd(ctx context.Context, sessionId uuid.UU
 	return session.RangeEnd, nil
 }
 
-func (m *memoryService) UploadCompleteBlob(ctx context.Context, reader io.Reader) (*UploadCompleteBlobResponse, error) {
+func (m *memoryService) UploadCompleteBlob(_ context.Context, reader io.Reader, contentType BlobContentType) (*UploadCompleteBlobResponse, error) {
 	hash := sha256.New()
 
 	var data []byte
@@ -228,7 +240,10 @@ func (m *memoryService) UploadCompleteBlob(ctx context.Context, reader io.Reader
 	}
 
 	digest := fmt.Sprintf("sha256:%x", hash.Sum(nil))
-	m.setBlob(digest, buffer.Bytes())
+	m.setBlob(digest, blobInfo{
+		contentType: contentType,
+		data:        buffer.Bytes(),
+	})
 
 	return &UploadCompleteBlobResponse{
 		Size:   bytesWritten,
@@ -249,6 +264,19 @@ func (m *memoryService) DownloadBlob(_ context.Context, w http.ResponseWriter, d
 		return fmt.Errorf("blob not found")
 	}
 
-	_, err := w.Write(blob)
+	var contentTypeHeader string
+	switch blob.contentType {
+	case BlobContentTypeOctetStream:
+		contentTypeHeader = "application/octet-stream"
+
+	case BlobContentTypeManifest:
+		contentTypeHeader = "application/vnd.oci.image.manifest.v1+json"
+
+	default:
+		panic(fmt.Errorf("unsupported blob content type: %s", blob.contentType))
+	}
+
+	w.Header().Set("Content-Type", contentTypeHeader)
+	_, err := w.Write(blob.data)
 	return err
 }

@@ -305,7 +305,7 @@ func FinishUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	completeResponse, err := blobService.CompleteUpload(ctx, sessionId)
+	completeResponse, err := blobService.CompleteUpload(ctx, sessionId, blobStorage.BlobContentTypeOctetStream)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
 		return

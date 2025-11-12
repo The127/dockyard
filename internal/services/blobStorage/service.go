@@ -40,13 +40,20 @@ type UploadCompleteBlobResponse struct {
 	Digest string
 }
 
+type BlobContentType string
+
+const (
+	BlobContentTypeOctetStream BlobContentType = "application/octet-stream"
+	BlobContentTypeManifest    BlobContentType = "application/vnd.oci.image.manifest.v1+json"
+)
+
 type Service interface {
 	StartUploadSession(ctx context.Context, params StartUploadSessionParams) (*StartUploadSessionResponse, error)
 	UploadWriteChunk(ctx context.Context, sessionId uuid.UUID, reader io.Reader) (*UploadWriteChunkResponse, error)
-	CompleteUpload(ctx context.Context, sessionId uuid.UUID) (*CompleteUploadResponse, error)
+	CompleteUpload(ctx context.Context, sessionId uuid.UUID, contentType BlobContentType) (*CompleteUploadResponse, error)
 	GetUploadRangeEnd(ctx context.Context, sessionId uuid.UUID) (int64, error)
 
-	UploadCompleteBlob(ctx context.Context, reader io.Reader) (*UploadCompleteBlobResponse, error)
+	UploadCompleteBlob(ctx context.Context, reader io.Reader, contentType BlobContentType) (*UploadCompleteBlobResponse, error)
 
 	GetBlobDownloadLink(ctx context.Context, digest string) (string, error)
 	DownloadBlob(ctx context.Context, w http.ResponseWriter, digest string) error
