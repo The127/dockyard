@@ -21,11 +21,24 @@ import (
 )
 
 func getManifestByReference(ctx context.Context, tx database.Transaction, repositoryId uuid.UUID, reference string) (*repositories.Manifest, *repositories.Blob, error) {
+	var manifestFilter *repositories.ManifestFilter
 	if !strings.HasPrefix(reference, "sha256:") {
-		tag, err
+		tag, err := tx.Tags().First(ctx, repositories.NewTagFilter().ByRepositoryId(repositoryId).ByName(reference))
+		if err != nil {
+			return nil, nil, err
+		}
+		if tag == nil {
+			err := ociError.NewOciError(ociError.ManifestUnknown).
+				WithMessage(fmt.Sprintf("tag '%s' does not exist", reference))
+			return nil, nil, err
+		}
+
+		manifestFilter = repositories.NewManifestFilter().ById(tag.GetRepositoryManifestId())
+	} else {
+		manifestFilter = repositories.NewManifestFilter().ByRepositoryId(repositoryId).ByDigest(reference)
 	}
 
-	manifest, err := tx.Manifests().First(ctx, repositories.NewManifestFilter().ByRepositoryId(repositoryId).ByDigest(reference))
+	manifest, err := tx.Manifests().First(ctx, manifestFilter)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -165,10 +178,22 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err = tx.Manifests().Insert(ctx, repositories.NewManifest(repository.GetId(), blob.GetId(), uploadResponse.Digest))
+	manifest := repositories.NewManifest(repository.GetId(), blob.GetId(), uploadResponse.Digest)
+	err = tx.Manifests().Insert(ctx, manifest)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
 		return
+	}
+
+	vars := mux.Vars(r)
+	reference := vars["reference"]
+
+	if !strings.HasPrefix(reference, "sha256:") {
+		err := tx.Tags().Insert(ctx, repositories.NewTag(repository.GetId(), manifest.GetId(), reference))
+		if err != nil {
+			ociError.HandleHttpError(w, err)
+			return
+		}
 	}
 
 	var location string
