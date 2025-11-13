@@ -84,8 +84,12 @@ func mapApi(r *mux.Router) {
 	})
 
 	apiRouter.HandleFunc("/projects", apihandlers.CreateProject).Methods(http.MethodPost, http.MethodOptions)
+	apiRouter.HandleFunc("/projects", apihandlers.ListProjects).Methods(http.MethodGet, http.MethodOptions)
+	apiRouter.HandleFunc("/projects/{project}", apihandlers.GetProject).Methods(http.MethodGet, http.MethodOptions)
 
 	apiRouter.HandleFunc("/projects/{project}/repositories", apihandlers.CreateRepository).Methods(http.MethodPost, http.MethodOptions)
+	apiRouter.HandleFunc("/projects/{project}/repositories", apihandlers.ListRepositories).Methods(http.MethodGet, http.MethodOptions)
+	apiRouter.HandleFunc("/projects/{project}/repositories/{repository}", apihandlers.GetRepository).Methods(http.MethodGet, http.MethodOptions)
 }
 
 func mapOciApi(r *mux.Router) {

@@ -6,3 +6,9 @@ Content-Type: application/json
   "slug": "default",
   "displayName": "Default project"
 }
+
+### list all projects
+GET http://localhost:8082/api/v1/tenants/raccoons/projects
+
+### get a project
+GET http://localhost:8082/api/v1/tenants/raccoons/projects/default

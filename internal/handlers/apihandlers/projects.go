@@ -3,9 +3,11 @@ package apihandlers
 import (
 	"encoding/json"
 	"net/http"
+	"time"
 
 	"github.com/The127/ioc"
 	"github.com/The127/mediatr"
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/the127/dockyard/internal/commands"
 	"github.com/the127/dockyard/internal/handlers"
@@ -87,6 +89,48 @@ func ListProjects(w http.ResponseWriter, r *http.Request) {
 			Slug:        item.Slug,
 			DisplayName: item.DisplayName,
 		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		apiError.HandleHttpError(w, err)
+		return
+	}
+}
+
+type GetProjectResponse struct {
+	Id          uuid.UUID `json:"id"`
+	Slug        string    `json:"slug"`
+	DisplayName string    `json:"displayName"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+}
+
+func GetProject(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	tenantSlug := vars["tenant"]
+	projectSlug := vars["project"]
+
+	ctx := r.Context()
+	scope := middlewares.GetScope(ctx)
+	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+
+	project, err := mediatr.Send[*queries.GetProjectResponse](ctx, mediator, queries.GetProject{
+		TenantSlug:  tenantSlug,
+		ProjectSlug: projectSlug,
+	})
+	if err != nil {
+		apiError.HandleHttpError(w, err)
+		return
+	}
+
+	response := GetProjectResponse{
+		Id:          project.Id,
+		Slug:        project.Slug,
+		DisplayName: project.DisplayName,
+		CreatedAt:   project.CreatedAt,
+		UpdatedAt:   project.UpdatedAt,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
