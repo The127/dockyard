@@ -73,6 +73,8 @@ func mapAdminApi(r *mux.Router) {
 	})
 
 	apiRouter.HandleFunc("/tenants", adminhandlers.CreateTenant).Methods(http.MethodPost, http.MethodOptions)
+	apiRouter.HandleFunc("/tenants", adminhandlers.ListTenants).Methods(http.MethodGet, http.MethodOptions)
+	apiRouter.HandleFunc("/tenants/{tenant}", adminhandlers.GetTenant).Methods(http.MethodGet, http.MethodOptions)
 }
 
 func mapApi(r *mux.Router) {
