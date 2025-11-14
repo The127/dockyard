@@ -13,13 +13,18 @@ type Tenant struct {
 
 	slug        string
 	displayName string
+
+	oidcClient string
+	oidcIssuer string
 }
 
-func NewTenant(slug string, displayName string) *Tenant {
+func NewTenant(slug string, displayName string, oidcClient string, oidcIssuer string) *Tenant {
 	return &Tenant{
 		BaseModel:   NewBaseModel(),
 		slug:        slug,
 		displayName: displayName,
+		oidcClient:  oidcClient,
+		oidcIssuer:  oidcIssuer,
 	}
 }
 
@@ -33,6 +38,14 @@ func (t *Tenant) GetDisplayName() string {
 
 func (t *Tenant) SetDisplayName(displayName string) {
 	t.displayName = displayName
+}
+
+func (t *Tenant) GetOidcClient() string {
+	return t.oidcClient
+}
+
+func (t *Tenant) GetOidcIssuer() string {
+	return t.oidcIssuer
 }
 
 type TenantFilter struct {

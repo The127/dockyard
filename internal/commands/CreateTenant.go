@@ -14,6 +14,8 @@ import (
 type CreateTenant struct {
 	Slug        string
 	DisplayName string
+	OidcClient  string
+	OidcIssuer  string
 }
 
 type CreateTenantResponse struct {
@@ -29,7 +31,7 @@ func HandleCreateTenant(ctx context.Context, command CreateTenant) (*CreateTenan
 		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
 
-	tenant := repositories.NewTenant(command.Slug, command.DisplayName)
+	tenant := repositories.NewTenant(command.Slug, command.DisplayName, command.OidcClient, command.OidcIssuer)
 	tenantRepository := tx.Tenants()
 	err = tenantRepository.Insert(ctx, tenant)
 	if err != nil {

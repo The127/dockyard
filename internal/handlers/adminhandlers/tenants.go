@@ -21,6 +21,8 @@ import (
 type CreateTenantRequest struct {
 	Slug        string `json:"slug" validate:"required"`
 	DisplayName string `json:"displayName"`
+	OidcClient  string `json:"oidcClient" validate:"required"`
+	OidcIssuer  string `json:"oidcIssuer" validate:"required"`
 }
 
 func CreateTenant(w http.ResponseWriter, r *http.Request) {
@@ -44,6 +46,8 @@ func CreateTenant(w http.ResponseWriter, r *http.Request) {
 	_, err = mediatr.Send[*commands.CreateTenantResponse](ctx, mediator, commands.CreateTenant{
 		Slug:        dto.Slug,
 		DisplayName: dto.DisplayName,
+		OidcClient:  dto.OidcClient,
+		OidcIssuer:  dto.OidcIssuer,
 	})
 	if err != nil {
 		apiError.HandleHttpError(w, err)

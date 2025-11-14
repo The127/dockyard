@@ -4,7 +4,9 @@ Content-Type: application/json
 
 {
   "slug": "raccoons",
-  "displayName": "A bunch of raccoons"
+  "displayName": "A bunch of raccoons",
+  "oidcClient": "dockyard-app",
+  "oidcIssuer": "http://localhost:8081/oidc/keyline"
 }
 
 ### get all tenants

@@ -15,10 +15,22 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Kv       KvConfig
-	Blob     BlobStorageConfig
+	Server        ServerConfig
+	InitialTenant InitialTenantConfig
+	Database      DatabaseConfig
+	Kv            KvConfig
+	Blob          BlobStorageConfig
+}
+
+type InitialTenantConfig struct {
+	Slug        string
+	DisplayName string
+	Oidc        InitialTenantOidcConfig
+}
+
+type InitialTenantOidcConfig struct {
+	ClientId  string
+	IssuerUrl string
 }
 
 type ServerConfig struct {

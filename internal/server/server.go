@@ -83,6 +83,8 @@ func mapApi(r *mux.Router) {
 		w.WriteHeader(http.StatusOK)
 	})
 
+	apiRouter.HandleFunc("/oidc", apihandlers.GetTenantOidcInfo).Methods(http.MethodGet, http.MethodOptions)
+
 	apiRouter.HandleFunc("/projects", apihandlers.CreateProject).Methods(http.MethodPost, http.MethodOptions)
 	apiRouter.HandleFunc("/projects", apihandlers.ListProjects).Methods(http.MethodGet, http.MethodOptions)
 	apiRouter.HandleFunc("/projects/{project}", apihandlers.GetProject).Methods(http.MethodGet, http.MethodOptions)

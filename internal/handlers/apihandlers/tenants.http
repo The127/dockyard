@@ -1,0 +1,2 @@
+### get tenant oidc info
+GET http://localhost:8082/api/v1/tenants/raccoons/oidc
