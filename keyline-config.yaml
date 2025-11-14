@@ -1,0 +1,45 @@
+server:
+  host: "0.0.0.0"
+  port: 8081
+  externalUrl: "http://localhost:8081"
+  allowedOrigins: ["http://localhost:5177"]
+frontend:
+  externalUrl: "http://localhost:5177"
+database:
+  mode: "postgres"
+  postgres:
+    host: "db"
+    port: 5432
+    username: "user"
+    password: "password"
+    sslMode: "disable"
+initialVirtualServer:
+  enableRegistration: true
+  signingAlgorithm: "RS256"
+  createSystemAdminRole: true
+  createAdmin: true
+  admin:
+    username: admin
+    displayName: Admin
+    primaryEmail: foo@bar.com
+    passwordHash: "$argon2id$v=19$m=16,t=2,p=1$MTIzNDU2Nzg$QWu7e+sjG5knAdNLoKdLDg"
+  projects:
+    - slug: "dockyard"
+      name: "Dockyard"
+      description: "Dockyard dev project"
+      applications:
+        - name: "dockyard-app"
+          displayName: "Dockyard App"
+          type: "public"
+          redirectUris:
+            - "http://localhost:1234/login-callback"
+          postLogoutRedirectUris:
+            - "http://localhost:1234/logout-callback"
+keyStore:
+  mode: "directory"
+  directory:
+    path: "./keys"
+cache:
+  mode: memory
+leaderElection:
+  mode: none

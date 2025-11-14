@@ -1,0 +1,34 @@
+version: '3.1'
+
+services:
+
+  db:
+    image: postgres
+    restart: always
+    ports:
+      - "5788:5432"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: keyline
+
+  keyline-api:
+    image: ghcr.io/the127/keyline:latest
+    platform: linux/amd64
+    container_name: keyline-api
+    ports: ["8081:8081"]
+    command: ["/app/api", "--config", "/app/config.yaml"]
+    volumes:
+      - ./keyline-config.yaml:/app/config.yaml:Z
+    restart: unless-stopped
+
+
+  keyline-ui:
+    image: ghcr.io/the127/keyline-ui:v0.2.0
+    platform: linux/amd64
+    container_name: keyline-ui
+    ports: ["5177:80"]
+    environment:
+      KEYLINE_API_URL: "http://localhost:8081"
+      KEYLINE_HOST: "http://localhost:5177"
+    restart: unless-stopped
