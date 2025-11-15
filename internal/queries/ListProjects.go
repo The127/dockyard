@@ -19,6 +19,7 @@ type ListProjectsResponse PagedResponse[ListProjectsResponseItem]
 type ListProjectsResponseItem struct {
 	Slug        string
 	DisplayName string
+	Description string
 }
 
 func HandleListProjects(ctx context.Context, query ListProjects) (*ListProjectsResponse, error) {
@@ -47,6 +48,7 @@ func HandleListProjects(ctx context.Context, query ListProjects) (*ListProjectsR
 		items[i] = ListProjectsResponseItem{
 			Slug:        project.GetSlug(),
 			DisplayName: project.GetDisplayName(),
+			Description: project.GetDescription(),
 		}
 	}
 

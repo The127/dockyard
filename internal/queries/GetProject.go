@@ -21,6 +21,7 @@ type GetProjectResponse struct {
 	Id          uuid.UUID
 	Slug        string
 	DisplayName string
+	Description string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -50,6 +51,7 @@ func HandleGetProject(ctx context.Context, query GetProject) (*GetProjectRespons
 		Id:          project.GetId(),
 		Slug:        project.GetSlug(),
 		DisplayName: project.GetDisplayName(),
+		Description: project.GetDescription(),
 		CreatedAt:   project.GetCreatedAt(),
 		UpdatedAt:   project.GetUpdatedAt(),
 	}, nil

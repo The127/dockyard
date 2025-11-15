@@ -62,6 +62,7 @@ type ListProjectResponse handlers.PagedResponse[ListProjectResponseItem]
 type ListProjectResponseItem struct {
 	Slug        string `json:"slug"`
 	DisplayName string `json:"displayName"`
+	Description string `json:"description"`
 }
 
 func ListProjects(w http.ResponseWriter, r *http.Request) {
@@ -88,6 +89,7 @@ func ListProjects(w http.ResponseWriter, r *http.Request) {
 		response.Items[i] = ListProjectResponseItem{
 			Slug:        item.Slug,
 			DisplayName: item.DisplayName,
+			Description: item.Description,
 		}
 	}
 
@@ -103,6 +105,7 @@ type GetProjectResponse struct {
 	Id          uuid.UUID `json:"id"`
 	Slug        string    `json:"slug"`
 	DisplayName string    `json:"displayName"`
+	Description string    `json:"description"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
@@ -129,6 +132,7 @@ func GetProject(w http.ResponseWriter, r *http.Request) {
 		Id:          project.Id,
 		Slug:        project.Slug,
 		DisplayName: project.DisplayName,
+		Description: project.Description,
 		CreatedAt:   project.CreatedAt,
 		UpdatedAt:   project.UpdatedAt,
 	}
