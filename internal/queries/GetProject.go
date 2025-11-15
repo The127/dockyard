@@ -21,7 +21,7 @@ type GetProjectResponse struct {
 	Id          uuid.UUID
 	Slug        string
 	DisplayName string
-	Description string
+	Description *string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }

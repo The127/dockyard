@@ -19,8 +19,9 @@ import (
 )
 
 type CreateProjectRequest struct {
-	Slug        string `json:"slug" validate:"required"`
-	DisplayName string `json:"displayName"`
+	Slug        string  `json:"slug" validate:"required"`
+	DisplayName *string `json:"displayName"`
+	Description *string `json:"description"`
 }
 
 func CreateProject(w http.ResponseWriter, r *http.Request) {
@@ -44,10 +45,16 @@ func CreateProject(w http.ResponseWriter, r *http.Request) {
 	scope := middlewares.GetScope(ctx)
 	mediator := ioc.GetDependency[mediatr.Mediator](scope)
 
+	var displayName = dto.Slug
+	if dto.DisplayName != nil && *dto.DisplayName != "" {
+		displayName = *dto.DisplayName
+	}
+
 	_, err = mediatr.Send[*commands.CreateProjectResponse](ctx, mediator, commands.CreateProject{
 		TenantSlug:  tenantSlug,
 		Slug:        dto.Slug,
-		DisplayName: dto.DisplayName,
+		DisplayName: displayName,
+		Description: dto.Description,
 	})
 	if err != nil {
 		apiError.HandleHttpError(w, err)
@@ -60,9 +67,9 @@ func CreateProject(w http.ResponseWriter, r *http.Request) {
 type ListProjectResponse handlers.PagedResponse[ListProjectResponseItem]
 
 type ListProjectResponseItem struct {
-	Slug        string `json:"slug"`
-	DisplayName string `json:"displayName"`
-	Description string `json:"description"`
+	Slug        string  `json:"slug"`
+	DisplayName string  `json:"displayName"`
+	Description *string `json:"description"`
 }
 
 func ListProjects(w http.ResponseWriter, r *http.Request) {
@@ -105,7 +112,7 @@ type GetProjectResponse struct {
 	Id          uuid.UUID `json:"id"`
 	Slug        string    `json:"slug"`
 	DisplayName string    `json:"displayName"`
-	Description string    `json:"description"`
+	Description *string   `json:"description"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 }

@@ -15,6 +15,8 @@ type CreateProject struct {
 	TenantSlug  string
 	Slug        string
 	DisplayName string
+
+	Description *string
 }
 
 type CreateProjectResponse struct {
@@ -39,6 +41,8 @@ func HandleCreateProject(ctx context.Context, command CreateProject) (*CreatePro
 	}
 
 	project := repositories.NewProject(tenant.GetId(), command.Slug, command.DisplayName)
+	project.SetDescription(command.Description)
+
 	projectRepository := tx.Projects()
 	err = projectRepository.Insert(ctx, project)
 	if err != nil {

@@ -15,7 +15,7 @@ type Project struct {
 	slug        string
 	displayName string
 
-	description string
+	description *string
 }
 
 func NewProject(tenantId uuid.UUID, slug string, displayName string) *Project {
@@ -43,11 +43,11 @@ func (p *Project) GetTenantId() uuid.UUID {
 	return p.tenantId
 }
 
-func (p *Project) GetDescription() string {
+func (p *Project) GetDescription() *string {
 	return p.description
 }
 
-func (p *Project) SetDescription(description string) {
+func (p *Project) SetDescription(description *string) {
 	p.description = description
 }
 
