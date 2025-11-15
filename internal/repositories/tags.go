@@ -7,6 +7,10 @@ import (
 	"github.com/the127/dockyard/internal/utils/pointer"
 )
 
+type TagManifestInfo struct {
+	Digest string
+}
+
 type Tag struct {
 	BaseModel
 
@@ -14,6 +18,8 @@ type Tag struct {
 	repositoryManifestId uuid.UUID
 
 	name string
+
+	manifestInfo *TagManifestInfo
 }
 
 func NewTag(repositoryId uuid.UUID, repositoryManifestId uuid.UUID, name string) *Tag {
@@ -37,11 +43,21 @@ func (t *Tag) GetRepositoryId() uuid.UUID {
 	return t.repositoryId
 }
 
+func (t *Tag) GetManifestInfo() *TagManifestInfo {
+	return t.manifestInfo
+}
+
+func (t *Tag) SetManifestInfo(manifestInfo TagManifestInfo) {
+	t.manifestInfo = &manifestInfo
+}
+
 type TagFilter struct {
 	id                   *uuid.UUID
 	repositoryId         *uuid.UUID
 	repositoryManifestId *uuid.UUID
 	name                 *string
+
+	includeManifestInfo bool
 }
 
 func NewTagFilter() *TagFilter {
@@ -107,6 +123,16 @@ func (f *TagFilter) HasName() bool {
 
 func (f *TagFilter) GetName() string {
 	return pointer.DerefOrZero(f.name)
+}
+
+func (f *TagFilter) WithManifestInfo() *TagFilter {
+	cloned := f.clone()
+	cloned.includeManifestInfo = true
+	return cloned
+}
+
+func (f *TagFilter) GetIncludeManifestInfo() bool {
+	return f.includeManifestInfo
 }
 
 type TagRepository interface {

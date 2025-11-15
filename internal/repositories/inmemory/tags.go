@@ -28,6 +28,18 @@ func (r *tagRepository) applyFilter(iterator memdb.ResultIterator, filter *repos
 		typed := obj.(repositories.Tag)
 
 		if r.matches(&typed, filter) {
+			if filter.GetIncludeManifestInfo() {
+				manifestRepo := NewInMemoryManifestRepository(r.txn)
+				manifest, err := manifestRepo.Single(context.Background(), repositories.NewManifestFilter().ById(typed.GetRepositoryManifestId()))
+				if err != nil {
+					return nil, 0, fmt.Errorf("failed to get manifest for tag %s: %w", typed.GetId(), err)
+				}
+
+				typed.SetManifestInfo(repositories.TagManifestInfo{
+					Digest: manifest.GetDigest(),
+				})
+			}
+
 			result = append(result, &typed)
 		}
 

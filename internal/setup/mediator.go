@@ -23,6 +23,8 @@ func Mediator(dc *ioc.DependencyCollection) {
 	mediatr.RegisterHandler(mediator, queries.HandleListRepositories)
 	mediatr.RegisterHandler(mediator, queries.HandleGetRepository)
 
+	mediatr.RegisterHandler(mediator, queries.HandleListTags)
+
 	ioc.RegisterSingleton(dc, func(_ *ioc.DependencyProvider) mediatr.Mediator {
 		return mediator
 	})
