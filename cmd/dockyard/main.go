@@ -1,17 +1,24 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/The127/ioc"
+	"github.com/The127/mediatr"
 	"github.com/the127/dockyard/internal/args"
+	"github.com/the127/dockyard/internal/commands"
 	"github.com/the127/dockyard/internal/config"
 	"github.com/the127/dockyard/internal/logging"
+	"github.com/the127/dockyard/internal/middlewares"
+	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/server"
+	"github.com/the127/dockyard/internal/services"
 	"github.com/the127/dockyard/internal/setup"
+	"github.com/the127/dockyard/internal/utils"
 )
 
 func main() {
@@ -45,6 +52,8 @@ func main() {
 		panic(fmt.Errorf("unsupported blob storage mode: %s", config.C.Blob.Mode))
 	}
 
+	initApp(dp)
+
 	server.Serve(dp, config.C.Server, hostBlobApi)
 	waitForExit()
 }
@@ -53,4 +62,37 @@ func waitForExit() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 	<-c
+}
+
+func initApp(dp *ioc.DependencyProvider) {
+	scope := dp.NewScope()
+	defer utils.PanicOnError(scope.Close, "closing scope")
+
+	ctx := middlewares.ContextWithScope(context.Background(), scope)
+
+	dbService := ioc.GetDependency[services.DbService](scope)
+	tx, err := dbService.GetTransaction()
+	if err != nil {
+		panic(fmt.Errorf("failed to get transaction: %w", err))
+	}
+
+	anyTenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter())
+	if err != nil {
+		panic(fmt.Errorf("failed to get any tenant: %w", err))
+	}
+	if anyTenant != nil {
+		// app already initialized
+		return
+	}
+
+	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	_, err = mediatr.Send[*commands.CreateTenantResponse](ctx, mediator, commands.CreateTenant{
+		Slug:        config.C.InitialTenant.Slug,
+		DisplayName: config.C.InitialTenant.DisplayName,
+		OidcClient:  config.C.InitialTenant.Oidc.Client,
+		OidcIssuer:  config.C.InitialTenant.Oidc.Issuer,
+	})
+	if err != nil {
+		panic(fmt.Errorf("failed to create initial tenant: %w", err))
+	}
 }

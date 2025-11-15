@@ -29,8 +29,8 @@ type InitialTenantConfig struct {
 }
 
 type InitialTenantOidcConfig struct {
-	ClientId  string
-	IssuerUrl string
+	Client string
+	Issuer string
 }
 
 type ServerConfig struct {
@@ -128,6 +128,7 @@ func Init() {
 
 func setDefaultsOrPanic() {
 	setServerDefaultsOrPanic()
+	setInitialTenantDefaultsOrPanic()
 	setDatabaseDefaultsOrPanic()
 	setKvDefaultsOrPanic()
 	setBlobDefaultsOrPanic()
@@ -161,6 +162,24 @@ func setServerDefaultsOrPanic() {
 		}
 
 		C.Server.ExternalDomain = externalUrl.Hostname()
+	}
+}
+
+func setInitialTenantDefaultsOrPanic() {
+	if C.InitialTenant.Slug == "" {
+		panic("InitialTenant.Slug must be set.")
+	}
+
+	if C.InitialTenant.DisplayName == "" {
+		C.InitialTenant.DisplayName = C.InitialTenant.Slug
+	}
+
+	if C.InitialTenant.Oidc.Client == "" {
+		panic("InitialTenant.Oidc.Client must be set to the oidc client id.")
+	}
+
+	if C.InitialTenant.Oidc.Issuer == "" {
+		panic("InitialTenant.Oidc.Issuer must be set to the oidc issuer url.")
 	}
 }
 
