@@ -22,6 +22,7 @@ type GetRepositoryResponse struct {
 	Id          uuid.UUID
 	Slug        string
 	DisplayName string
+	Description *string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -57,6 +58,7 @@ func HandleGetRepository(ctx context.Context, query GetRepository) (*GetReposito
 		Id:          repository.GetId(),
 		Slug:        repository.GetSlug(),
 		DisplayName: repository.GetDisplayName(),
+		Description: repository.GetDescription(),
 		CreatedAt:   repository.GetCreatedAt(),
 		UpdatedAt:   repository.GetUpdatedAt(),
 	}, nil

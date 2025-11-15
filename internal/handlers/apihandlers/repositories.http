@@ -4,7 +4,7 @@ Content-Type: application/json
 
 {
   "slug": "test",
-  "displayName": "foobar"
+  "description": "A test repository."
 }
 
 ### list all repositories

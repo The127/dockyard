@@ -19,8 +19,8 @@ import (
 )
 
 type CreateRepositoryRequest struct {
-	Slug        string `json:"slug" validate:"required"`
-	DisplayName string `json:"displayName"`
+	Slug        string  `json:"slug" validate:"required"`
+	Description *string `json:"description"`
 }
 
 func CreateRepository(w http.ResponseWriter, r *http.Request) {
@@ -49,7 +49,7 @@ func CreateRepository(w http.ResponseWriter, r *http.Request) {
 		TenantSlug:  tenantSlug,
 		ProjectSlug: projectSlug,
 		Slug:        dto.Slug,
-		DisplayName: dto.DisplayName,
+		Description: dto.Description,
 	})
 	if err != nil {
 		apiError.HandleHttpError(w, err)
@@ -62,8 +62,9 @@ func CreateRepository(w http.ResponseWriter, r *http.Request) {
 type ListRepositoriesResponse handlers.PagedResponse[ListRepositoriesResponseItem]
 
 type ListRepositoriesResponseItem struct {
-	Slug        string `json:"slug"`
-	DisplayName string `json:"displayName"`
+	Slug        string  `json:"slug"`
+	DisplayName string  `json:"displayName"`
+	Description *string `json:"description"`
 }
 
 func ListRepositories(w http.ResponseWriter, r *http.Request) {
@@ -92,6 +93,7 @@ func ListRepositories(w http.ResponseWriter, r *http.Request) {
 		response.Items[i] = ListRepositoriesResponseItem{
 			Slug:        repo.Slug,
 			DisplayName: repo.DisplayName,
+			Description: repo.Description,
 		}
 	}
 
@@ -107,6 +109,7 @@ type GetRepositoryResponse struct {
 	Id          uuid.UUID `json:"id"`
 	Slug        string    `json:"slug"`
 	DisplayName string    `json:"displayName"`
+	Description *string   `json:"description"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
@@ -135,6 +138,7 @@ func GetRepository(w http.ResponseWriter, r *http.Request) {
 		Id:          repo.Id,
 		Slug:        repo.Slug,
 		DisplayName: repo.DisplayName,
+		Description: repo.Description,
 		CreatedAt:   repo.CreatedAt,
 		UpdatedAt:   repo.UpdatedAt,
 	}

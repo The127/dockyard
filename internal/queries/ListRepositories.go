@@ -20,6 +20,7 @@ type ListRepositoriesResponse PagedResponse[ListRepositoriesResponseItem]
 type ListRepositoriesResponseItem struct {
 	Slug        string
 	DisplayName string
+	Description *string
 }
 
 func HandleListRepositories(ctx context.Context, query ListRepositories) (*ListRepositoriesResponse, error) {
@@ -54,6 +55,7 @@ func HandleListRepositories(ctx context.Context, query ListRepositories) (*ListR
 		items[i] = ListRepositoriesResponseItem{
 			Slug:        repository.GetSlug(),
 			DisplayName: repository.GetDisplayName(),
+			Description: repository.GetDescription(),
 		}
 	}
 

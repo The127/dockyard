@@ -15,7 +15,7 @@ type CreateRepository struct {
 	TenantSlug  string
 	ProjectSlug string
 	Slug        string
-	DisplayName string
+	Description *string
 }
 
 type CreateRepositoryResponse struct {
@@ -48,7 +48,9 @@ func HandleCreateRepository(ctx context.Context, command CreateRepository) (*Cre
 		return nil, fmt.Errorf("failed to get project: %w", err)
 	}
 
-	repository := repositories.NewRepository(project.GetId(), command.Slug, command.DisplayName)
+	repository := repositories.NewRepository(project.GetId(), command.Slug, fmt.Sprintf("%s/%s", project.GetSlug(), command.Slug))
+	repository.SetDescription(command.Description)
+
 	repositoryRepository := tx.Repositories()
 	err = repositoryRepository.Insert(ctx, repository)
 	if err != nil {
