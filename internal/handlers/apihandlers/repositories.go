@@ -62,9 +62,10 @@ func CreateRepository(w http.ResponseWriter, r *http.Request) {
 type ListRepositoriesResponse handlers.PagedResponse[ListRepositoriesResponseItem]
 
 type ListRepositoriesResponseItem struct {
-	Slug        string  `json:"slug"`
-	DisplayName string  `json:"displayName"`
-	Description *string `json:"description"`
+	Id          uuid.UUID `json:"id"`
+	Slug        string    `json:"slug"`
+	DisplayName string    `json:"displayName"`
+	Description *string   `json:"description"`
 }
 
 func ListRepositories(w http.ResponseWriter, r *http.Request) {
@@ -91,6 +92,7 @@ func ListRepositories(w http.ResponseWriter, r *http.Request) {
 
 	for i, repo := range repos.Items {
 		response.Items[i] = ListRepositoriesResponseItem{
+			Id:          repo.Id,
 			Slug:        repo.Slug,
 			DisplayName: repo.DisplayName,
 			Description: repo.Description,

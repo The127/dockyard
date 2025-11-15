@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/The127/ioc"
+	"github.com/google/uuid"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/services"
@@ -17,6 +18,7 @@ type ListProjects struct {
 type ListProjectsResponse PagedResponse[ListProjectsResponseItem]
 
 type ListProjectsResponseItem struct {
+	Id          uuid.UUID
 	Slug        string
 	DisplayName string
 	Description *string
@@ -46,6 +48,7 @@ func HandleListProjects(ctx context.Context, query ListProjects) (*ListProjectsR
 	items := make([]ListProjectsResponseItem, len(projects))
 	for i, project := range projects {
 		items[i] = ListProjectsResponseItem{
+			Id:          project.GetId(),
 			Slug:        project.GetSlug(),
 			DisplayName: project.GetDisplayName(),
 			Description: project.GetDescription(),

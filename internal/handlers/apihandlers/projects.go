@@ -67,9 +67,10 @@ func CreateProject(w http.ResponseWriter, r *http.Request) {
 type ListProjectResponse handlers.PagedResponse[ListProjectResponseItem]
 
 type ListProjectResponseItem struct {
-	Slug        string  `json:"slug"`
-	DisplayName string  `json:"displayName"`
-	Description *string `json:"description"`
+	Id          uuid.UUID `json:"id"`
+	Slug        string    `json:"slug"`
+	DisplayName string    `json:"displayName"`
+	Description *string   `json:"description"`
 }
 
 func ListProjects(w http.ResponseWriter, r *http.Request) {
@@ -94,6 +95,7 @@ func ListProjects(w http.ResponseWriter, r *http.Request) {
 
 	for i, item := range projects.Items {
 		response.Items[i] = ListProjectResponseItem{
+			Id:          item.Id,
 			Slug:        item.Slug,
 			DisplayName: item.DisplayName,
 			Description: item.Description,

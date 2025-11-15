@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/The127/ioc"
+	"github.com/google/uuid"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/services"
@@ -18,6 +19,7 @@ type ListRepositories struct {
 type ListRepositoriesResponse PagedResponse[ListRepositoriesResponseItem]
 
 type ListRepositoriesResponseItem struct {
+	Id          uuid.UUID
 	Slug        string
 	DisplayName string
 	Description *string
@@ -53,6 +55,7 @@ func HandleListRepositories(ctx context.Context, query ListRepositories) (*ListR
 	items := make([]ListRepositoriesResponseItem, len(repos))
 	for i, repository := range repos {
 		items[i] = ListRepositoriesResponseItem{
+			Id:          repository.GetId(),
 			Slug:        repository.GetSlug(),
 			DisplayName: repository.GetDisplayName(),
 			Description: repository.GetDescription(),
