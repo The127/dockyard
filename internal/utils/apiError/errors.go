@@ -23,6 +23,8 @@ var ErrApiBlobNotFound = fmt.Errorf("blob not found: %w", ErrApiNotFound)
 var ErrApiRepositoryBlobNotFound = fmt.Errorf("repository blob not found: %w", ErrApiNotFound)
 var ErrApiFileNotFound = fmt.Errorf("file not found: %w", ErrApiNotFound)
 
+var ErrApiUnauthorized = errors.New("unauthorized")
+
 func HandleHttpError(w http.ResponseWriter, err error) {
 	var code int
 	var message string
@@ -38,6 +40,10 @@ func HandleHttpError(w http.ResponseWriter, err error) {
 
 	case errors.Is(err, ErrApiUnsupportedMediaType):
 		code = http.StatusUnsupportedMediaType
+		message = err.Error()
+
+	case errors.Is(err, ErrApiUnauthorized):
+		code = http.StatusUnauthorized
 		message = err.Error()
 
 	default:
