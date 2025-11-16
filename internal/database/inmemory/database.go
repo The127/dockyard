@@ -26,6 +26,16 @@ func NewInMemoryDatabase() (db.Database, error) {
 					},
 				},
 			},
+			"users": {
+				Name: "users",
+				Indexes: map[string]*memdb.IndexSchema{
+					"id": {
+						Name:    "id",
+						Unique:  true,
+						Indexer: &memdb.StringFieldIndex{Field: "subject"},
+					},
+				},
+			},
 			"projects": {
 				Name: "projects",
 				Indexes: map[string]*memdb.IndexSchema{

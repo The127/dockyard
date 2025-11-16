@@ -15,7 +15,7 @@ database:
     sslMode: "disable"
 initialVirtualServer:
   enableRegistration: true
-  signingAlgorithm: "RS256"
+  signingAlgorithm: "EdDSA"
   createSystemAdminRole: true
   createAdmin: true
   admin:

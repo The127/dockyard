@@ -12,6 +12,7 @@ import (
 	"github.com/the127/dockyard/internal/handlers/ocihandlers"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/middlewares"
+	"github.com/the127/dockyard/internal/middlewares/authentication"
 
 	gh "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -63,6 +64,7 @@ func mapBlobApi(r *mux.Router) {
 		w.WriteHeader(http.StatusOK)
 	})
 
+	// TODO: implement authentication
 	apiRouter.HandleFunc("/{digest}", blobhandlers.DownloadBlob).Methods(http.MethodGet, http.MethodOptions)
 }
 
@@ -72,9 +74,14 @@ func mapAdminApi(r *mux.Router) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	apiRouter.HandleFunc("/tenants", adminhandlers.CreateTenant).Methods(http.MethodPost, http.MethodOptions)
-	apiRouter.HandleFunc("/tenants", adminhandlers.ListTenants).Methods(http.MethodGet, http.MethodOptions)
-	apiRouter.HandleFunc("/tenants/{tenant}", adminhandlers.GetTenant).Methods(http.MethodGet, http.MethodOptions)
+	// unauthenticated endpoints need to go above the authentication middleware
+	authApiRouter := apiRouter.PathPrefix("").Subrouter()
+	// TODO: make it work for non {tenant} routes
+	// authApiRouter.Use(authentication.ApiAuthenticationMiddleware())
+
+	authApiRouter.HandleFunc("/tenants", adminhandlers.CreateTenant).Methods(http.MethodPost, http.MethodOptions)
+	authApiRouter.HandleFunc("/tenants", adminhandlers.ListTenants).Methods(http.MethodGet, http.MethodOptions)
+	authApiRouter.HandleFunc("/tenants/{tenant}", adminhandlers.GetTenant).Methods(http.MethodGet, http.MethodOptions)
 }
 
 func mapApi(r *mux.Router) {
@@ -85,18 +92,22 @@ func mapApi(r *mux.Router) {
 
 	apiRouter.HandleFunc("/oidc", apihandlers.GetTenantOidcInfo).Methods(http.MethodGet, http.MethodOptions)
 
-	apiRouter.HandleFunc("/projects", apihandlers.CreateProject).Methods(http.MethodPost, http.MethodOptions)
-	apiRouter.HandleFunc("/projects", apihandlers.ListProjects).Methods(http.MethodGet, http.MethodOptions)
-	apiRouter.HandleFunc("/projects/{project}", apihandlers.GetProject).Methods(http.MethodGet, http.MethodOptions)
+	// unauthenticated endpoints need to go above the authentication middleware
+	authApiRouter := apiRouter.PathPrefix("").Subrouter()
+	authApiRouter.Use(authentication.ApiAuthenticationMiddleware())
 
-	apiRouter.HandleFunc("/projects/{project}/repositories", apihandlers.CreateRepository).Methods(http.MethodPost, http.MethodOptions)
-	apiRouter.HandleFunc("/projects/{project}/repositories", apihandlers.ListRepositories).Methods(http.MethodGet, http.MethodOptions)
-	apiRouter.HandleFunc("/projects/{project}/repositories/{repository}", apihandlers.GetRepository).Methods(http.MethodGet, http.MethodOptions)
+	authApiRouter.HandleFunc("/projects", apihandlers.CreateProject).Methods(http.MethodPost, http.MethodOptions)
+	authApiRouter.HandleFunc("/projects", apihandlers.ListProjects).Methods(http.MethodGet, http.MethodOptions)
+	authApiRouter.HandleFunc("/projects/{project}", apihandlers.GetProject).Methods(http.MethodGet, http.MethodOptions)
 
-	apiRouter.HandleFunc("/projects/{project}/repositories/{repository}/readme", apihandlers.GetRepositoryReadme).Methods(http.MethodGet, http.MethodOptions)
-	apiRouter.HandleFunc("/projects/{project}/repositories/{repository}/readme", apihandlers.UpdateRepositoryReadme).Methods(http.MethodPut, http.MethodOptions)
+	authApiRouter.HandleFunc("/projects/{project}/repositories", apihandlers.CreateRepository).Methods(http.MethodPost, http.MethodOptions)
+	authApiRouter.HandleFunc("/projects/{project}/repositories", apihandlers.ListRepositories).Methods(http.MethodGet, http.MethodOptions)
+	authApiRouter.HandleFunc("/projects/{project}/repositories/{repository}", apihandlers.GetRepository).Methods(http.MethodGet, http.MethodOptions)
 
-	apiRouter.HandleFunc("/projects/{project}/repositories/{repository}/tags", apihandlers.ListTags).Methods(http.MethodGet, http.MethodOptions)
+	authApiRouter.HandleFunc("/projects/{project}/repositories/{repository}/readme", apihandlers.GetRepositoryReadme).Methods(http.MethodGet, http.MethodOptions)
+	authApiRouter.HandleFunc("/projects/{project}/repositories/{repository}/readme", apihandlers.UpdateRepositoryReadme).Methods(http.MethodPut, http.MethodOptions)
+
+	authApiRouter.HandleFunc("/projects/{project}/repositories/{repository}/tags", apihandlers.ListTags).Methods(http.MethodGet, http.MethodOptions)
 }
 
 func mapOciApi(r *mux.Router) {

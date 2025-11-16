@@ -17,6 +17,16 @@ type User struct {
 	email       *string
 }
 
+func NewUser(tenantId uuid.UUID, subject string) *User {
+	return &User{
+		BaseModel:   NewBaseModel(),
+		tenantId:    tenantId,
+		subject:     subject,
+		displayName: nil,
+		email:       nil,
+	}
+}
+
 func (u *User) GetTenantId() uuid.UUID {
 	return u.tenantId
 }
@@ -29,16 +39,16 @@ func (u *User) GetDisplayName() string {
 	return pointer.DerefOrZero(u.displayName)
 }
 
-func (u *User) SetDisplayName(displayName string) {
-	u.displayName = &displayName
+func (u *User) SetDisplayName(displayName *string) {
+	u.displayName = displayName
 }
 
 func (u *User) GetEmail() string {
 	return pointer.DerefOrZero(u.email)
 }
 
-func (u *User) SetEmail(email string) {
-	u.email = &email
+func (u *User) SetEmail(email *string) {
+	u.email = email
 }
 
 type UserFilter struct {
