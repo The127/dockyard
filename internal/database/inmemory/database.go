@@ -92,6 +92,19 @@ func NewInMemoryDatabase() (db.Database, error) {
 					},
 				},
 			},
+			"files": {
+				Name: "files",
+				Indexes: map[string]*memdb.IndexSchema{
+					"id": {
+						Name:   "id",
+						Unique: true,
+						Indexer: &UUIDValueIndexer{Getter: func(obj interface{}) uuid.UUID {
+							file := obj.(repositories.File)
+							return file.GetId()
+						}},
+					},
+				},
+			},
 		},
 	}
 

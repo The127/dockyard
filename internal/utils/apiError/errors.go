@@ -21,6 +21,7 @@ var ErrApiManifestNotFound = fmt.Errorf("manifest not found: %w", ErrApiNotFound
 var ErrApiTagNotFound = fmt.Errorf("tag not found: %w", ErrApiNotFound)
 var ErrApiBlobNotFound = fmt.Errorf("blob not found: %w", ErrApiNotFound)
 var ErrApiRepositoryBlobNotFound = fmt.Errorf("repository blob not found: %w", ErrApiNotFound)
+var ErrApiFileNotFound = fmt.Errorf("file not found: %w", ErrApiNotFound)
 
 func HandleHttpError(w http.ResponseWriter, err error) {
 	var code int

@@ -11,6 +11,7 @@ type Transaction interface {
 	Tags() repositories.TagRepository
 	Blobs() repositories.BlobRepository
 	RepositoryBlobs() repositories.RepositoryBlobRepository
+	Files() repositories.FileRepository
 	Commit() error
 	Rollback() error
 }

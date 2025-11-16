@@ -18,6 +18,7 @@ type transaction struct {
 	tags            repositories.TagRepository
 	blobs           repositories.BlobRepository
 	repositoryBlobs repositories.RepositoryBlobRepository
+	files           repositories.FileRepository
 }
 
 func newTransaction(txn *memdb.Txn) db.Transaction {
@@ -80,6 +81,13 @@ func (t *transaction) Tags() repositories.TagRepository {
 		t.tags = inmemory.NewInMemoryTagRepository(t.txn)
 	}
 	return t.tags
+}
+
+func (t *transaction) Files() repositories.FileRepository {
+	if t.files == nil {
+		t.files = inmemory.NewInMemoryFileRepository(t.txn)
+	}
+	return t.files
 }
 
 func (t *transaction) Commit() error {
