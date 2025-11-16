@@ -15,6 +15,6 @@ initialTenant:
     roleClaim: roles
     roleClaimFormat: array
     roleClaimMapping:
-      admin: dockyard:admin
-      project-admin: dockyard:project-admin
-      developer: dockyard:developer
+      "dockyard:admin": admin
+      "dockyard:project-admin": project-admin
+      "dockyard:developer": developer

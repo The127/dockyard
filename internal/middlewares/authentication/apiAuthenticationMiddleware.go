@@ -93,12 +93,12 @@ func ApiAuthenticationMiddleware() mux.MiddlewareFunc {
 			}
 
 			// apply tenant role mapping
-			mappedRoles := make([]string, 0, len(roles))
-			for _, r := range roles {
-				if mapped, ok := tenant.GetOidcRoleMapping()[r]; ok {
-					mappedRoles = append(mappedRoles, mapped)
-				} else {
-					mappedRoles = append(mappedRoles, r)
+			var mappedRoles []string
+			tenantRoleMapping := tenant.GetOidcRoleMapping()
+			for _, role := range roles {
+				mappedRole, ok := tenantRoleMapping[role]
+				if ok {
+					mappedRoles = append(mappedRoles, mappedRole)
 				}
 			}
 
