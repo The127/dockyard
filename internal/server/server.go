@@ -103,9 +103,7 @@ func mapOciApi(r *mux.Router) {
 	apiRouter := r.PathPrefix("/v2").Subrouter()
 
 	// implement end-1 api endpoint that shows the support for the oci api specification
-	apiRouter.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	})
+	apiRouter.HandleFunc("/", ocihandlers.Root).Methods(http.MethodGet, http.MethodOptions)
 
 	tenantProjectRepoRouter := apiRouter.PathPrefix("/{tenant}/{project}/{repository}").Subrouter()
 	tenantProjectRepoRouter.Use(middlewares.OciNameMiddleware(middlewares.OciTenantSourcePath))
