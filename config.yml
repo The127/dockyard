@@ -12,3 +12,9 @@ initialTenant:
   oidc:
     client: dockyard-app
     issuer: http://localhost:8081/oidc/keyline
+    roleClaim: roles
+    roleClaimFormat: array
+    roleClaimMapping:
+      admin: dockyard:admin
+      project-admin: dockyard:project-admin
+      developer: dockyard:developer

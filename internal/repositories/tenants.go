@@ -14,17 +14,47 @@ type Tenant struct {
 	slug        string
 	displayName string
 
-	oidcClient string
-	oidcIssuer string
+	oidcClient          string
+	oidcIssuer          string
+	oidcRoleClaim       string
+	oidcRoleClaimFormat string
+	oidcRoleMapping     map[string]string
 }
 
-func NewTenant(slug string, displayName string, oidcClient string, oidcIssuer string) *Tenant {
+type TenantOidcConfig struct {
+	Client           string
+	Issuer           string
+	RoleClaim        string
+	RoleClaimFormat  string
+	RoleClaimMapping map[string]string
+}
+
+func NewTenantOidcConfig(
+	client string,
+	issuer string,
+	roleClaim string,
+	roleClaimFormat string,
+	roleClaimMapping map[string]string,
+) TenantOidcConfig {
+	return TenantOidcConfig{
+		Client:           client,
+		Issuer:           issuer,
+		RoleClaim:        roleClaim,
+		RoleClaimFormat:  roleClaimFormat,
+		RoleClaimMapping: roleClaimMapping,
+	}
+}
+
+func NewTenant(slug string, displayName string, oidcConfig TenantOidcConfig) *Tenant {
 	return &Tenant{
-		BaseModel:   NewBaseModel(),
-		slug:        slug,
-		displayName: displayName,
-		oidcClient:  oidcClient,
-		oidcIssuer:  oidcIssuer,
+		BaseModel:           NewBaseModel(),
+		slug:                slug,
+		displayName:         displayName,
+		oidcClient:          oidcConfig.Client,
+		oidcIssuer:          oidcConfig.Issuer,
+		oidcRoleClaim:       oidcConfig.RoleClaim,
+		oidcRoleClaimFormat: oidcConfig.RoleClaimFormat,
+		oidcRoleMapping:     oidcConfig.RoleClaimMapping,
 	}
 }
 
@@ -44,8 +74,40 @@ func (t *Tenant) GetOidcClient() string {
 	return t.oidcClient
 }
 
+func (t *Tenant) SetOidcClient(oidcClient string) {
+	t.oidcClient = oidcClient
+}
+
 func (t *Tenant) GetOidcIssuer() string {
 	return t.oidcIssuer
+}
+
+func (t *Tenant) SetOidcIssuer(oidcIssuer string) {
+	t.oidcIssuer = oidcIssuer
+}
+
+func (t *Tenant) GetOidcRoleClaim() string {
+	return t.oidcRoleClaim
+}
+
+func (t *Tenant) SetOidcRoleClaim(oidcRoleClaim string) {
+	t.oidcRoleClaim = oidcRoleClaim
+}
+
+func (t *Tenant) GetOidcRoleClaimFormat() string {
+	return t.oidcRoleClaimFormat
+}
+
+func (t *Tenant) SetOidcRoleClaimFormat(oidcRoleClaimFormat string) {
+	t.oidcRoleClaimFormat = oidcRoleClaimFormat
+}
+
+func (t *Tenant) GetOidcRoleMapping() map[string]string {
+	return t.oidcRoleMapping
+}
+
+func (t *Tenant) SetOidcRoleMapping(oidcRoleMapping map[string]string) {
+	t.oidcRoleMapping = oidcRoleMapping
 }
 
 type TenantFilter struct {

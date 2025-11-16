@@ -14,8 +14,12 @@ import (
 type CreateTenant struct {
 	Slug        string
 	DisplayName string
-	OidcClient  string
-	OidcIssuer  string
+
+	OidcClient      string
+	OidcIssuer      string
+	OidcRoleClaim   string
+	OidcRoleFormat  string
+	OidcRoleMapping map[string]string
 }
 
 type CreateTenantResponse struct {
@@ -31,9 +35,18 @@ func HandleCreateTenant(ctx context.Context, command CreateTenant) (*CreateTenan
 		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
 
-	tenant := repositories.NewTenant(command.Slug, command.DisplayName, command.OidcClient, command.OidcIssuer)
-	tenantRepository := tx.Tenants()
-	err = tenantRepository.Insert(ctx, tenant)
+	tenant := repositories.NewTenant(
+		command.Slug,
+		command.DisplayName,
+		repositories.NewTenantOidcConfig(
+			command.OidcClient,
+			command.OidcIssuer,
+			command.OidcRoleClaim,
+			command.OidcRoleFormat,
+			command.OidcRoleMapping,
+		),
+	)
+	err = tx.Tenants().Insert(ctx, tenant)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert tenant: %w", err)
 	}

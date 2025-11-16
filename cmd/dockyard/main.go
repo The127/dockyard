@@ -87,10 +87,13 @@ func initApp(dp *ioc.DependencyProvider) {
 
 	mediator := ioc.GetDependency[mediatr.Mediator](scope)
 	_, err = mediatr.Send[*commands.CreateTenantResponse](ctx, mediator, commands.CreateTenant{
-		Slug:        config.C.InitialTenant.Slug,
-		DisplayName: config.C.InitialTenant.DisplayName,
-		OidcClient:  config.C.InitialTenant.Oidc.Client,
-		OidcIssuer:  config.C.InitialTenant.Oidc.Issuer,
+		Slug:            config.C.InitialTenant.Slug,
+		DisplayName:     config.C.InitialTenant.DisplayName,
+		OidcClient:      config.C.InitialTenant.Oidc.Client,
+		OidcIssuer:      config.C.InitialTenant.Oidc.Issuer,
+		OidcRoleClaim:   config.C.InitialTenant.Oidc.RoleClaim,
+		OidcRoleFormat:  string(config.C.InitialTenant.Oidc.RoleClaimFormat),
+		OidcRoleMapping: config.C.InitialTenant.Oidc.RoleClaimMapping,
 	})
 	if err != nil {
 		panic(fmt.Errorf("failed to create initial tenant: %w", err))

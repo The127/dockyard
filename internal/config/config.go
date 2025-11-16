@@ -28,9 +28,20 @@ type InitialTenantConfig struct {
 	Oidc        InitialTenantOidcConfig
 }
 
+type OidcRoleClaimFormat string
+
+const (
+	OidcRoleClaimFormatArray          OidcRoleClaimFormat = "array"
+	OidcRoleClaimFormatSpaceSeparated OidcRoleClaimFormat = "space-separated"
+	OidcRoleClaimFormatCommaSeparated OidcRoleClaimFormat = "comma-separated"
+)
+
 type InitialTenantOidcConfig struct {
-	Client string
-	Issuer string
+	Client           string
+	Issuer           string
+	RoleClaim        string
+	RoleClaimFormat  OidcRoleClaimFormat
+	RoleClaimMapping map[string]string
 }
 
 type ServerConfig struct {
@@ -180,6 +191,22 @@ func setInitialTenantDefaultsOrPanic() {
 
 	if C.InitialTenant.Oidc.Issuer == "" {
 		panic("InitialTenant.Oidc.Issuer must be set to the oidc issuer url.")
+	}
+
+	if C.InitialTenant.Oidc.RoleClaim == "" {
+		panic("InitialTenant.Oidc.RoleClaim must be set to the oidc role claim.")
+	}
+
+	switch C.InitialTenant.Oidc.RoleClaimFormat {
+	case OidcRoleClaimFormatArray, OidcRoleClaimFormatSpaceSeparated, OidcRoleClaimFormatCommaSeparated:
+		break
+
+	default:
+		panic(fmt.Errorf("unsupported oidc role claim format: %s", C.InitialTenant.Oidc.RoleClaimFormat))
+	}
+
+	if C.InitialTenant.Oidc.RoleClaimMapping == nil {
+		panic("InitialTenant.Oidc.RoleClaimMapping must be set to the oidc role mapping.")
 	}
 }
 

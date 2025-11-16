@@ -23,6 +23,8 @@ initialVirtualServer:
     displayName: Admin
     primaryEmail: foo@bar.com
     passwordHash: "$argon2id$v=19$m=16,t=2,p=1$MTIzNDU2Nzg$QWu7e+sjG5knAdNLoKdLDg"
+    roles:
+      - dockyard:admin
   projects:
     - slug: "dockyard"
       name: "Dockyard"
@@ -35,6 +37,13 @@ initialVirtualServer:
             - "http://localhost:5173/raccoons/oidc/login"
           postLogoutRedirectUris:
             - "http://localhost:5173/raccoons/oidc/logout"
+      roles:
+        - name: "admin"
+          description: "Dockyard Admin"
+        - name: "project-admin"
+          description: "Dockyard Project Admin"
+        - name: "developer"
+          description: "Dockyard Developer"
 keyStore:
   mode: "directory"
   directory:
