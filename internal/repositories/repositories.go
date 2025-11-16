@@ -15,7 +15,8 @@ type Repository struct {
 	slug        string
 	displayName string
 
-	description *string
+	description  *string
+	readmeFileId *uuid.UUID
 }
 
 func NewRepository(projectId uuid.UUID, slug string, displayName string) *Repository {
@@ -45,6 +46,14 @@ func (r *Repository) GetDescription() *string {
 
 func (r *Repository) SetDescription(description *string) {
 	r.description = description
+}
+
+func (r *Repository) GetReadmeFileId() *uuid.UUID {
+	return r.readmeFileId
+}
+
+func (r *Repository) SetReadmeFileId(readmeFileId *uuid.UUID) {
+	r.readmeFileId = readmeFileId
 }
 
 type RepositoryFilter struct {

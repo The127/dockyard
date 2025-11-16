@@ -1,6 +1,7 @@
 package apihandlers
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/the127/dockyard/internal/queries"
 	"github.com/the127/dockyard/internal/utils/apiError"
 	"github.com/the127/dockyard/internal/utils/decoding"
+	"github.com/the127/dockyard/internal/utils/pointer"
 	"github.com/the127/dockyard/internal/utils/validate"
 )
 
@@ -151,4 +153,92 @@ func GetRepository(w http.ResponseWriter, r *http.Request) {
 		apiError.HandleHttpError(w, err)
 		return
 	}
+}
+
+type GetRepositoryReadmeResponse struct {
+	ContentBase64 *string `json:"contentBase64"`
+}
+
+func GetRepositoryReadme(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	tenantSlug := vars["tenant"]
+	projectSlug := vars["project"]
+	repositorySlug := vars["repository"]
+
+	ctx := r.Context()
+	scope := middlewares.GetScope(ctx)
+	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+
+	readme, err := mediatr.Send[*queries.GetRepositoryReadmeResponse](ctx, mediator, queries.GetRepositoryReadme{
+		TenantSlug:     tenantSlug,
+		ProjectSlug:    projectSlug,
+		RepositorySlug: repositorySlug,
+	})
+	if err != nil {
+		apiError.HandleHttpError(w, err)
+		return
+	}
+
+	var contentBase64 *string
+	if readme.Content != nil {
+		contentBase64 = pointer.To(base64.StdEncoding.EncodeToString(*readme.Content))
+	}
+
+	response := GetRepositoryReadmeResponse{
+		ContentBase64: contentBase64,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		apiError.HandleHttpError(w, err)
+		return
+	}
+}
+
+type UpdateRepositoryReadmeRequest struct {
+	ContentBase64 string `json:"contentBase64" validate:"required"`
+}
+
+func UpdateRepositoryReadme(w http.ResponseWriter, r *http.Request) {
+	var dto UpdateRepositoryReadmeRequest
+	err := decoding.HttpBodyAsJson(w, r, &dto)
+	if err != nil {
+		apiError.HandleHttpError(w, err)
+		return
+	}
+
+	err = validate.Validate(dto)
+	if err != nil {
+		apiError.HandleHttpError(w, err)
+		return
+	}
+
+	vars := mux.Vars(r)
+	tenantSlug := vars["tenant"]
+	projectSlug := vars["project"]
+	repositorySlug := vars["repository"]
+
+	content, err := base64.StdEncoding.DecodeString(dto.ContentBase64)
+	if err != nil {
+		apiError.HandleHttpError(w, err)
+		return
+	}
+
+	ctx := r.Context()
+	scope := middlewares.GetScope(ctx)
+	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+
+	_, err = mediatr.Send[*commands.UpdateRepositoryReadmeResponse](ctx, mediator, commands.UpdateRepositoryReadme{
+		TenantSlug:     tenantSlug,
+		ProjectSlug:    projectSlug,
+		RepositorySlug: repositorySlug,
+		Content:        content,
+	})
+	if err != nil {
+		apiError.HandleHttpError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
