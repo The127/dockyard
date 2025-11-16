@@ -72,7 +72,8 @@ func ApiAuthenticationMiddleware() mux.MiddlewareFunc {
 
 			// Extract roles claim (customizable per tenant)
 			var claims map[string]interface{}
-			if err := idToken.Claims(&claims); err != nil {
+			err = idToken.Claims(&claims)
+			if err != nil {
 				http.Error(w, "failed to parse token claims", http.StatusBadRequest)
 				return
 			}
