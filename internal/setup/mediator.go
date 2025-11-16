@@ -15,6 +15,8 @@ func Mediator(dc *ioc.DependencyCollection) {
 	mediatr.RegisterHandler(mediator, queries.HandleGetTenant)
 	mediatr.RegisterHandler(mediator, queries.HandleGetTenantOidcInfo)
 
+	mediatr.RegisterHandler(mediator, queries.HandleListUsers)
+
 	mediatr.RegisterHandler(mediator, commands.HandleCreateProject)
 	mediatr.RegisterHandler(mediator, queries.HandleListProjects)
 	mediatr.RegisterHandler(mediator, queries.HandleGetProject)

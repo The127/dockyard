@@ -35,16 +35,16 @@ func (u *User) GetSubject() string {
 	return u.subject
 }
 
-func (u *User) GetDisplayName() string {
-	return pointer.DerefOrZero(u.displayName)
+func (u *User) GetDisplayName() *string {
+	return u.displayName
 }
 
 func (u *User) SetDisplayName(displayName *string) {
 	u.displayName = displayName
 }
 
-func (u *User) GetEmail() string {
-	return pointer.DerefOrZero(u.email)
+func (u *User) GetEmail() *string {
+	return u.email
 }
 
 func (u *User) SetEmail(email *string) {
