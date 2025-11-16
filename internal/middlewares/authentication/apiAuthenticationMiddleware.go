@@ -81,15 +81,35 @@ func ApiAuthenticationMiddleware() mux.MiddlewareFunc {
 			var roles []string
 			rawRoles, ok := claims[tenant.GetOidcRoleClaim()]
 			if ok {
-				switch v := rawRoles.(type) {
-				case []interface{}:
-					for _, r := range v {
-						roles = append(roles, fmt.Sprintf("%v", r))
+				switch tenant.GetOidcRoleClaimFormat() {
+				case "array":
+					rolesArray, ok := rawRoles.([]interface{})
+					if ok {
+						for i := range rolesArray {
+							role, ok := rolesArray[i].(string)
+							if ok {
+								roles = append(roles, strings.TrimSpace(role))
+							}
+						}
 					}
-				case []string:
-					roles = v
-				case string:
-					roles = append(roles, v)
+
+				case "space-separated":
+					rolesString, ok := rawRoles.(string)
+					if ok {
+						roles = strings.Split(rolesString, " ")
+					}
+
+				case "comma-separated":
+					rolesString, ok := rawRoles.(string)
+					if ok {
+						roles = strings.Split(rolesString, ",")
+						for i, role := range roles {
+							roles[i] = strings.TrimSpace(role)
+						}
+					}
+
+				default:
+					panic(fmt.Errorf("unsupported role claim format: %s", tenant.GetOidcRoleClaimFormat()))
 				}
 			}
 
@@ -103,6 +123,7 @@ func ApiAuthenticationMiddleware() mux.MiddlewareFunc {
 				}
 			}
 
+			// get or create user
 			user, err := tx.Users().First(ctx, repositories.NewUserFilter().BySubject(idToken.Subject))
 			if err != nil {
 				panic(fmt.Errorf("failed to get user: %w", err))
@@ -127,6 +148,7 @@ func ApiAuthenticationMiddleware() mux.MiddlewareFunc {
 				}
 			}
 
+			// set current user
 			ctx = ContextWithCurrentUser(ctx, CurrentUser{
 				TenantId: tenant.GetId(),
 				UserId:   user.GetId(),
