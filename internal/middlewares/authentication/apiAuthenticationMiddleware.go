@@ -22,7 +22,7 @@ func ApiAuthenticationMiddleware() mux.MiddlewareFunc {
 			vars := mux.Vars(r)
 			tenantSlug := vars["tenant"]
 
-			currentUser, ok, err := getApiCurrentUser(w, r, tenantSlug)
+			currentUser, ok, err := getApiCurrentUser(r, tenantSlug)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
@@ -42,7 +42,7 @@ func ApiAuthenticationMiddleware() mux.MiddlewareFunc {
 	}
 }
 
-func getApiCurrentUser(w http.ResponseWriter, r *http.Request, tenantSlug string) (*CurrentUser, bool, error) {
+func getApiCurrentUser(r *http.Request, tenantSlug string) (*CurrentUser, bool, error) {
 	tokenStr, err := extractBearerToken(r, r.Header.Get("Authorization"))
 	if err != nil {
 		return nil, false, nil

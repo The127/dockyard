@@ -14,7 +14,7 @@ func OciAuthenticationMiddleware() mux.MiddlewareFunc {
 	}
 }
 
-func getOciCurrentUser(w http.ResponseWriter, r *http.Request) (*CurrentUser, bool, error) {
+func getOciCurrentUser(r *http.Request) (*CurrentUser, bool, error) {
 	_, err := extractBearerToken(r, r.Header.Get("Authorization"))
 	if err != nil {
 		return nil, false, nil
