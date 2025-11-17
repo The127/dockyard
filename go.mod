@@ -5,6 +5,7 @@ go 1.25
 require (
 	github.com/The127/ioc v0.0.0-20251110122812-609720f03d90
 	github.com/The127/mediatr v0.0.0-20251110111536-44e365a25098
+	github.com/The127/signr v0.0.1
 	github.com/coreos/go-oidc/v3 v3.16.0
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/google/uuid v1.6.0

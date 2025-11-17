@@ -17,6 +17,7 @@ import (
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/server"
 	"github.com/the127/dockyard/internal/services"
+	"github.com/the127/dockyard/internal/services/clock"
 	"github.com/the127/dockyard/internal/setup"
 	"github.com/the127/dockyard/internal/utils"
 )
@@ -28,6 +29,10 @@ func main() {
 
 	dc := ioc.NewDependencyCollection()
 
+	ioc.RegisterSingleton(dc, func(dp *ioc.DependencyProvider) clock.Service {
+		return clock.NewClockService()
+	})
+
 	db := setup.Database(dc, config.C.Database)
 	err := db.Migrate()
 	if err != nil {
@@ -37,6 +42,7 @@ func main() {
 	setup.Kv(dc, config.C.Kv)
 	setup.Mediator(dc)
 	setup.Blob(dc, config.C.Blob)
+	setup.Kms(dc, config.C.Kms)
 
 	dp := dc.BuildProvider()
 

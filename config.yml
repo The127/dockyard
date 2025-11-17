@@ -6,6 +6,8 @@ cache:
   mode: memory
 blob:
   mode: memory
+kms:
+  mode: memory
 initialTenant:
   slug: raccoons
   name: Raccoons

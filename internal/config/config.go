@@ -20,6 +20,17 @@ type Config struct {
 	Database      DatabaseConfig
 	Kv            KvConfig
 	Blob          BlobStorageConfig
+	Kms           KmsConfig
+}
+
+type KmsMode string
+
+const (
+	KmsModeMemory KmsMode = "memory"
+)
+
+type KmsConfig struct {
+	Mode KmsMode
 }
 
 type InitialTenantConfig struct {
