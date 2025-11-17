@@ -79,8 +79,8 @@ func (r *projectRepository) First(_ context.Context, filter *repositories.Projec
 	return result[0], nil
 }
 
-func (r *projectRepository) Single(_ context.Context, filter *repositories.ProjectFilter) (*repositories.Project, error) {
-	result, err := r.First(context.Background(), filter)
+func (r *projectRepository) Single(ctx context.Context, filter *repositories.ProjectFilter) (*repositories.Project, error) {
+	result, err := r.First(ctx, filter)
 	if err != nil {
 		return nil, err
 	}

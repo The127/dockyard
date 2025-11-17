@@ -5,6 +5,7 @@ import "github.com/the127/dockyard/internal/repositories"
 type Transaction interface {
 	Tenants() repositories.TenantRepository
 	Projects() repositories.ProjectRepository
+	ProjectAccess() repositories.ProjectAccessRepository
 	Users() repositories.UserRepository
 	Repositories() repositories.RepositoryRepository
 	Manifests() repositories.ManifestRepository
