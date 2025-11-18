@@ -60,12 +60,14 @@ type OciError struct {
 	HttpCode int          `json:"-"`
 	Code     OciErrorCode `json:"code"`
 	Message  string       `json:"message,omitempty"`
+	Headers  map[string]string
 }
 
 func NewOciError(code OciErrorCode) *OciError {
 	return &OciError{
 		HttpCode: http.StatusBadRequest,
 		Code:     code,
+		Headers:  make(map[string]string),
 	}
 }
 
@@ -76,6 +78,11 @@ func (e *OciError) WithMessage(message string) *OciError {
 
 func (e *OciError) WithHttpCode(httpCode int) *OciError {
 	e.HttpCode = httpCode
+	return e
+}
+
+func (e *OciError) WithHeader(key, value string) *OciError {
+	e.Headers[key] = value
 	return e
 }
 
@@ -100,7 +107,12 @@ func HandleHttpError(w http.ResponseWriter, err error) {
 			Errors: []*OciError{ociError},
 		}
 
+		for k, v := range ociError.Headers {
+			w.Header().Set(k, v)
+		}
+
 		logging.Logger.Errorf("HTTP Error: %d %s", ociError.HttpCode, ociError.Error())
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(ociError.HttpCode)
 		err = json.NewEncoder(w).Encode(wrapper)
 	}

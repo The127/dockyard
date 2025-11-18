@@ -64,6 +64,12 @@ func BlobsDownload(w http.ResponseWriter, r *http.Request) {
 		ociError.HandleHttpError(w, err)
 	}
 
+	err = checkAccess(ctx, tx, repoIdentifier, repository, "pull")
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+
 	_, blob, err := getRepositoryBlob(ctx, tx, repository.GetId(), digest)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
@@ -99,6 +105,12 @@ func BlobExists(w http.ResponseWriter, r *http.Request) {
 		ociError.HandleHttpError(w, err)
 	}
 
+	err = checkAccess(ctx, tx, repoIdentifier, repository, "pull")
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
+	}
+
 	_, blob, err := getRepositoryBlob(ctx, tx, repository.GetId(), digest)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
@@ -124,6 +136,12 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 	tenant, project, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, err)
+	}
+
+	err = checkAccess(ctx, tx, repoIdentifier, repository, "push")
+	if err != nil {
+		ociError.HandleHttpError(w, err)
+		return
 	}
 
 	digest := r.URL.Query().Get("digest")
