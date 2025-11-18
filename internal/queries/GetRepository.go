@@ -23,6 +23,7 @@ type GetRepositoryResponse struct {
 	Slug        string
 	DisplayName string
 	Description *string
+	IsPublic    bool
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -59,6 +60,7 @@ func HandleGetRepository(ctx context.Context, query GetRepository) (*GetReposito
 		Slug:        repository.GetSlug(),
 		DisplayName: repository.GetDisplayName(),
 		Description: repository.GetDescription(),
+		IsPublic:    repository.GetIsPublic(),
 		CreatedAt:   repository.GetCreatedAt(),
 		UpdatedAt:   repository.GetUpdatedAt(),
 	}, nil

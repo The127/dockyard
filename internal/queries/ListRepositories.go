@@ -23,6 +23,7 @@ type ListRepositoriesResponseItem struct {
 	Slug        string
 	DisplayName string
 	Description *string
+	IsPublic    bool
 }
 
 func HandleListRepositories(ctx context.Context, query ListRepositories) (*ListRepositoriesResponse, error) {
@@ -59,6 +60,7 @@ func HandleListRepositories(ctx context.Context, query ListRepositories) (*ListR
 			Slug:        repository.GetSlug(),
 			DisplayName: repository.GetDisplayName(),
 			Description: repository.GetDescription(),
+			IsPublic:    repository.GetIsPublic(),
 		}
 	}
 

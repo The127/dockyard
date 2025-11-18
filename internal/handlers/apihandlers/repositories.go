@@ -70,6 +70,7 @@ type ListRepositoriesResponseItem struct {
 	Slug        string    `json:"slug"`
 	DisplayName string    `json:"displayName"`
 	Description *string   `json:"description"`
+	IsPublic    bool      `json:"isPublic"`
 }
 
 func ListRepositories(w http.ResponseWriter, r *http.Request) {
@@ -100,6 +101,7 @@ func ListRepositories(w http.ResponseWriter, r *http.Request) {
 			Slug:        repo.Slug,
 			DisplayName: repo.DisplayName,
 			Description: repo.Description,
+			IsPublic:    repo.IsPublic,
 		}
 	}
 
@@ -116,6 +118,7 @@ type GetRepositoryResponse struct {
 	Slug        string    `json:"slug"`
 	DisplayName string    `json:"displayName"`
 	Description *string   `json:"description"`
+	IsPublic    bool      `json:"isPublic"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
 }
@@ -145,6 +148,7 @@ func GetRepository(w http.ResponseWriter, r *http.Request) {
 		Slug:        repo.Slug,
 		DisplayName: repo.DisplayName,
 		Description: repo.Description,
+		IsPublic:    repo.IsPublic,
 		CreatedAt:   repo.CreatedAt,
 		UpdatedAt:   repo.UpdatedAt,
 	}
