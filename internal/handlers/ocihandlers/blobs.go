@@ -181,17 +181,7 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var location string
-	switch repoIdentifier.TenantSource {
-	case middlewares.OciTenantSourcePath:
-		location = fmt.Sprintf("/v2/%s/%s/%s/blobs/uploads/%s", repoIdentifier.TenantSlug, repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, uploadSession.SessionId.String())
-
-	case middlewares.OciTenantSourceRoute:
-		location = fmt.Sprintf("/v2/%s/%s/blobs/uploads/%s", repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, uploadSession.SessionId.String())
-
-	default:
-		panic(fmt.Errorf("unsupported tenant source: %s", repoIdentifier.TenantSource))
-	}
+	location := fmt.Sprintf("/v2/%s/%s/blobs/uploads/%s", repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, uploadSession.SessionId.String())
 
 	w.Header().Set("Location", location)
 	w.WriteHeader(http.StatusAccepted)
@@ -366,17 +356,7 @@ func FinishUpload(w http.ResponseWriter, r *http.Request) {
 
 	repoIdentifier := middlewares.GetRepoIdentifier(ctx)
 
-	var location string
-	switch repoIdentifier.TenantSource {
-	case middlewares.OciTenantSourcePath:
-		location = fmt.Sprintf("/v2/%s/%s/%s/blobs/%s", repoIdentifier.TenantSlug, repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, digest)
-
-	case middlewares.OciTenantSourceRoute:
-		location = fmt.Sprintf("/v2/%s/%s/blobs/%s", repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, digest)
-
-	default:
-		panic(fmt.Errorf("unsupported tenant source: %s", repoIdentifier.TenantSource))
-	}
+	location := fmt.Sprintf("/v2/%s/%s/%s/blobs/%s", repoIdentifier.TenantSlug, repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, digest)
 
 	w.Header().Set("Location", location)
 	w.WriteHeader(http.StatusCreated)

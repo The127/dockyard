@@ -125,34 +125,30 @@ func mapApi(r *mux.Router) {
 
 func mapOciApi(r *mux.Router) {
 	apiRouter := r.PathPrefix("/v2").Subrouter()
-	apiRouter.HandleFunc("/tokens", ocihandlers.Tokens).Methods(http.MethodPost, http.MethodGet, http.MethodOptions)
-
-	// unauthenticated endpoints need to go above the authentication middleware
-	authApiRouter := apiRouter.PathPrefix("").Subrouter()
-	authApiRouter.Use(authentication.OciAuthenticationMiddleware())
+	apiRouter.HandleFunc("/token", ocihandlers.Tokens).Methods(http.MethodPost, http.MethodGet, http.MethodOptions)
 
 	// implement end-1 api endpoint that shows the support for the oci api specification
-	authApiRouter.HandleFunc("/", ocihandlers.Root).Methods(http.MethodGet, http.MethodOptions)
+	apiRouter.HandleFunc("/", ocihandlers.Root).Methods(http.MethodGet, http.MethodOptions)
 
-	tenantProjectRepoRouter := authApiRouter.PathPrefix("/{tenant}/{project}/{repository}").Subrouter()
-	tenantProjectRepoRouter.Use(middlewares.OciNameMiddleware(middlewares.OciTenantSourcePath))
-	mapNamedOciApi(tenantProjectRepoRouter)
-
-	projectRepoRouter := authApiRouter.PathPrefix("/{project}/{repository}").Subrouter()
-	projectRepoRouter.Use(middlewares.OciNameMiddleware(middlewares.OciTenantSourceRoute))
+	projectRepoRouter := apiRouter.PathPrefix("/{project}/{repository}").Subrouter()
+	projectRepoRouter.Use(middlewares.OciNameMiddleware())
 	mapNamedOciApi(projectRepoRouter)
 }
 
 func mapNamedOciApi(r *mux.Router) {
-	r.HandleFunc("/blobs/{digest}", ocihandlers.BlobsDownload).Methods(http.MethodGet, http.MethodOptions)
-	r.HandleFunc("/blobs/{digest}", ocihandlers.BlobExists).Methods(http.MethodHead, http.MethodOptions)
+	// unauthenticated endpoints need to go above the authentication middleware
+	authApiRouter := r.PathPrefix("").Subrouter()
+	authApiRouter.Use(authentication.OciAuthenticationMiddleware())
 
-	r.HandleFunc("/manifests/{reference}", ocihandlers.ManifestsDownload).Methods(http.MethodGet, http.MethodOptions)
-	r.HandleFunc("/manifests/{reference}", ocihandlers.ManifestsExists).Methods(http.MethodHead, http.MethodOptions)
+	authApiRouter.HandleFunc("/blobs/{digest}", ocihandlers.BlobsDownload).Methods(http.MethodGet, http.MethodOptions)
+	authApiRouter.HandleFunc("/blobs/{digest}", ocihandlers.BlobExists).Methods(http.MethodHead, http.MethodOptions)
 
-	r.HandleFunc("/blobs/uploads/", ocihandlers.BlobsUploadStart).Methods(http.MethodPost, http.MethodOptions)
-	r.HandleFunc("/blobs/uploads/{reference}", ocihandlers.UploadChunk).Methods(http.MethodPatch, http.MethodOptions)
-	r.HandleFunc("/blobs/uploads/{reference}", ocihandlers.FinishUpload).Methods(http.MethodPut, http.MethodOptions)
+	authApiRouter.HandleFunc("/manifests/{reference}", ocihandlers.ManifestsDownload).Methods(http.MethodGet, http.MethodOptions)
+	authApiRouter.HandleFunc("/manifests/{reference}", ocihandlers.ManifestsExists).Methods(http.MethodHead, http.MethodOptions)
 
-	r.HandleFunc("/manifests/{reference}", ocihandlers.UploadManifest).Methods(http.MethodPut, http.MethodOptions)
+	authApiRouter.HandleFunc("/blobs/uploads/", ocihandlers.BlobsUploadStart).Methods(http.MethodPost, http.MethodOptions)
+	authApiRouter.HandleFunc("/blobs/uploads/{reference}", ocihandlers.UploadChunk).Methods(http.MethodPatch, http.MethodOptions)
+	authApiRouter.HandleFunc("/blobs/uploads/{reference}", ocihandlers.FinishUpload).Methods(http.MethodPut, http.MethodOptions)
+
+	authApiRouter.HandleFunc("/manifests/{reference}", ocihandlers.UploadManifest).Methods(http.MethodPut, http.MethodOptions)
 }

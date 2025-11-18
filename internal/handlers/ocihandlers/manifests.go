@@ -215,17 +215,7 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var location string
-	switch repoIdentifier.TenantSource {
-	case middlewares.OciTenantSourceRoute:
-		location = fmt.Sprintf("/v2/%s/%s/manifests/%s", repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, uploadResponse.Digest)
-
-	case middlewares.OciTenantSourcePath:
-		location = fmt.Sprintf("/v2/%s/%s/%s/manifests/%s", repoIdentifier.TenantSlug, repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, uploadResponse.Digest)
-
-	default:
-		panic(fmt.Errorf("unsupported tenant source: %s", repoIdentifier.TenantSource))
-	}
+	location := fmt.Sprintf("/v2/%s/%s/manifests/%s", repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, uploadResponse.Digest)
 
 	w.Header().Set("Location", location)
 	w.WriteHeader(http.StatusCreated)
