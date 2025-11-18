@@ -17,6 +17,8 @@ type Repository struct {
 
 	description  *string
 	readmeFileId *uuid.UUID
+
+	isPublic bool
 }
 
 func NewRepository(projectId uuid.UUID, slug string, displayName string) *Repository {
@@ -54,6 +56,14 @@ func (r *Repository) GetReadmeFileId() *uuid.UUID {
 
 func (r *Repository) SetReadmeFileId(readmeFileId *uuid.UUID) {
 	r.readmeFileId = readmeFileId
+}
+
+func (r *Repository) GetIsPublic() bool {
+	return r.isPublic
+}
+
+func (r *Repository) SetIsPublic(isPublic bool) {
+	r.isPublic = isPublic
 }
 
 type RepositoryFilter struct {

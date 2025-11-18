@@ -23,6 +23,7 @@ import (
 type CreateRepositoryRequest struct {
 	Slug        string  `json:"slug" validate:"required"`
 	Description *string `json:"description"`
+	IsPublic    bool    `json:"isPublic"`
 }
 
 func CreateRepository(w http.ResponseWriter, r *http.Request) {
@@ -52,6 +53,7 @@ func CreateRepository(w http.ResponseWriter, r *http.Request) {
 		ProjectSlug: projectSlug,
 		Slug:        dto.Slug,
 		Description: dto.Description,
+		IsPublic:    dto.IsPublic,
 	})
 	if err != nil {
 		apiError.HandleHttpError(w, err)

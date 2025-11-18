@@ -16,6 +16,7 @@ type CreateRepository struct {
 	ProjectSlug string
 	Slug        string
 	Description *string
+	IsPublic    bool
 }
 
 type CreateRepositoryResponse struct {
@@ -50,6 +51,7 @@ func HandleCreateRepository(ctx context.Context, command CreateRepository) (*Cre
 
 	repository := repositories.NewRepository(project.GetId(), command.Slug, fmt.Sprintf("%s/%s", project.GetSlug(), command.Slug))
 	repository.SetDescription(command.Description)
+	repository.SetIsPublic(command.IsPublic)
 
 	repositoryRepository := tx.Repositories()
 	err = repositoryRepository.Insert(ctx, repository)
