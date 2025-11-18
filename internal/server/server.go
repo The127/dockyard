@@ -113,14 +113,18 @@ func mapApi(r *mux.Router) {
 func mapOciApi(r *mux.Router) {
 	apiRouter := r.PathPrefix("/v2").Subrouter()
 
-	// implement end-1 api endpoint that shows the support for the oci api specification
-	apiRouter.HandleFunc("/", ocihandlers.Root).Methods(http.MethodGet, http.MethodOptions)
+	// unauthenticated endpoints need to go above the authentication middleware
+	authApiRouter := apiRouter.PathPrefix("").Subrouter()
+	authApiRouter.Use(authentication.OciAuthenticationMiddleware())
 
-	tenantProjectRepoRouter := apiRouter.PathPrefix("/{tenant}/{project}/{repository}").Subrouter()
+	// implement end-1 api endpoint that shows the support for the oci api specification
+	authApiRouter.HandleFunc("/", ocihandlers.Root).Methods(http.MethodGet, http.MethodOptions)
+
+	tenantProjectRepoRouter := authApiRouter.PathPrefix("/{tenant}/{project}/{repository}").Subrouter()
 	tenantProjectRepoRouter.Use(middlewares.OciNameMiddleware(middlewares.OciTenantSourcePath))
 	mapNamedOciApi(tenantProjectRepoRouter)
 
-	projectRepoRouter := apiRouter.PathPrefix("/{project}/{repository}").Subrouter()
+	projectRepoRouter := authApiRouter.PathPrefix("/{project}/{repository}").Subrouter()
 	projectRepoRouter.Use(middlewares.OciNameMiddleware(middlewares.OciTenantSourceRoute))
 	mapNamedOciApi(projectRepoRouter)
 }

@@ -24,7 +24,7 @@ func ApiAuthenticationMiddleware() mux.MiddlewareFunc {
 
 			currentUser, ok, err := getApiCurrentUser(r, tenantSlug)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 

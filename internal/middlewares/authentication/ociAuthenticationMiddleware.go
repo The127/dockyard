@@ -3,13 +3,29 @@ package authentication
 import (
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 )
 
 func OciAuthenticationMiddleware() mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			next.ServeHTTP(w, r)
+			currentUser, ok, err := getOciCurrentUser(r)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if !ok {
+				currentUser = &CurrentUser{
+					TenantId: uuid.Nil,
+					UserId:   uuid.Nil,
+					Roles:    []string{},
+				}
+			}
+
+			ctx := ContextWithCurrentUser(r.Context(), *currentUser)
+			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
