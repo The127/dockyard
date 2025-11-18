@@ -161,47 +161,6 @@ func GetRepository(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type GetRepositoryReadmeResponse struct {
-	ContentBase64 *string `json:"contentBase64"`
-}
-
-func GetRepositoryReadme(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	tenantSlug := vars["tenant"]
-	projectSlug := vars["project"]
-	repositorySlug := vars["repository"]
-
-	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
-
-	readme, err := mediatr.Send[*queries.GetRepositoryReadmeResponse](ctx, mediator, queries.GetRepositoryReadme{
-		TenantSlug:     tenantSlug,
-		ProjectSlug:    projectSlug,
-		RepositorySlug: repositorySlug,
-	})
-	if err != nil {
-		apiError.HandleHttpError(w, err)
-		return
-	}
-
-	var contentBase64 *string
-	if readme.Content != nil {
-		contentBase64 = pointer.To(base64.StdEncoding.EncodeToString(*readme.Content))
-	}
-
-	response := GetRepositoryReadmeResponse{
-		ContentBase64: contentBase64,
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(response)
-	if err != nil {
-		apiError.HandleHttpError(w, err)
-		return
-	}
-}
-
 type PatchRepositoryRequest struct {
 	Description *string `json:"description"`
 	IsPublic    *bool   `json:"isPublic"`
@@ -243,6 +202,47 @@ func PatchRepository(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+type GetRepositoryReadmeResponse struct {
+	ContentBase64 *string `json:"contentBase64"`
+}
+
+func GetRepositoryReadme(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	tenantSlug := vars["tenant"]
+	projectSlug := vars["project"]
+	repositorySlug := vars["repository"]
+
+	ctx := r.Context()
+	scope := middlewares.GetScope(ctx)
+	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+
+	readme, err := mediatr.Send[*queries.GetRepositoryReadmeResponse](ctx, mediator, queries.GetRepositoryReadme{
+		TenantSlug:     tenantSlug,
+		ProjectSlug:    projectSlug,
+		RepositorySlug: repositorySlug,
+	})
+	if err != nil {
+		apiError.HandleHttpError(w, err)
+		return
+	}
+
+	var contentBase64 *string
+	if readme.Content != nil {
+		contentBase64 = pointer.To(base64.StdEncoding.EncodeToString(*readme.Content))
+	}
+
+	response := GetRepositoryReadmeResponse{
+		ContentBase64: contentBase64,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		apiError.HandleHttpError(w, err)
+		return
+	}
 }
 
 type UpdateRepositoryReadmeRequest struct {
