@@ -24,6 +24,8 @@ func Mediator(dc *ioc.DependencyCollection) {
 	mediatr.RegisterHandler(mediator, commands.HandleCreateRepository)
 	mediatr.RegisterHandler(mediator, queries.HandleListRepositories)
 	mediatr.RegisterHandler(mediator, queries.HandleGetRepository)
+	mediatr.RegisterHandler(mediator, commands.HandlePatchRepository)
+
 	mediatr.RegisterHandler(mediator, commands.HandleUpdateRepositoryReadme)
 	mediatr.RegisterHandler(mediator, queries.HandleGetRepositoryReadme)
 

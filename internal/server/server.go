@@ -115,6 +115,7 @@ func mapApi(r *mux.Router) {
 	authApiRouter.HandleFunc("/projects/{project}/repositories", apihandlers.CreateRepository).Methods(http.MethodPost, http.MethodOptions)
 	authApiRouter.HandleFunc("/projects/{project}/repositories", apihandlers.ListRepositories).Methods(http.MethodGet, http.MethodOptions)
 	authApiRouter.HandleFunc("/projects/{project}/repositories/{repository}", apihandlers.GetRepository).Methods(http.MethodGet, http.MethodOptions)
+	authApiRouter.HandleFunc("/projects/{project}/repositories/{repository}", apihandlers.PatchRepository).Methods(http.MethodPatch, http.MethodOptions)
 
 	authApiRouter.HandleFunc("/projects/{project}/repositories/{repository}/readme", apihandlers.GetRepositoryReadme).Methods(http.MethodGet, http.MethodOptions)
 	authApiRouter.HandleFunc("/projects/{project}/repositories/{repository}/readme", apihandlers.UpdateRepositoryReadme).Methods(http.MethodPut, http.MethodOptions)

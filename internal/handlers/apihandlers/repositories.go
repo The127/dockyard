@@ -202,6 +202,49 @@ func GetRepositoryReadme(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type PatchRepositoryRequest struct {
+	Description *string `json:"description"`
+	IsPublic    *bool   `json:"isPublic"`
+}
+
+func PatchRepository(w http.ResponseWriter, r *http.Request) {
+	var dto PatchRepositoryRequest
+	err := decoding.HttpBodyAsJson(w, r, &dto)
+	if err != nil {
+		apiError.HandleHttpError(w, err)
+		return
+	}
+
+	err = validate.Validate(dto)
+	if err != nil {
+		apiError.HandleHttpError(w, err)
+		return
+	}
+
+	vars := mux.Vars(r)
+	tenantSlug := vars["tenant"]
+	projectSlug := vars["project"]
+	repositorySlug := vars["repository"]
+
+	ctx := r.Context()
+	scope := middlewares.GetScope(ctx)
+	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+
+	_, err = mediatr.Send[*commands.PatchRepositoryResponse](ctx, mediator, commands.PatchRepository{
+		TenantSlug:     tenantSlug,
+		ProjectSlug:    projectSlug,
+		RepositorySlug: repositorySlug,
+		Description:    dto.Description,
+		IsPublic:       dto.IsPublic,
+	})
+	if err != nil {
+		apiError.HandleHttpError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 type UpdateRepositoryReadmeRequest struct {
 	ContentBase64 string `json:"contentBase64" validate:"required"`
 }
