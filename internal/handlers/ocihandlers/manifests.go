@@ -72,32 +72,32 @@ func ManifestsDownload(w http.ResponseWriter, r *http.Request) {
 	dbService := ioc.GetDependency[services.DbService](scope)
 	tx, err := dbService.GetTransaction()
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	err = checkAccess(ctx, tx, repoIdentifier, repository, "pull")
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	_, blob, err := getManifestByReference(ctx, tx, repository.GetId(), reference)
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	blobService := ioc.GetDependency[blobStorage.Service](scope)
 	redirectUri, err := blobService.GetBlobDownloadLink(ctx, blob.GetDigest())
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
@@ -115,25 +115,25 @@ func ManifestsExists(w http.ResponseWriter, r *http.Request) {
 	dbService := ioc.GetDependency[services.DbService](scope)
 	tx, err := dbService.GetTransaction()
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	err = checkAccess(ctx, tx, repoIdentifier, repository, "pull")
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	_, blob, err := getManifestByReference(ctx, tx, repository.GetId(), reference)
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
@@ -150,27 +150,28 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 	dbService := ioc.GetDependency[services.DbService](scope)
 	tx, err := dbService.GetTransaction()
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	err = checkAccess(ctx, tx, repoIdentifier, repository, "push")
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024*1024*4) // max 4 MB
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
-		ociError.HandleHttpError(w, ociError.NewOciError(ociError.BlobUploadInvalid).
-			WithMessage("failed to read manifest"))
+		err := ociError.NewOciError(ociError.BlobUploadInvalid).
+			WithMessage("failed to read manifest")
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
@@ -179,19 +180,19 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 	blobs := ioc.GetDependency[blobStorage.Service](scope)
 	uploadResponse, err := blobs.UploadCompleteBlob(ctx, bytes.NewReader(bodyBytes), blobStorage.BlobContentTypeManifest)
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	blob, err := tx.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(uploadResponse.Digest))
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 	if blob == nil {
 		blob = repositories.NewBlob(uploadResponse.Digest, int64(len(bodyBytes)))
 		if err := tx.Blobs().Insert(ctx, blob); err != nil {
-			ociError.HandleHttpError(w, err)
+			ociError.HandleHttpError(w, r, err)
 			return
 		}
 	}
@@ -199,7 +200,7 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 	manifest := repositories.NewManifest(repository.GetId(), blob.GetId(), uploadResponse.Digest)
 	err = tx.Manifests().Insert(ctx, manifest)
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
@@ -209,7 +210,7 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 	if !strings.HasPrefix(reference, "sha256:") {
 		err := tx.Tags().Insert(ctx, repositories.NewTag(repository.GetId(), manifest.GetId(), reference))
 		if err != nil {
-			ociError.HandleHttpError(w, err)
+			ociError.HandleHttpError(w, r, err)
 			return
 		}
 	}

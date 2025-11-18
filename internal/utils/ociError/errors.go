@@ -98,7 +98,7 @@ type Wrapper struct {
 	Errors []*OciError `json:"errors"`
 }
 
-func HandleHttpError(w http.ResponseWriter, err error) {
+func HandleHttpError(w http.ResponseWriter, r *http.Request, err error) {
 	var message string
 	var ociError *OciError
 
@@ -114,7 +114,15 @@ func HandleHttpError(w http.ResponseWriter, err error) {
 		logging.Logger.Errorf("HTTP Error: %d %s", ociError.HttpCode, ociError.Error())
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(ociError.HttpCode)
-		err = json.NewEncoder(w).Encode(wrapper)
+
+		if r.Method != http.MethodHead {
+			err = json.NewEncoder(w).Encode(wrapper)
+			if err == nil {
+				return
+			}
+		} else {
+			return
+		}
 	}
 
 	if err != nil {
@@ -127,6 +135,9 @@ func HandleHttpError(w http.ResponseWriter, err error) {
 		logging.Logger.Errorf("HTTP Error: %d %s", http.StatusInternalServerError, message)
 		w.WriteHeader(http.StatusInternalServerError)
 		err = json.NewEncoder(w).Encode(message)
+		if err == nil {
+			return
+		}
 	}
 
 	if err != nil {
@@ -138,5 +149,6 @@ func HandleHttpError(w http.ResponseWriter, err error) {
 
 		logging.Logger.Errorf("HTTP Error: %d %s", http.StatusInternalServerError, message)
 		http.Error(w, message, http.StatusInternalServerError)
+		return
 	}
 }

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -20,6 +21,17 @@ import (
 
 func Serve(root *ioc.DependencyProvider, serverConfig config.ServerConfig, hostBlobApi bool) {
 	r := mux.NewRouter()
+
+	r.NotFoundHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		logging.Logger.Infof("Not found API Request: %s %s", r.Method, r.URL.Path)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"errors": []map[string]string{
+				{"code": "NOT_FOUND", "message": "route not found"},
+			},
+		})
+	})
 
 	r.Use(middlewares.RecoverMiddleware())
 	r.Use(middlewares.LoggingMiddleware())
@@ -112,6 +124,7 @@ func mapApi(r *mux.Router) {
 
 func mapOciApi(r *mux.Router) {
 	apiRouter := r.PathPrefix("/v2").Subrouter()
+	apiRouter.HandleFunc("/tokens", ocihandlers.Tokens).Methods(http.MethodPost, http.MethodGet, http.MethodOptions)
 
 	// unauthenticated endpoints need to go above the authentication middleware
 	authApiRouter := apiRouter.PathPrefix("").Subrouter()

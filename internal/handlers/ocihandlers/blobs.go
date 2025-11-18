@@ -55,30 +55,30 @@ func BlobsDownload(w http.ResponseWriter, r *http.Request) {
 	dbService := ioc.GetDependency[services.DbService](scope)
 	tx, err := dbService.GetTransaction()
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 	}
 
 	err = checkAccess(ctx, tx, repoIdentifier, repository, "pull")
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	_, blob, err := getRepositoryBlob(ctx, tx, repository.GetId(), digest)
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 	}
 
 	blobService := ioc.GetDependency[blobStorage.Service](scope)
 	redirectUri, err := blobService.GetBlobDownloadLink(ctx, blob.GetDigest())
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
@@ -96,24 +96,24 @@ func BlobExists(w http.ResponseWriter, r *http.Request) {
 	dbService := ioc.GetDependency[services.DbService](scope)
 	tx, err := dbService.GetTransaction()
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 	}
 
 	err = checkAccess(ctx, tx, repoIdentifier, repository, "pull")
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	_, blob, err := getRepositoryBlob(ctx, tx, repository.GetId(), digest)
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 	}
 
 	w.Header().Set("Docker-Content-Digest", blob.GetDigest())
@@ -129,18 +129,18 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 	dbService := ioc.GetDependency[services.DbService](scope)
 	tx, err := dbService.GetTransaction()
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	tenant, project, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 	}
 
 	err = checkAccess(ctx, tx, repoIdentifier, repository, "push")
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
@@ -148,7 +148,7 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 	if digest != "" {
 		err := ociError.NewOciError(ociError.Unsupported).
 			WithMessage("single post upload is not supported")
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	} // check if it is a monolithic single post upload
 
@@ -164,7 +164,7 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 	default:
 		err := ociError.NewOciError(ociError.Unsupported).
 			WithMessage("unsupported content length")
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
@@ -177,7 +177,7 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 		RepositoryId:   repository.GetId(),
 	})
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
@@ -199,8 +199,9 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 
 func UploadChunk(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Type") != "application/octet-stream" {
-		ociError.HandleHttpError(w, ociError.NewOciError(ociError.Unsupported).
-			WithMessage("unsupported content type"))
+		err := ociError.NewOciError(ociError.Unsupported).
+			WithMessage("unsupported content type")
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
@@ -253,7 +254,7 @@ func UploadChunk(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		err := ociError.NewOciError(ociError.BlobUploadInvalid).
 			WithMessage("session id must be a valid uuid")
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
@@ -263,7 +264,7 @@ func UploadChunk(w http.ResponseWriter, r *http.Request) {
 
 	uploadResponse, err := blobService.UploadWriteChunk(ctx, sessionId, r.Body)
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
@@ -277,7 +278,7 @@ func FinishUpload(w http.ResponseWriter, r *http.Request) {
 	if digest == "" {
 		err := ociError.NewOciError(ociError.DigestInvalid).
 			WithMessage("digest is required")
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
@@ -287,7 +288,7 @@ func FinishUpload(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		err := ociError.NewOciError(ociError.BlobUploadInvalid).
 			WithMessage("session id must be a valid uuid")
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
@@ -312,54 +313,54 @@ func FinishUpload(w http.ResponseWriter, r *http.Request) {
 
 		err := blobService.UploadWriteChunk(ctx, sessionId, r.Body)
 		if err != nil {
-			ociError.HandleHttpError(w, err)
+			ociError.HandleHttpError(w, r, err)
 			return
 		}
 	}*/
 
 	_, err = blobService.UploadWriteChunk(ctx, sessionId, r.Body)
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	completeResponse, err := blobService.CompleteUpload(ctx, sessionId, blobStorage.BlobContentTypeOctetStream)
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	if completeResponse.ComputedDigest != digest {
 		err = ociError.NewOciError(ociError.DigestInvalid).
 			WithMessage("computed digest does not match")
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	dbService := ioc.GetDependency[services.DbService](scope)
 	tx, err := dbService.GetTransaction()
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	blob, err := tx.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(digest))
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 	if blob == nil {
 		blob = repositories.NewBlob(completeResponse.ComputedDigest, completeResponse.Size)
 		err = tx.Blobs().Insert(ctx, blob)
 		if err != nil {
-			ociError.HandleHttpError(w, err)
+			ociError.HandleHttpError(w, r, err)
 			return
 		}
 	}
 
 	err = tx.RepositoryBlobs().Insert(ctx, repositories.NewRepositoryBlob(completeResponse.RepositoryId, blob.GetId()))
 	if err != nil {
-		ociError.HandleHttpError(w, err)
+		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
