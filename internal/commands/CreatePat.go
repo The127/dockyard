@@ -36,10 +36,19 @@ func HandleCreatePat(ctx context.Context, command CreatePat) (*CreatePatResponse
 		return nil, fmt.Errorf("inserting pat: %w", err)
 	}
 
-	secretBase64 := base64.RawURLEncoding.EncodeToString(secret)
-	token := base64.RawURLEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", pat.GetId(), secretBase64)))
+	tokenBytes := make([]byte, 16+len(secret)) // 16 bytes of uuid + length of secret
+
+	idBytes, err := pat.GetId().MarshalBinary()
+	if err != nil {
+		return nil, fmt.Errorf("marshalling pat id: %w", err)
+	}
+
+	copy(tokenBytes, idBytes)
+	copy(tokenBytes[16:], secret)
+
+	tokenBase64 := base64.RawURLEncoding.EncodeToString(tokenBytes)
 
 	return &CreatePatResponse{
-		Token: fmt.Sprintf("pat_%s", token),
+		Token: fmt.Sprintf("pat_%s", tokenBase64),
 	}, nil
 }
