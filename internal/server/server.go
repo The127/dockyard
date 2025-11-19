@@ -108,6 +108,8 @@ func mapApi(r *mux.Router) {
 	authApiRouter := apiRouter.PathPrefix("").Subrouter()
 	authApiRouter.Use(authentication.ApiAuthenticationMiddleware())
 
+	authApiRouter.HandleFunc("/pats", apihandlers.CreatePat).Methods(http.MethodPost, http.MethodOptions)
+
 	authApiRouter.HandleFunc("/projects", apihandlers.CreateProject).Methods(http.MethodPost, http.MethodOptions)
 	authApiRouter.HandleFunc("/projects", apihandlers.ListProjects).Methods(http.MethodGet, http.MethodOptions)
 	authApiRouter.HandleFunc("/projects/{project}", apihandlers.GetProject).Methods(http.MethodGet, http.MethodOptions)
