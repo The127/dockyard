@@ -36,6 +36,19 @@ func NewInMemoryDatabase() (db.Database, error) {
 					},
 				},
 			},
+			"pats": {
+				Name: "pats",
+				Indexes: map[string]*memdb.IndexSchema{
+					"id": {
+						Name:   "id",
+						Unique: true,
+						Indexer: &UUIDValueIndexer{Getter: func(obj interface{}) uuid.UUID {
+							pat := obj.(repositories.Pat)
+							return pat.GetId()
+						}},
+					},
+				},
+			},
 			"projects": {
 				Name: "projects",
 				Indexes: map[string]*memdb.IndexSchema{
@@ -43,6 +56,19 @@ func NewInMemoryDatabase() (db.Database, error) {
 						Name:    "id",
 						Unique:  true,
 						Indexer: &memdb.StringFieldIndex{Field: "slug"},
+					},
+				},
+			},
+			"project_accesses": {
+				Name: "project_accesses",
+				Indexes: map[string]*memdb.IndexSchema{
+					"id": {
+						Name:   "id",
+						Unique: true,
+						Indexer: &UUIDValueIndexer{Getter: func(obj interface{}) uuid.UUID {
+							projectAccess := obj.(repositories.ProjectAccess)
+							return projectAccess.GetId()
+						}},
 					},
 				},
 			},

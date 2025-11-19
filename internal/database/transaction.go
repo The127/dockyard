@@ -7,6 +7,7 @@ type Transaction interface {
 	Projects() repositories.ProjectRepository
 	ProjectAccess() repositories.ProjectAccessRepository
 	Users() repositories.UserRepository
+	Pats() repositories.PatRepository
 	Repositories() repositories.RepositoryRepository
 	Manifests() repositories.ManifestRepository
 	Tags() repositories.TagRepository

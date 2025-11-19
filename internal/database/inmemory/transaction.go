@@ -14,6 +14,7 @@ type transaction struct {
 	projects        repositories.ProjectRepository
 	projectAccess   repositories.ProjectAccessRepository
 	users           repositories.UserRepository
+	pats            repositories.PatRepository
 	repos           repositories.RepositoryRepository
 	manifest        repositories.ManifestRepository
 	tags            repositories.TagRepository
@@ -54,6 +55,13 @@ func (t *transaction) Users() repositories.UserRepository {
 		t.users = inmemory.NewInMemoryUserRepository(t.txn)
 	}
 	return t.users
+}
+
+func (t *transaction) Pats() repositories.PatRepository {
+	if t.pats == nil {
+		t.pats = inmemory.NewInMemoryPatRepository(t.txn)
+	}
+	return t.pats
 }
 
 func (t *transaction) Repositories() repositories.RepositoryRepository {
