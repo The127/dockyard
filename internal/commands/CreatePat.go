@@ -10,6 +10,7 @@ import (
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/services"
+	"github.com/the127/dockyard/internal/services/clock"
 )
 
 type CreatePat struct {
@@ -30,7 +31,14 @@ func HandleCreatePat(ctx context.Context, command CreatePat) (*CreatePatResponse
 		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
 
-	pat, secret := repositories.NewPat(command.UserId, command.DisplayName)
+	clockService := ioc.GetDependency[clock.Service](scope)
+	var displayName = command.DisplayName
+	if displayName == "" {
+		now := clockService.Now().Format("2006-01-02 15:04:05")
+		displayName = fmt.Sprintf("Dockyard PAT %s", now)
+	}
+
+	pat, secret := repositories.NewPat(command.UserId, displayName)
 	err = tx.Pats().Insert(ctx, pat)
 	if err != nil {
 		return nil, fmt.Errorf("inserting pat: %w", err)
