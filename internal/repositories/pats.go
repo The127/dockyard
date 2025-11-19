@@ -51,7 +51,8 @@ func (p *Pat) SetDisplayName(displayName string) {
 }
 
 type PatFilter struct {
-	id *uuid.UUID
+	id     *uuid.UUID
+	userId *uuid.UUID
 }
 
 func NewPatFilter() *PatFilter {
@@ -77,9 +78,24 @@ func (f *PatFilter) GetId() uuid.UUID {
 	return pointer.DerefOrZero(f.id)
 }
 
+func (f *PatFilter) ByUserId(id uuid.UUID) *PatFilter {
+	cloned := f.clone()
+	cloned.userId = &id
+	return cloned
+}
+
+func (f *PatFilter) HasUserId() bool {
+	return f.userId != nil
+}
+
+func (f *PatFilter) GetUserId() uuid.UUID {
+	return pointer.DerefOrZero(f.userId)
+}
+
 type PatRepository interface {
 	Single(ctx context.Context, filter *PatFilter) (*Pat, error)
 	First(ctx context.Context, filter *PatFilter) (*Pat, error)
+	List(ctx context.Context, filter *PatFilter) ([]*Pat, int, error)
 	Insert(ctx context.Context, entity *Pat) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }

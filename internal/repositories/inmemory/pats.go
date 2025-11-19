@@ -46,6 +46,12 @@ func (r *patRepository) matches(pat *repositories.Pat, filter *repositories.PatF
 		}
 	}
 
+	if filter.HasUserId() {
+		if pat.GetUserId() != filter.GetUserId() {
+			return false
+		}
+	}
+
 	return true
 }
 
@@ -87,6 +93,20 @@ func (r *patRepository) Insert(_ context.Context, pat *repositories.Pat) error {
 	}
 
 	return nil
+}
+
+func (r *patRepository) List(_ context.Context, filter *repositories.PatFilter) ([]*repositories.Pat, int, error) {
+	iterator, err := r.txn.Get("pats", "id")
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to get pats: %w", err)
+	}
+
+	pats, count, err := r.applyFilter(iterator, filter)
+	if err != nil {
+		return nil, 0, fmt.Errorf("failed to apply filter: %w", err)
+	}
+
+	return pats, count, nil
 }
 
 func (r *patRepository) Delete(_ context.Context, id uuid.UUID) error {

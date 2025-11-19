@@ -6,9 +6,12 @@ import (
 
 	"github.com/The127/ioc"
 	"github.com/The127/mediatr"
+	"github.com/google/uuid"
 	"github.com/the127/dockyard/internal/commands"
+	"github.com/the127/dockyard/internal/handlers"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/middlewares/authentication"
+	"github.com/the127/dockyard/internal/queries"
 	"github.com/the127/dockyard/internal/utils/apiError"
 	"github.com/the127/dockyard/internal/utils/decoding"
 	"github.com/the127/dockyard/internal/utils/validate"
@@ -56,6 +59,46 @@ func CreatePat(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 
+	err = json.NewEncoder(w).Encode(response)
+	if err != nil {
+		apiError.HandleHttpError(w, err)
+		return
+	}
+}
+
+type ListPatsResponse handlers.PagedResponse[ListPatsResponseItem]
+
+type ListPatsResponseItem struct {
+	Id          uuid.UUID
+	DisplayName string
+}
+
+func ListPats(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	scope := middlewares.GetScope(ctx)
+	currentUser := authentication.GetCurrentUser(ctx)
+	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+
+	pats, err := mediatr.Send[*queries.ListPatsResponse](ctx, mediator, queries.ListPats{
+		UserId: currentUser.UserId,
+	})
+	if err != nil {
+		apiError.HandleHttpError(w, err)
+		return
+	}
+
+	response := ListPatsResponse{
+		Items: make([]ListPatsResponseItem, len(pats.Items)),
+	}
+
+	for i, item := range pats.Items {
+		response.Items[i] = ListPatsResponseItem{
+			Id:          item.Id,
+			DisplayName: item.DisplayName,
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(response)
 	if err != nil {
 		apiError.HandleHttpError(w, err)

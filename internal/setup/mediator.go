@@ -18,6 +18,7 @@ func Mediator(dc *ioc.DependencyCollection) {
 	mediatr.RegisterHandler(mediator, queries.HandleListUsers)
 
 	mediatr.RegisterHandler(mediator, commands.HandleCreatePat)
+	mediatr.RegisterHandler(mediator, queries.HandleListPats)
 
 	mediatr.RegisterHandler(mediator, commands.HandleCreateProject)
 	mediatr.RegisterHandler(mediator, queries.HandleListProjects)
