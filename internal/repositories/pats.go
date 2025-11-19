@@ -13,10 +13,11 @@ type Pat struct {
 	BaseModel
 
 	userId       uuid.UUID
+	displayName  string
 	hashedSecret []byte
 }
 
-func NewPat(userId uuid.UUID) (*Pat, []byte) {
+func NewPat(userId uuid.UUID, displayName string) (*Pat, []byte) {
 	secret := make([]byte, 32)
 	n, err := rand.Read(secret)
 	if err != nil || n != len(secret) {
@@ -28,6 +29,7 @@ func NewPat(userId uuid.UUID) (*Pat, []byte) {
 	return &Pat{
 		BaseModel:    NewBaseModel(),
 		userId:       userId,
+		displayName:  displayName,
 		hashedSecret: hashedSecret,
 	}, secret
 }
@@ -38,6 +40,14 @@ func (p *Pat) GetUserId() uuid.UUID {
 
 func (p *Pat) GetHashedSecret() []byte {
 	return p.hashedSecret
+}
+
+func (p *Pat) GetDisplayName() string {
+	return p.displayName
+}
+
+func (p *Pat) SetDisplayName(displayName string) {
+	p.displayName = displayName
 }
 
 type PatFilter struct {
