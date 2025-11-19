@@ -22,7 +22,7 @@ type CreatePatRequest struct {
 }
 
 type CreatePatResponse struct {
-	Token string
+	Token string `json:"token"`
 }
 
 func CreatePat(w http.ResponseWriter, r *http.Request) {
@@ -69,8 +69,8 @@ func CreatePat(w http.ResponseWriter, r *http.Request) {
 type ListPatsResponse handlers.PagedResponse[ListPatsResponseItem]
 
 type ListPatsResponseItem struct {
-	Id          uuid.UUID
-	DisplayName string
+	Id          uuid.UUID `json:"id"`
+	DisplayName string    `json:"displayName"`
 }
 
 func ListPats(w http.ResponseWriter, r *http.Request) {
