@@ -40,6 +40,6 @@ func HandleCreatePat(ctx context.Context, command CreatePat) (*CreatePatResponse
 	token := base64.RawURLEncoding.EncodeToString([]byte(fmt.Sprintf("%s:%s", pat.GetId(), secretBase64)))
 
 	return &CreatePatResponse{
-		Token: token,
+		Token: fmt.Sprintf("pat_%s", token),
 	}, nil
 }
