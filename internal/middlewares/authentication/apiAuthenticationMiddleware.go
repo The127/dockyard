@@ -22,13 +22,13 @@ func ApiAuthenticationMiddleware() mux.MiddlewareFunc {
 			vars := mux.Vars(r)
 			tenantSlug := vars["tenant"]
 
-			currentUser, ok, err := getApiCurrentUser(r, tenantSlug)
+			currentUser, err := getApiCurrentUser(r, tenantSlug)
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 
-			if !ok {
+			if currentUser == nil {
 				currentUser = &CurrentUser{
 					TenantId: uuid.Nil,
 					UserId:   uuid.Nil,
@@ -42,10 +42,10 @@ func ApiAuthenticationMiddleware() mux.MiddlewareFunc {
 	}
 }
 
-func getApiCurrentUser(r *http.Request, tenantSlug string) (*CurrentUser, bool, error) {
+func getApiCurrentUser(r *http.Request, tenantSlug string) (*CurrentUser, error) {
 	tokenStr, err := extractBearerToken(r, r.Header.Get("Authorization"))
 	if err != nil {
-		return nil, false, nil
+		return nil, nil
 	}
 
 	// get the tenant
@@ -55,21 +55,21 @@ func getApiCurrentUser(r *http.Request, tenantSlug string) (*CurrentUser, bool, 
 	dbService := ioc.GetDependency[services.DbService](scope)
 	tx, err := dbService.GetTransaction()
 	if err != nil {
-		return nil, false, fmt.Errorf("getting transaction: %w", err)
+		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
 
 	tenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(tenantSlug))
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to get tenant: %w", err)
+		return nil, fmt.Errorf("failed to get tenant: %w", err)
 	}
 	if tenant == nil {
-		return nil, false, nil
+		return nil, nil
 	}
 
 	// build oidc verifier
 	provider, err := oidc.NewProvider(ctx, tenant.GetOidcIssuer())
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to create oidc provider: %w", err)
+		return nil, fmt.Errorf("failed to create oidc provider: %w", err)
 	}
 
 	verifier := provider.Verifier(&oidc.Config{
@@ -79,14 +79,14 @@ func getApiCurrentUser(r *http.Request, tenantSlug string) (*CurrentUser, bool, 
 	// Verify token
 	idToken, err := verifier.Verify(ctx, tokenStr)
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to verify token: %w", apiError.ErrApiUnauthorized)
+		return nil, fmt.Errorf("failed to verify token: %w", apiError.ErrApiUnauthorized)
 	}
 
 	// Extract roles claim (customizable per tenant)
 	var claims map[string]interface{}
 	err = idToken.Claims(&claims)
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to extract claims: %w", err)
+		return nil, fmt.Errorf("failed to extract claims: %w", err)
 	}
 
 	var roles []string
@@ -137,7 +137,7 @@ func getApiCurrentUser(r *http.Request, tenantSlug string) (*CurrentUser, bool, 
 	// get or create the user
 	user, err := tx.Users().First(ctx, repositories.NewUserFilter().BySubject(idToken.Subject))
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to get user: %w", err)
+		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
 
 	if user == nil {
@@ -155,7 +155,7 @@ func getApiCurrentUser(r *http.Request, tenantSlug string) (*CurrentUser, bool, 
 
 		err = tx.Users().Insert(ctx, user)
 		if err != nil {
-			return nil, false, fmt.Errorf("failed to insert user: %w", err)
+			return nil, fmt.Errorf("failed to insert user: %w", err)
 		}
 	}
 
@@ -163,5 +163,5 @@ func getApiCurrentUser(r *http.Request, tenantSlug string) (*CurrentUser, bool, 
 		TenantId: tenant.GetId(),
 		UserId:   user.GetId(),
 		Roles:    mappedRoles,
-	}, true, nil
+	}, nil
 }
