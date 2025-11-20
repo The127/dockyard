@@ -39,14 +39,34 @@ func Tokens(w http.ResponseWriter, r *http.Request) {
 	splitN := strings.SplitN(service, ":", 2)
 	tenantSlug := splitN[1]
 
-	userInfo, err := getUserInfo(r, tenantSlug)
+	ctx := r.Context()
+	scope := middlewares.GetScope(ctx)
+	dbService := ioc.GetDependency[services.DbService](scope)
+
+	tx, err := dbService.GetTransaction()
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
-	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
+	tenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(tenantSlug))
+	if err != nil {
+		ociError.HandleHttpError(w, r, err)
+		return
+	}
+	if tenant == nil {
+		err := ociError.NewOciError(ociError.Unauthorized).
+			WithMessage("invalid token").
+			WithHttpCode(http.StatusUnauthorized)
+		ociError.HandleHttpError(w, r, err)
+		return
+	}
+
+	userInfo, err := getUserInfo(r, tenant)
+	if err != nil {
+		ociError.HandleHttpError(w, r, err)
+		return
+	}
 
 	keyManager := ioc.GetDependency[signr.KeyManager](scope)
 	signingKey, err := keyManager.
@@ -99,7 +119,7 @@ type Access struct {
 	Repository []string `json:"repository"`
 }
 
-func getUserInfo(r *http.Request, tenantSlug string) (*claimInfo, error) {
+func getUserInfo(r *http.Request, tenant *repositories.Tenant) (*claimInfo, error) {
 	_, password, ok := r.BasicAuth()
 	if !ok {
 		return &claimInfo{
@@ -166,18 +186,7 @@ func getUserInfo(r *http.Request, tenantSlug string) (*claimInfo, error) {
 		return nil, err
 	}
 
-	tenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter().ById(user.GetTenantId()))
-	if err != nil {
-		return nil, fmt.Errorf("getting tenant: %w", err)
-	}
-	if tenant == nil {
-		err := ociError.NewOciError(ociError.Unauthorized).
-			WithMessage("invalid token").
-			WithHttpCode(http.StatusUnauthorized)
-		return nil, err
-	}
-
-	if tenant.GetSlug() != tenantSlug {
+	if tenant.GetId() != user.GetTenantId() {
 		err := ociError.NewOciError(ociError.Unauthorized).
 			WithMessage("invalid token").
 			WithHttpCode(http.StatusUnauthorized)
