@@ -138,6 +138,7 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 	tenant, project, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
+		return
 	}
 
 	err = checkAccess(ctx, tx, repoIdentifier, repository, "push")
