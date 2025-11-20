@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/the127/dockyard/internal/config"
 )
 
 type OciRepositoryIdentifier struct {
@@ -22,12 +21,7 @@ func OciNameMiddleware() mux.MiddlewareFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			vars := mux.Vars(r)
 
-			hostname := r.URL.Hostname()
-			if hostname == config.C.Server.ExternalDomain {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-			tenant := strings.Split(hostname, ".")[0]
+			tenant := strings.SplitN(r.Host, ".", 2)[0]
 
 			repoIdentifier := OciRepositoryIdentifier{
 				TenantSlug:     tenant,
