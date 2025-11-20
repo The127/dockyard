@@ -83,7 +83,7 @@ func Tokens(w http.ResponseWriter, r *http.Request) {
 	claims := &jwt.MapClaims{
 		"iss":    config.C.Server.ExternalDomain,
 		"sub":    userInfo.Sub,
-		"aud":    tenantSlug,
+		"aud":    tenant.GetId().String(),
 		"exp":    jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
 		"iat":    jwt.NewNumericDate(now),
 		"access": userInfo.Access,
