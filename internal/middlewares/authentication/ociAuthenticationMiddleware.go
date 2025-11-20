@@ -22,7 +22,7 @@ func OciAuthenticationMiddleware() mux.MiddlewareFunc {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			currentUser, ok, err := getOciCurrentUser(r)
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				ociError.HandleHttpError(w, r, err)
 				return
 			}
 
@@ -100,19 +100,9 @@ func getOciCurrentUser(r *http.Request) (*CurrentUser, bool, error) {
 			WithHttpCode(http.StatusUnauthorized)
 	}
 
-	user, err := tx.Users().First(ctx, repositories.NewUserFilter().ByTenantId(tenant.GetId()).ById(userId))
-	if err != nil {
-		return nil, false, fmt.Errorf("failed to get user: %w", err)
-	}
-	if user == nil {
-		return nil, false, ociError.NewOciError(ociError.Unauthorized).
-			WithMessage("user not found").
-			WithHttpCode(http.StatusUnauthorized)
-	}
-
 	return &CurrentUser{
 		TenantId:        tenant.GetId(),
-		UserId:          user.GetId(),
+		UserId:          userId,
 		Roles:           nil,
 		IsAuthenticated: true,
 	}, true, nil
