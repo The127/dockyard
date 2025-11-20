@@ -7,9 +7,10 @@ import (
 )
 
 type CurrentUser struct {
-	TenantId uuid.UUID
-	UserId   uuid.UUID
-	Roles    []string
+	TenantId        uuid.UUID
+	UserId          uuid.UUID
+	Roles           []string
+	IsAuthenticated bool
 }
 
 var CurrentUserContextKey = &CurrentUser{}

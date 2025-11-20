@@ -6,16 +6,19 @@ import (
 	"strings"
 
 	"github.com/the127/dockyard/internal/config"
+	"github.com/the127/dockyard/internal/middlewares/authentication"
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
 
 func Root(w http.ResponseWriter, r *http.Request) {
-	hostname := r.URL.Hostname()
-	if hostname == config.C.Server.ExternalDomain {
-		w.WriteHeader(http.StatusNotFound)
+	ctx := r.Context()
+	currentUser := authentication.GetCurrentUser(ctx)
+	if currentUser.IsAuthenticated {
+		w.WriteHeader(http.StatusOK)
 		return
 	}
-	tenant := strings.Split(hostname, ".")[0]
+
+	tenant := strings.Split(r.Host, ".")[0]
 
 	realm := fmt.Sprintf("%s/v2/token", config.C.Server.ExternalUrl)
 	service := fmt.Sprintf("%s:%s", config.C.Server.ExternalDomain, tenant)
