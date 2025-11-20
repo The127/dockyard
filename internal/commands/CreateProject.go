@@ -12,6 +12,7 @@ import (
 )
 
 type CreateProject struct {
+	UserId      uuid.UUID
 	TenantSlug  string
 	Slug        string
 	DisplayName string
@@ -47,6 +48,12 @@ func HandleCreateProject(ctx context.Context, command CreateProject) (*CreatePro
 	err = projectRepository.Insert(ctx, project)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert project: %w", err)
+	}
+
+	projectAccess := repositories.NewProjectAccess(project.GetId(), command.UserId)
+	err = tx.ProjectAccess().Insert(ctx, projectAccess)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert project access: %w", err)
 	}
 
 	return &CreateProjectResponse{
