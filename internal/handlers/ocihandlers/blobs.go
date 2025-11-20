@@ -103,6 +103,7 @@ func BlobExists(w http.ResponseWriter, r *http.Request) {
 	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
+		return
 	}
 
 	err = checkAccess(ctx, tx, repoIdentifier, repository, "pull")
@@ -114,6 +115,7 @@ func BlobExists(w http.ResponseWriter, r *http.Request) {
 	_, blob, err := getRepositoryBlob(ctx, tx, repository.GetId(), digest)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
+		return
 	}
 
 	w.Header().Set("Docker-Content-Digest", blob.GetDigest())
