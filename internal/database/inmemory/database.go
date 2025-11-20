@@ -82,6 +82,19 @@ func NewInMemoryDatabase() (db.Database, error) {
 					},
 				},
 			},
+			"repository_accesses": {
+				Name: "repository_accesses",
+				Indexes: map[string]*memdb.IndexSchema{
+					"id": {
+						Name:   "id",
+						Unique: true,
+						Indexer: &UUIDValueIndexer{Getter: func(obj interface{}) uuid.UUID {
+							repositoryAccess := obj.(repositories.RepositoryAccess)
+							return repositoryAccess.GetId()
+						}},
+					},
+				},
+			},
 			"manifests": {
 				Name: "manifests",
 				Indexes: map[string]*memdb.IndexSchema{

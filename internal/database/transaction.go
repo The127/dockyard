@@ -9,6 +9,7 @@ type Transaction interface {
 	Users() repositories.UserRepository
 	Pats() repositories.PatRepository
 	Repositories() repositories.RepositoryRepository
+	RepositoryAccess() repositories.RepositoryAccessRepository
 	Manifests() repositories.ManifestRepository
 	Tags() repositories.TagRepository
 	Blobs() repositories.BlobRepository

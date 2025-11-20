@@ -10,17 +10,18 @@ import (
 type transaction struct {
 	txn *memdb.Txn
 
-	tenants         repositories.TenantRepository
-	projects        repositories.ProjectRepository
-	projectAccess   repositories.ProjectAccessRepository
-	users           repositories.UserRepository
-	pats            repositories.PatRepository
-	repos           repositories.RepositoryRepository
-	manifest        repositories.ManifestRepository
-	tags            repositories.TagRepository
-	blobs           repositories.BlobRepository
-	repositoryBlobs repositories.RepositoryBlobRepository
-	files           repositories.FileRepository
+	tenants          repositories.TenantRepository
+	projects         repositories.ProjectRepository
+	projectAccess    repositories.ProjectAccessRepository
+	users            repositories.UserRepository
+	pats             repositories.PatRepository
+	repos            repositories.RepositoryRepository
+	repositoryAccess repositories.RepositoryAccessRepository
+	manifest         repositories.ManifestRepository
+	tags             repositories.TagRepository
+	blobs            repositories.BlobRepository
+	repositoryBlobs  repositories.RepositoryBlobRepository
+	files            repositories.FileRepository
 }
 
 func newTransaction(txn *memdb.Txn) db.Transaction {
@@ -69,6 +70,13 @@ func (t *transaction) Repositories() repositories.RepositoryRepository {
 		t.repos = inmemory.NewInMemoryRepositoryRepository(t.txn)
 	}
 	return t.repos
+}
+
+func (t *transaction) RepositoryAccess() repositories.RepositoryAccessRepository {
+	if t.repositoryAccess == nil {
+		t.repositoryAccess = inmemory.NewInMemoryRepositoryAccessRepository(t.txn)
+	}
+	return t.repositoryAccess
 }
 
 func (t *transaction) Manifests() repositories.ManifestRepository {
