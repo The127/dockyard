@@ -12,6 +12,8 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/the127/dockyard/internal/config"
 	"github.com/the127/dockyard/internal/middlewares"
+	"github.com/the127/dockyard/internal/repositories"
+	"github.com/the127/dockyard/internal/services"
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
 
@@ -45,10 +47,25 @@ func getOciCurrentUser(r *http.Request) (*CurrentUser, bool, error) {
 		return nil, false, nil
 	}
 
-	tenantSlug := strings.Split(r.Host, ".")[0]
-
 	ctx := r.Context()
 	scope := middlewares.GetScope(ctx)
+	dbService := ioc.GetDependency[services.DbService](scope)
+
+	tx, err := dbService.GetTransaction()
+	if err != nil {
+		return nil, false, fmt.Errorf("getting transaction: %w", err)
+	}
+
+	tenantSlug := strings.Split(r.Host, ".")[0]
+	tenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(tenantSlug))
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to get tenant: %w", err)
+	}
+	if tenant == nil {
+		return nil, false, ociError.NewOciError(ociError.Unauthorized).
+			WithMessage("invalid tenant").
+			WithHttpCode(http.StatusUnauthorized)
+	}
 
 	keyManager := ioc.GetDependency[signr.KeyManager](scope)
 
@@ -61,7 +78,7 @@ func getOciCurrentUser(r *http.Request) (*CurrentUser, bool, error) {
 
 	token, err := jwt.Parse(bearerToken, func(token *jwt.Token) (interface{}, error) {
 		return signingKey.PublicKey()
-	}, jwt.WithAudience(tenantSlug), jwt.WithIssuer(config.C.Server.ExternalDomain), jwt.WithIssuedAt(), jwt.WithExpirationRequired())
+	}, jwt.WithAudience(tenant.GetId().String()), jwt.WithIssuer(config.C.Server.ExternalDomain), jwt.WithIssuedAt(), jwt.WithExpirationRequired())
 	if err != nil {
 		return nil, false, fmt.Errorf("parsing jwt: %w", err)
 	}
