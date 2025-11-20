@@ -12,8 +12,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/the127/dockyard/internal/config"
 	"github.com/the127/dockyard/internal/middlewares"
-	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
 
@@ -74,21 +72,12 @@ func getOciCurrentUser(r *http.Request) (*CurrentUser, bool, error) {
 			WithHttpCode(http.StatusUnauthorized)
 	}
 
-	dbService := ioc.GetDependency[services.DbService](scope)
-	tx, err := dbService.GetTransaction()
-	if err != nil {
-		return nil, false, fmt.Errorf("getting transaction: %w", err)
-	}
-
 	claims := token.Claims.(jwt.MapClaims)
-
-	tenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(claims["aud"].(string)))
+	audClaimString := claims["aud"].(string)
+	tenantId, err := uuid.Parse(audClaimString)
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to get tenant: %w", err)
-	}
-	if tenant == nil {
 		return nil, false, ociError.NewOciError(ociError.Unauthorized).
-			WithMessage("tenant not found").
+			WithMessage("invalid tenant id").
 			WithHttpCode(http.StatusUnauthorized)
 	}
 
@@ -101,7 +90,7 @@ func getOciCurrentUser(r *http.Request) (*CurrentUser, bool, error) {
 	}
 
 	return &CurrentUser{
-		TenantId:        tenant.GetId(),
+		TenantId:        tenantId,
 		UserId:          userId,
 		Roles:           nil,
 		IsAuthenticated: true,
