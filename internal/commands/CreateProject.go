@@ -50,7 +50,7 @@ func HandleCreateProject(ctx context.Context, command CreateProject) (*CreatePro
 		return nil, fmt.Errorf("failed to insert project: %w", err)
 	}
 
-	projectAccess := repositories.NewProjectAccess(project.GetId(), command.UserId)
+	projectAccess := repositories.NewProjectAccess(project.GetId(), command.UserId, repositories.ProjectAccessRoleAdmin)
 	err = tx.ProjectAccess().Insert(ctx, projectAccess)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert project access: %w", err)

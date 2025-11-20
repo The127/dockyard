@@ -7,18 +7,28 @@ import (
 	"github.com/the127/dockyard/internal/utils/pointer"
 )
 
+type ProjectAccessRole string
+
+const (
+	ProjectAccessRoleAdmin ProjectAccessRole = "admin"
+	ProjectAccessRoleUser  ProjectAccessRole = "user"
+)
+
 type ProjectAccess struct {
 	BaseModel
 
 	projectId uuid.UUID
 	userId    uuid.UUID
+
+	role ProjectAccessRole
 }
 
-func NewProjectAccess(projectId uuid.UUID, userId uuid.UUID) *ProjectAccess {
+func NewProjectAccess(projectId uuid.UUID, userId uuid.UUID, role ProjectAccessRole) *ProjectAccess {
 	return &ProjectAccess{
 		BaseModel: NewBaseModel(),
 		projectId: projectId,
 		userId:    userId,
+		role:      role,
 	}
 }
 
@@ -28,6 +38,14 @@ func (p *ProjectAccess) GetProjectId() uuid.UUID {
 
 func (p *ProjectAccess) GetUserId() uuid.UUID {
 	return p.userId
+}
+
+func (p *ProjectAccess) GetRole() ProjectAccessRole {
+	return p.role
+}
+
+func (p *ProjectAccess) SetRole(role ProjectAccessRole) {
+	p.role = role
 }
 
 type ProjectAccessFilter struct {
