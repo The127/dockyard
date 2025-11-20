@@ -3,6 +3,7 @@ package ocihandlers
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/google/uuid"
 	"github.com/the127/dockyard/internal/config"
@@ -48,7 +49,8 @@ func getRepositoryByIdentifier(ctx context.Context, tx database.Transaction, rep
 	}
 	if tenant == nil {
 		return nil, nil, nil, ociError.NewOciError(ociError.NameUnknown).
-			WithMessage(fmt.Sprintf("tenant '%s' does not exist", repoIdentifier.TenantSlug))
+			WithMessage(fmt.Sprintf("tenant '%s' does not exist", repoIdentifier.TenantSlug)).
+			WithHttpCode(http.StatusNotFound)
 	}
 
 	project, err := tx.Projects().First(ctx, repositories.NewProjectFilter().ByTenantId(tenant.GetId()).BySlug(repoIdentifier.ProjectSlug))
@@ -57,7 +59,8 @@ func getRepositoryByIdentifier(ctx context.Context, tx database.Transaction, rep
 	}
 	if project == nil {
 		return nil, nil, nil, ociError.NewOciError(ociError.NameUnknown).
-			WithMessage(fmt.Sprintf("project '%s' does not exist", repoIdentifier.ProjectSlug))
+			WithMessage(fmt.Sprintf("project '%s' does not exist", repoIdentifier.ProjectSlug)).
+			WithHttpCode(http.StatusNotFound)
 	}
 
 	repository, err := tx.Repositories().First(ctx, repositories.NewRepositoryFilter().ByProjectId(project.GetId()).BySlug(repoIdentifier.RepositorySlug))
@@ -66,7 +69,8 @@ func getRepositoryByIdentifier(ctx context.Context, tx database.Transaction, rep
 	}
 	if repository == nil {
 		return nil, nil, nil, ociError.NewOciError(ociError.NameUnknown).
-			WithMessage(fmt.Sprintf("repository '%s' does not exist", repoIdentifier.RepositorySlug))
+			WithMessage(fmt.Sprintf("repository '%s' does not exist", repoIdentifier.RepositorySlug)).
+			WithHttpCode(http.StatusNotFound)
 	}
 
 	return tenant, project, repository, nil
