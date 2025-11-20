@@ -20,13 +20,13 @@ import (
 func OciAuthenticationMiddleware() mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			currentUser, ok, err := getOciCurrentUser(r)
+			currentUser, err := getOciCurrentUser(r)
 			if err != nil {
 				ociError.HandleHttpError(w, r, err)
 				return
 			}
 
-			if !ok {
+			if currentUser == nil {
 				currentUser = &CurrentUser{
 					TenantId:        uuid.Nil,
 					UserId:          uuid.Nil,
@@ -41,10 +41,10 @@ func OciAuthenticationMiddleware() mux.MiddlewareFunc {
 	}
 }
 
-func getOciCurrentUser(r *http.Request) (*CurrentUser, bool, error) {
+func getOciCurrentUser(r *http.Request) (*CurrentUser, error) {
 	bearerToken, err := extractBearerToken(r, r.Header.Get("Authorization"))
 	if err != nil {
-		return nil, false, nil
+		return nil, nil
 	}
 
 	ctx := r.Context()
@@ -53,16 +53,16 @@ func getOciCurrentUser(r *http.Request) (*CurrentUser, bool, error) {
 
 	tx, err := dbService.GetTransaction()
 	if err != nil {
-		return nil, false, fmt.Errorf("getting transaction: %w", err)
+		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
 
 	tenantSlug := strings.Split(r.Host, ".")[0]
 	tenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(tenantSlug))
 	if err != nil {
-		return nil, false, fmt.Errorf("failed to get tenant: %w", err)
+		return nil, fmt.Errorf("failed to get tenant: %w", err)
 	}
 	if tenant == nil {
-		return nil, false, ociError.NewOciError(ociError.Unauthorized).
+		return nil, ociError.NewOciError(ociError.Unauthorized).
 			WithMessage("invalid tenant").
 			WithHttpCode(http.StatusUnauthorized)
 	}
@@ -73,18 +73,18 @@ func getOciCurrentUser(r *http.Request) (*CurrentUser, bool, error) {
 		GetGroup(fmt.Sprintf("jwt-signing-key:%s", tenantSlug)).
 		GetKey("EdDSA")
 	if err != nil {
-		return nil, false, fmt.Errorf("getting signing key: %w", err)
+		return nil, fmt.Errorf("getting signing key: %w", err)
 	}
 
 	token, err := jwt.Parse(bearerToken, func(token *jwt.Token) (interface{}, error) {
 		return signingKey.PublicKey()
 	}, jwt.WithAudience(tenant.GetId().String()), jwt.WithIssuer(config.C.Server.ExternalDomain), jwt.WithIssuedAt(), jwt.WithExpirationRequired())
 	if err != nil {
-		return nil, false, fmt.Errorf("parsing jwt: %w", err)
+		return nil, fmt.Errorf("parsing jwt: %w", err)
 	}
 
 	if !token.Valid {
-		return nil, false, ociError.NewOciError(ociError.Unauthorized).
+		return nil, ociError.NewOciError(ociError.Unauthorized).
 			WithMessage("invalid token").
 			WithHttpCode(http.StatusUnauthorized)
 	}
@@ -93,7 +93,7 @@ func getOciCurrentUser(r *http.Request) (*CurrentUser, bool, error) {
 	audClaimString := claims["aud"].(string)
 	tenantId, err := uuid.Parse(audClaimString)
 	if err != nil {
-		return nil, false, ociError.NewOciError(ociError.Unauthorized).
+		return nil, ociError.NewOciError(ociError.Unauthorized).
 			WithMessage("invalid tenant id").
 			WithHttpCode(http.StatusUnauthorized)
 	}
@@ -101,7 +101,7 @@ func getOciCurrentUser(r *http.Request) (*CurrentUser, bool, error) {
 	subClaimString := claims["sub"].(string)
 	userId, err := uuid.Parse(subClaimString)
 	if err != nil {
-		return nil, false, ociError.NewOciError(ociError.Unauthorized).
+		return nil, ociError.NewOciError(ociError.Unauthorized).
 			WithMessage("invalid user id").
 			WithHttpCode(http.StatusUnauthorized)
 	}
@@ -111,5 +111,5 @@ func getOciCurrentUser(r *http.Request) (*CurrentUser, bool, error) {
 		UserId:          userId,
 		Roles:           nil,
 		IsAuthenticated: true,
-	}, true, nil
+	}, nil
 }
