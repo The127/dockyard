@@ -1,9 +1,11 @@
 package ocihandlers
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -15,6 +17,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/the127/dockyard/internal/config"
+	"github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/services"
@@ -56,13 +59,21 @@ func Tokens(w http.ResponseWriter, r *http.Request) {
 	}
 	if tenant == nil {
 		err := ociError.NewOciError(ociError.Unauthorized).
-			WithMessage("invalid token").
+			WithMessage("invalid tenant").
 			WithHttpCode(http.StatusUnauthorized)
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
-	userInfo, err := getUserInfo(r, tenant)
+	requestedScope := parseScopeFromRequest(r, tenantSlug)
+
+	userId, err := getUserId(r, tenant)
+	if err != nil {
+		ociError.HandleHttpError(w, r, err)
+		return
+	}
+
+	restrictedScope, err := restrictScope(ctx, tx, userId, requestedScope)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -80,17 +91,23 @@ func Tokens(w http.ResponseWriter, r *http.Request) {
 	clockService := ioc.GetDependency[clock.Service](scope)
 	now := clockService.Now()
 
-	claims := &jwt.MapClaims{
-		"iss":    config.C.Server.ExternalDomain,
-		"sub":    userInfo.Sub,
-		"aud":    tenant.GetId().String(),
-		"exp":    jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
-		"iat":    jwt.NewNumericDate(now),
-		"access": userInfo.Access,
+	claims := map[string]any{
+		"iss": config.C.Server.ExternalDomain,
+		"sub": userId.String(),
+		"aud": tenant.GetId().String(),
+		"exp": jwt.NewNumericDate(time.Now().Add(10 * time.Minute)),
+		"iat": jwt.NewNumericDate(now),
 	}
 
+	if restrictedScope != nil {
+		claims["repository"] = restrictedScope.repository
+		claims["access"] = restrictedScope.access
+	}
+
+	mapClaims := jwt.MapClaims(claims)
+
 	s := NewJwtSigningMethod(signingKey)
-	j, err := jwt.NewWithClaims(s, claims).SignedString(s)
+	j, err := jwt.NewWithClaims(s, mapClaims).SignedString(s)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -110,33 +127,156 @@ func Tokens(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-type claimInfo struct {
-	Sub    string
-	Access *Access
+func checkAccessForUserAndRepository(
+	ctx context.Context,
+	tx database.Transaction,
+	userId uuid.UUID,
+	repository *repositories.Repository,
+	accessType Access,
+) (bool, error) {
+	var repositoryAccessFilter *repositories.RepositoryAccessFilter
+	var repositoryAccess *repositories.RepositoryAccess
+	var err error
+
+	if userId == uuid.Nil {
+		if repository.GetIsPublic() && accessType == PullAccess {
+			return true, nil
+		} else {
+			return false, nil
+		}
+	}
+
+	repositoryAccessFilter = repositories.NewRepositoryAccessFilter().
+		ByRepositoryId(repository.GetId()).
+		ByUserId(userId)
+	repositoryAccess, err = tx.RepositoryAccess().First(ctx, repositoryAccessFilter)
+	if err != nil {
+		return false, fmt.Errorf("getting repository access: %w", err)
+	}
+
+	if repositoryAccess == nil {
+		return false, nil
+	}
+
+	if accessType == PushAccess && repositoryAccess.GetRole().AllowPush() {
+		return true, nil
+	}
+
+	if accessType == PullAccess && repositoryAccess.GetRole().AllowPull() {
+		return true, nil
+	}
+
+	return false, nil
 }
 
-type Access struct {
-	Repository []string `json:"repository"`
+func restrictScope(ctx context.Context, tx database.Transaction, userId uuid.UUID, scope *ociScope) (*ociScope, error) {
+	if scope == nil {
+		return nil, nil
+	}
+
+	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, scope.repository)
+
+	if err != nil {
+		var ociErr *ociError.OciError
+		if errors.As(err, &ociErr) && ociErr.Code == ociError.NameUnknown {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	allowedAccesses := make([]Access, 0, len(scope.access))
+
+	for _, access := range scope.access {
+		ok, err := checkAccessForUserAndRepository(ctx, tx, userId, repository, access)
+		if err != nil {
+			return nil, err
+		}
+
+		if ok {
+			allowedAccesses = append(allowedAccesses, access)
+		}
+	}
+
+	if len(allowedAccesses) == 0 {
+		return nil, nil
+	}
+
+	return &ociScope{
+		repository: scope.repository,
+		access:     allowedAccesses,
+	}, nil
 }
 
-func getUserInfo(r *http.Request, tenant *repositories.Tenant) (*claimInfo, error) {
+func parseScopeFromRequest(r *http.Request, tenantSlug string) *ociScope {
+	scopeStr := r.Form.Get("scope")
+
+	// repository:<reponame>:<accesslist>
+	splitN := strings.SplitN(scopeStr, ":", 3)
+	if len(splitN) != 3 || splitN[0] != "repository" {
+		return nil
+	}
+
+	repository := splitN[1]
+
+	accessStrs := strings.Split(splitN[2], ",")
+	if len(accessStrs) == 0 {
+		return nil
+	}
+
+	accesses := make([]Access, len(accessStrs))
+
+	for _, accessStr := range accessStrs {
+		if accessStr != string(PushAccess) && accessStr != string(PullAccess) {
+			continue
+		}
+
+		accesses = append(accesses, Access(accessStr))
+	}
+
+	repositoryParts := strings.Split(repository, "/")
+	if len(repositoryParts) != 2 {
+		return nil
+	}
+
+	return &ociScope{
+		repository: middlewares.OciRepositoryIdentifier{
+			TenantSlug:     tenantSlug,
+			ProjectSlug:    repositoryParts[0],
+			RepositorySlug: repositoryParts[1],
+		},
+		access: accesses,
+	}
+}
+
+type ociScope struct {
+	repository middlewares.OciRepositoryIdentifier
+	access     []Access
+}
+
+type Access string
+
+const (
+	PushAccess Access = "push"
+	PullAccess Access = "pull"
+)
+
+func getUserId(r *http.Request, tenant *repositories.Tenant) (uuid.UUID, error) {
 	_, password, ok := r.BasicAuth()
 	if !ok {
-		return &claimInfo{
-			Sub: uuid.Nil.String(),
-		}, nil
+		return uuid.Nil, nil
 	}
 
 	if !strings.HasPrefix(password, "pat_") {
 		err := ociError.NewOciError(ociError.Unauthorized).
 			WithMessage("invalid token, must start with 'pat_'").
 			WithHttpCode(http.StatusUnauthorized)
-		return nil, err
+		return uuid.Nil, err
 	}
 
 	patBytes, err := base64.RawURLEncoding.DecodeString(password[4:])
 	if err != nil {
-		return nil, fmt.Errorf("decoding pat: %w", err)
+		return uuid.Nil, fmt.Errorf("decoding pat: %w", err)
 	}
 
 	uuidBytes := patBytes[:16]
@@ -144,7 +284,7 @@ func getUserInfo(r *http.Request, tenant *repositories.Tenant) (*claimInfo, erro
 
 	patId, err := uuid.FromBytes(uuidBytes)
 	if err != nil {
-		return nil, fmt.Errorf("parsing pat id: %w", err)
+		return uuid.Nil, fmt.Errorf("parsing pat id: %w", err)
 	}
 
 	ctx := r.Context()
@@ -153,18 +293,18 @@ func getUserInfo(r *http.Request, tenant *repositories.Tenant) (*claimInfo, erro
 
 	tx, err := dbService.GetTransaction()
 	if err != nil {
-		return nil, fmt.Errorf("getting transaction: %w", err)
+		return uuid.Nil, fmt.Errorf("getting transaction: %w", err)
 	}
 
 	pat, err := tx.Pats().First(ctx, repositories.NewPatFilter().ById(patId))
 	if err != nil {
-		return nil, fmt.Errorf("getting pat: %w", err)
+		return uuid.Nil, fmt.Errorf("getting pat: %w", err)
 	}
 	if pat == nil {
 		err := ociError.NewOciError(ociError.Unauthorized).
 			WithMessage("invalid token").
 			WithHttpCode(http.StatusUnauthorized)
-		return nil, err
+		return uuid.Nil, err
 	}
 
 	hashedSecret := sha256.New().Sum(secretBytes)
@@ -172,31 +312,28 @@ func getUserInfo(r *http.Request, tenant *repositories.Tenant) (*claimInfo, erro
 		err := ociError.NewOciError(ociError.Unauthorized).
 			WithMessage("invalid token").
 			WithHttpCode(http.StatusUnauthorized)
-		return nil, err
+		return uuid.Nil, err
 	}
 
 	user, err := tx.Users().First(ctx, repositories.NewUserFilter().ById(pat.GetUserId()))
 	if err != nil {
-		return nil, fmt.Errorf("getting user: %w", err)
+		return uuid.Nil, fmt.Errorf("getting user: %w", err)
 	}
 	if user == nil {
 		err := ociError.NewOciError(ociError.Unauthorized).
 			WithMessage("invalid token").
 			WithHttpCode(http.StatusUnauthorized)
-		return nil, err
+		return uuid.Nil, err
 	}
 
 	if tenant.GetId() != user.GetTenantId() {
 		err := ociError.NewOciError(ociError.Unauthorized).
 			WithMessage("invalid token").
 			WithHttpCode(http.StatusUnauthorized)
-		return nil, err
+		return uuid.Nil, err
 	}
 
-	return &claimInfo{
-		Sub:    user.GetId().String(),
-		Access: &Access{},
-	}, nil
+	return user.GetId(), nil
 }
 
 type jwtSigningMethod struct {

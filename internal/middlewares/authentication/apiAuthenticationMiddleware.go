@@ -43,10 +43,12 @@ func ApiAuthenticationMiddleware() mux.MiddlewareFunc {
 }
 
 func getApiCurrentUser(r *http.Request, tenantSlug string) (*CurrentUser, error) {
-	tokenStr, err := extractBearerToken(r, r.Header.Get("Authorization"))
-	if err != nil {
-		return nil, nil
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
+		return nil, fmt.Errorf("authorization header is missing or invalid")
 	}
+
+	tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
 
 	// get the tenant
 	ctx := r.Context()

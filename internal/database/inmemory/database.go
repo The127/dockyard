@@ -59,8 +59,8 @@ func NewInMemoryDatabase() (db.Database, error) {
 					},
 				},
 			},
-			"project_accesses": {
-				Name: "project_accesses",
+			"project_access": {
+				Name: "project_access",
 				Indexes: map[string]*memdb.IndexSchema{
 					"id": {
 						Name:   "id",
@@ -82,8 +82,8 @@ func NewInMemoryDatabase() (db.Database, error) {
 					},
 				},
 			},
-			"repository_accesses": {
-				Name: "repository_accesses",
+			"repository_access": {
+				Name: "repository_access",
 				Indexes: map[string]*memdb.IndexSchema{
 					"id": {
 						Name:   "id",

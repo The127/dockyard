@@ -4,58 +4,33 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 
-	"github.com/google/uuid"
 	"github.com/the127/dockyard/internal/config"
 	"github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
-	"github.com/the127/dockyard/internal/middlewares/authentication"
+	"github.com/the127/dockyard/internal/middlewares/ociAuthentication"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
 
 func checkAccess(
 	ctx context.Context,
-	tx database.Transaction,
 	repoIdentifier middlewares.OciRepositoryIdentifier,
-	repository *repositories.Repository,
-	accessType string,
+	accessType Access,
 ) error {
-	var repositoryAccessFilter *repositories.RepositoryAccessFilter
-	var repositoryAccess *repositories.RepositoryAccess
-	var err error
+	currentUser := ociAuthentication.GetCurrentUser(ctx)
+	if currentUser.Repository != nil {
+		if currentUser.Repository.TenantSlug == repoIdentifier.TenantSlug &&
+			currentUser.Repository.ProjectSlug == repoIdentifier.ProjectSlug &&
+			currentUser.Repository.RepositorySlug == repoIdentifier.RepositorySlug {
 
-	if repository.GetIsPublic() {
-		return nil
-	}
-
-	currentUser := authentication.GetCurrentUser(ctx)
-	if currentUser.UserId == uuid.Nil {
-		goto failure
-	}
-
-	repositoryAccessFilter = repositories.NewRepositoryAccessFilter().
-		ByRepositoryId(repository.GetId()).
-		ByUserId(currentUser.UserId)
-	repositoryAccess, err = tx.RepositoryAccess().First(ctx, repositoryAccessFilter)
-	if err != nil {
-		return fmt.Errorf("getting repository access: %w", err)
-	}
-	if repositoryAccess == nil {
-		goto failure
-	}
-
-	if accessType == "push" {
-		if repositoryAccess.GetRole() == repositories.RepositoryAccessRoleGuest {
-			goto failure
+			if slices.Contains(currentUser.Access, string(accessType)) {
+				return nil
+			}
 		}
 	}
 
-	// pull access is allowed for all roles
-
-	return nil
-
-failure:
 	realm := fmt.Sprintf("%s/v2/token", config.C.Server.ExternalUrl)
 	service := fmt.Sprintf("%s:%s", config.C.Server.ExternalDomain, repoIdentifier.TenantSlug)
 	scope := fmt.Sprintf("repository:%s/%s/%s:%s", repoIdentifier.TenantSlug, repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, accessType)

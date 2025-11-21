@@ -64,7 +64,7 @@ func BlobsDownload(w http.ResponseWriter, r *http.Request) {
 		ociError.HandleHttpError(w, r, err)
 	}
 
-	err = checkAccess(ctx, tx, repoIdentifier, repository, "pull")
+	err = checkAccess(ctx, repoIdentifier, PullAccess)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -106,7 +106,7 @@ func BlobExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = checkAccess(ctx, tx, repoIdentifier, repository, "pull")
+	err = checkAccess(ctx, repoIdentifier, PullAccess)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -141,7 +141,7 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = checkAccess(ctx, tx, repoIdentifier, repository, "push")
+	err = checkAccess(ctx, repoIdentifier, PushAccess)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return

@@ -61,7 +61,7 @@ func (r *repositoryAccessRepository) matches(repositoryAccess *repositories.Repo
 }
 
 func (r *repositoryAccessRepository) First(_ context.Context, filter *repositories.RepositoryAccessFilter) (*repositories.RepositoryAccess, error) {
-	iterator, err := r.txn.Get("repository_accesses", "id")
+	iterator, err := r.txn.Get("repository_access", "id")
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (r *repositoryAccessRepository) First(_ context.Context, filter *repositori
 }
 
 func (r *repositoryAccessRepository) Insert(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
-	err := r.txn.Insert("repository_accesses", *repositoryAccess)
+	err := r.txn.Insert("repository_access", *repositoryAccess)
 	if err != nil {
 		return fmt.Errorf("failed to insert repository access: %w", err)
 	}
@@ -97,7 +97,7 @@ func (r *repositoryAccessRepository) Delete(_ context.Context, id uuid.UUID) err
 		return nil
 	}
 
-	err = r.txn.Delete("repository_accesses", entry)
+	err = r.txn.Delete("repository_access", entry)
 	if err != nil {
 		return fmt.Errorf("failed to delete repository access: %w", err)
 	}

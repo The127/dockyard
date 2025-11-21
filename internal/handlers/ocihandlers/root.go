@@ -6,13 +6,13 @@ import (
 	"strings"
 
 	"github.com/the127/dockyard/internal/config"
-	"github.com/the127/dockyard/internal/middlewares/authentication"
+	"github.com/the127/dockyard/internal/middlewares/ociAuthentication"
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
 
 func Root(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	currentUser := authentication.GetCurrentUser(ctx)
+	currentUser := ociAuthentication.GetCurrentUser(ctx)
 	if currentUser.IsAuthenticated {
 		w.WriteHeader(http.StatusOK)
 		return

@@ -1,4 +1,4 @@
-package authentication
+package ociAuthentication
 
 import (
 	"fmt"
@@ -30,7 +30,6 @@ func OciAuthenticationMiddleware() mux.MiddlewareFunc {
 				currentUser = &CurrentUser{
 					TenantId:        uuid.Nil,
 					UserId:          uuid.Nil,
-					Roles:           []string{},
 					IsAuthenticated: false,
 				}
 			}
@@ -42,10 +41,12 @@ func OciAuthenticationMiddleware() mux.MiddlewareFunc {
 }
 
 func getOciCurrentUser(r *http.Request) (*CurrentUser, error) {
-	bearerToken, err := extractBearerToken(r, r.Header.Get("Authorization"))
-	if err != nil {
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 		return nil, nil
 	}
+
+	bearerToken := strings.TrimPrefix(authHeader, "Bearer ")
 
 	ctx := r.Context()
 	scope := middlewares.GetScope(ctx)
@@ -106,10 +107,39 @@ func getOciCurrentUser(r *http.Request) (*CurrentUser, error) {
 			WithHttpCode(http.StatusUnauthorized)
 	}
 
+	var access []string
+
+	accessClaim, ok := claims["access"]
+	if ok {
+		accessClaimSlice, ok := accessClaim.([]any)
+		if ok {
+			for i := range accessClaimSlice {
+				accessClaimString, ok := accessClaimSlice[i].(string)
+				if ok {
+					access = append(access, accessClaimString)
+				}
+			}
+		}
+	}
+
+	var repository *middlewares.OciRepositoryIdentifier
+	repositoryClaim, ok := claims["repository"]
+	if ok {
+		repositoryClaimMap, ok := repositoryClaim.(map[string]any)
+		if ok {
+			repository = &middlewares.OciRepositoryIdentifier{
+				TenantSlug:     repositoryClaimMap["tenant"].(string),
+				ProjectSlug:    repositoryClaimMap["project"].(string),
+				RepositorySlug: repositoryClaimMap["repository"].(string),
+			}
+		}
+	}
+
 	return &CurrentUser{
 		TenantId:        tenantId,
 		UserId:          userId,
-		Roles:           nil,
 		IsAuthenticated: true,
+		Access:          access,
+		Repository:      repository,
 	}, nil
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/middlewares/authentication"
+	"github.com/the127/dockyard/internal/middlewares/ociAuthentication"
 
 	gh "github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -128,7 +129,7 @@ func mapApi(r *mux.Router) {
 
 func mapOciApi(r *mux.Router) {
 	v2Router := r.PathPrefix("/v2").Subrouter()
-	v2Router.Use(authentication.OciAuthenticationMiddleware())
+	v2Router.Use(ociAuthentication.OciAuthenticationMiddleware())
 
 	v2Router.HandleFunc("/token", ocihandlers.Tokens).Methods(http.MethodPost, http.MethodGet, http.MethodOptions)
 

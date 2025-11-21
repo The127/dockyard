@@ -15,6 +15,15 @@ const (
 	RepositoryAccessRoleGuest RepositoryAccessRole = "reader"
 )
 
+func (r RepositoryAccessRole) AllowPush() bool {
+	return r != RepositoryAccessRoleGuest
+}
+
+func (r RepositoryAccessRole) AllowPull() bool {
+	// all roles can pull
+	return true
+}
+
 type RepositoryAccess struct {
 	BaseModel
 

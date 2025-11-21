@@ -9,9 +9,9 @@ import (
 )
 
 type OciRepositoryIdentifier struct {
-	TenantSlug     string
-	ProjectSlug    string
-	RepositorySlug string
+	TenantSlug     string `json:"tenant"`
+	ProjectSlug    string `json:"project"`
+	RepositorySlug string `json:"repository"`
 }
 
 type OciNameContextKey string

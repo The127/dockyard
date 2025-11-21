@@ -82,7 +82,7 @@ func ManifestsDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = checkAccess(ctx, tx, repoIdentifier, repository, "pull")
+	err = checkAccess(ctx, repoIdentifier, PullAccess)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -125,7 +125,7 @@ func ManifestsExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = checkAccess(ctx, tx, repoIdentifier, repository, "pull")
+	err = checkAccess(ctx, repoIdentifier, PullAccess)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -160,7 +160,7 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = checkAccess(ctx, tx, repoIdentifier, repository, "push")
+	err = checkAccess(ctx, repoIdentifier, PushAccess)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
