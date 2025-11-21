@@ -12,6 +12,7 @@ import (
 )
 
 type CreateRepository struct {
+	UserId      uuid.UUID
 	TenantSlug  string
 	ProjectSlug string
 	Slug        string
@@ -57,6 +58,12 @@ func HandleCreateRepository(ctx context.Context, command CreateRepository) (*Cre
 	err = repositoryRepository.Insert(ctx, repository)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert repository: %w", err)
+	}
+
+	repositoryAccess := repositories.NewRepositoryAccess(repository.GetId(), command.UserId, repositories.RepositoryAccessRoleAdmin)
+	err = tx.RepositoryAccess().Insert(ctx, repositoryAccess)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert repository access: %w", err)
 	}
 
 	return &CreateRepositoryResponse{

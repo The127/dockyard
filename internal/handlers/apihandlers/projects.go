@@ -12,6 +12,7 @@ import (
 	"github.com/the127/dockyard/internal/commands"
 	"github.com/the127/dockyard/internal/handlers"
 	"github.com/the127/dockyard/internal/middlewares"
+	"github.com/the127/dockyard/internal/middlewares/authentication"
 	"github.com/the127/dockyard/internal/queries"
 	"github.com/the127/dockyard/internal/utils/apiError"
 	"github.com/the127/dockyard/internal/utils/decoding"
@@ -45,12 +46,15 @@ func CreateProject(w http.ResponseWriter, r *http.Request) {
 	scope := middlewares.GetScope(ctx)
 	mediator := ioc.GetDependency[mediatr.Mediator](scope)
 
+	currentUser := authentication.GetCurrentUser(ctx)
+
 	var displayName = dto.Slug
 	if dto.DisplayName != nil && *dto.DisplayName != "" {
 		displayName = *dto.DisplayName
 	}
 
 	_, err = mediatr.Send[*commands.CreateProjectResponse](ctx, mediator, commands.CreateProject{
+		UserId:      currentUser.UserId,
 		TenantSlug:  tenantSlug,
 		Slug:        dto.Slug,
 		DisplayName: displayName,

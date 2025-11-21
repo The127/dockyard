@@ -13,6 +13,7 @@ import (
 	"github.com/the127/dockyard/internal/commands"
 	"github.com/the127/dockyard/internal/handlers"
 	"github.com/the127/dockyard/internal/middlewares"
+	"github.com/the127/dockyard/internal/middlewares/authentication"
 	"github.com/the127/dockyard/internal/queries"
 	"github.com/the127/dockyard/internal/utils/apiError"
 	"github.com/the127/dockyard/internal/utils/decoding"
@@ -48,7 +49,10 @@ func CreateRepository(w http.ResponseWriter, r *http.Request) {
 	scope := middlewares.GetScope(ctx)
 	mediator := ioc.GetDependency[mediatr.Mediator](scope)
 
+	currentUser := authentication.GetCurrentUser(ctx)
+
 	_, err = mediatr.Send[*commands.CreateRepositoryResponse](ctx, mediator, commands.CreateRepository{
+		UserId:      currentUser.UserId,
 		TenantSlug:  tenantSlug,
 		ProjectSlug: projectSlug,
 		Slug:        dto.Slug,
