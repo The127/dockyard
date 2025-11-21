@@ -63,8 +63,15 @@ func getManifestByReference(ctx context.Context, tx database.Transaction, reposi
 
 func ManifestsDownload(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
 	repoIdentifier := middlewares.GetRepoIdentifier(ctx)
+
+	err := checkAccess(ctx, repoIdentifier, PullAccess)
+	if err != nil {
+		ociError.HandleHttpError(w, r, err)
+		return
+	}
+
+	scope := middlewares.GetScope(ctx)
 
 	vars := mux.Vars(r)
 	reference := vars["reference"]
@@ -77,12 +84,6 @@ func ManifestsDownload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
-	if err != nil {
-		ociError.HandleHttpError(w, r, err)
-		return
-	}
-
-	err = checkAccess(ctx, repoIdentifier, PullAccess)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -107,6 +108,13 @@ func ManifestsDownload(w http.ResponseWriter, r *http.Request) {
 func ManifestsExists(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	repoIdentifier := middlewares.GetRepoIdentifier(ctx)
+
+	err := checkAccess(ctx, repoIdentifier, PullAccess)
+	if err != nil {
+		ociError.HandleHttpError(w, r, err)
+		return
+	}
+
 	scope := middlewares.GetScope(ctx)
 
 	vars := mux.Vars(r)
@@ -125,12 +133,6 @@ func ManifestsExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = checkAccess(ctx, repoIdentifier, PullAccess)
-	if err != nil {
-		ociError.HandleHttpError(w, r, err)
-		return
-	}
-
 	_, blob, err := getManifestByReference(ctx, tx, repository.GetId(), reference)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
@@ -144,8 +146,15 @@ func ManifestsExists(w http.ResponseWriter, r *http.Request) {
 
 func UploadManifest(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
 	repoIdentifier := middlewares.GetRepoIdentifier(ctx)
+
+	err := checkAccess(ctx, repoIdentifier, PushAccess)
+	if err != nil {
+		ociError.HandleHttpError(w, r, err)
+		return
+	}
+
+	scope := middlewares.GetScope(ctx)
 
 	dbService := ioc.GetDependency[services.DbService](scope)
 	tx, err := dbService.GetTransaction()
@@ -155,12 +164,6 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
-	if err != nil {
-		ociError.HandleHttpError(w, r, err)
-		return
-	}
-
-	err = checkAccess(ctx, repoIdentifier, PushAccess)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return

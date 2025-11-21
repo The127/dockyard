@@ -47,6 +47,13 @@ func getRepositoryBlob(ctx context.Context, tx database.Transaction, repositoryI
 func BlobsDownload(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	repoIdentifier := middlewares.GetRepoIdentifier(ctx)
+
+	err := checkAccess(ctx, repoIdentifier, PullAccess)
+	if err != nil {
+		ociError.HandleHttpError(w, r, err)
+		return
+	}
+
 	scope := middlewares.GetScope(ctx)
 
 	vars := mux.Vars(r)
@@ -62,12 +69,6 @@ func BlobsDownload(w http.ResponseWriter, r *http.Request) {
 	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
-	}
-
-	err = checkAccess(ctx, repoIdentifier, PullAccess)
-	if err != nil {
-		ociError.HandleHttpError(w, r, err)
-		return
 	}
 
 	_, blob, err := getRepositoryBlob(ctx, tx, repository.GetId(), digest)
@@ -88,6 +89,13 @@ func BlobsDownload(w http.ResponseWriter, r *http.Request) {
 func BlobExists(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	repoIdentifier := middlewares.GetRepoIdentifier(ctx)
+
+	err := checkAccess(ctx, repoIdentifier, PullAccess)
+	if err != nil {
+		ociError.HandleHttpError(w, r, err)
+		return
+	}
+
 	scope := middlewares.GetScope(ctx)
 
 	vars := mux.Vars(r)
@@ -101,12 +109,6 @@ func BlobExists(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
-	if err != nil {
-		ociError.HandleHttpError(w, r, err)
-		return
-	}
-
-	err = checkAccess(ctx, repoIdentifier, PullAccess)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -126,6 +128,13 @@ func BlobExists(w http.ResponseWriter, r *http.Request) {
 func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	repoIdentifier := middlewares.GetRepoIdentifier(ctx)
+
+	err := checkAccess(ctx, repoIdentifier, PushAccess)
+	if err != nil {
+		ociError.HandleHttpError(w, r, err)
+		return
+	}
+
 	scope := middlewares.GetScope(ctx)
 
 	dbService := ioc.GetDependency[services.DbService](scope)
@@ -136,12 +145,6 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tenant, project, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
-	if err != nil {
-		ociError.HandleHttpError(w, r, err)
-		return
-	}
-
-	err = checkAccess(ctx, repoIdentifier, PushAccess)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
