@@ -48,32 +48,23 @@ func HandleUpdateRepositoryReadme(ctx context.Context, command UpdateRepositoryR
 	digestBytes := sha256.Sum256(command.Content)
 	digest := fmt.Sprintf("sha256:%x", digestBytes[:])
 
-	switch repository.GetReadmeFileId() {
-	case nil:
-		newReadme := repositories.NewFile(digest, "text/markdown", command.Content)
-		err = tx.Files().Insert(ctx, newReadme)
+	if repository.GetReadmeFileId() != nil {
+		err = tx.Files().Delete(ctx, *repository.GetReadmeFileId())
 		if err != nil {
-			return nil, fmt.Errorf("failed to insert readme file: %w", err)
+			return nil, fmt.Errorf("failed to delete readme file: %w", err)
 		}
+	}
 
-		repository.SetReadmeFileId(pointer.To(newReadme.GetId()))
-		err = tx.Repositories().Update(ctx, repository)
-		if err != nil {
-			return nil, fmt.Errorf("failed to update repository: %w", err)
-		}
+	newReadme := repositories.NewFile(digest, "text/markdown", command.Content)
+	err = tx.Files().Insert(ctx, newReadme)
+	if err != nil {
+		return nil, fmt.Errorf("failed to insert readme file: %w", err)
+	}
 
-	default:
-		existingReadme, err := tx.Files().Single(ctx, repositories.NewFileFilter().ById(*repository.GetReadmeFileId()))
-		if err != nil {
-			return nil, fmt.Errorf("failed to get readme file: %w", err)
-		}
-
-		existingReadme.Digest = digest
-		existingReadme.Data = command.Content
-		err = tx.Files().Update(ctx, existingReadme)
-		if err != nil {
-			return nil, fmt.Errorf("failed to update readme file: %w", err)
-		}
+	repository.SetReadmeFileId(pointer.To(newReadme.GetId()))
+	err = tx.Repositories().Update(ctx, repository)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update repository: %w", err)
 	}
 
 	return &UpdateRepositoryReadmeResponse{}, nil

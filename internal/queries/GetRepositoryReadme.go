@@ -8,6 +8,7 @@ import (
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/services"
+	"github.com/the127/dockyard/internal/utils/pointer"
 )
 
 type GetRepositoryReadme struct {
@@ -51,7 +52,7 @@ func HandleGetRepositoryReadme(ctx context.Context, query GetRepositoryReadme) (
 			return nil, fmt.Errorf("failed to get readme file: %w", err)
 		}
 
-		content = &file.Data
+		content = pointer.To(file.GetData())
 	}
 
 	return &GetRepositoryReadmeResponse{
