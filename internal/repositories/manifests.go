@@ -25,6 +25,15 @@ func NewManifest(repositoryId uuid.UUID, blobId uuid.UUID, reference string) *Ma
 	}
 }
 
+func NewManifestFromDB(repositoryId uuid.UUID, blobId uuid.UUID, reference string, base BaseModel) *Manifest {
+	return &Manifest{
+		BaseModel:    base,
+		repositoryId: repositoryId,
+		blobId:       blobId,
+		digest:       reference,
+	}
+}
+
 func (m *Manifest) GetRepositoryId() uuid.UUID {
 	return m.repositoryId
 }
@@ -114,6 +123,5 @@ type ManifestRepository interface {
 	First(ctx context.Context, filter *ManifestFilter) (*Manifest, error)
 	List(ctx context.Context, filter *ManifestFilter) ([]*Manifest, int, error)
 	Insert(ctx context.Context, manifest *Manifest) error
-	Update(ctx context.Context, manifest *Manifest) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
