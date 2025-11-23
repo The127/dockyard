@@ -9,8 +9,15 @@ import (
 	"github.com/the127/dockyard/internal/utils/pointer"
 )
 
+type PatChange int
+
+const (
+	PatChangeDisplayName PatChange = iota
+)
+
 type Pat struct {
 	BaseModel
+	Changes[PatChange]
 
 	userId       uuid.UUID
 	displayName  string
@@ -56,7 +63,12 @@ func (p *Pat) GetDisplayName() string {
 }
 
 func (p *Pat) SetDisplayName(displayName string) {
+	if p.displayName == displayName {
+		return
+	}
+
 	p.displayName = displayName
+	p.trackChange(PatChangeDisplayName)
 }
 
 type PatFilter struct {
@@ -106,5 +118,6 @@ type PatRepository interface {
 	First(ctx context.Context, filter *PatFilter) (*Pat, error)
 	List(ctx context.Context, filter *PatFilter) ([]*Pat, int, error)
 	Insert(ctx context.Context, entity *Pat) error
+	Update(ctx context.Context, entity *Pat) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }

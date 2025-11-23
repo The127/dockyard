@@ -105,6 +105,7 @@ func (r *userRepository) Insert(_ context.Context, user *repositories.User) erro
 		return fmt.Errorf("failed to insert user: %w", err)
 	}
 
+	user.ClearChanges()
 	return nil
 }
 
@@ -114,6 +115,7 @@ func (r *userRepository) Update(_ context.Context, user *repositories.User) erro
 		return fmt.Errorf("failed to insert user: %w", err)
 	}
 
+	user.ClearChanges()
 	return nil
 }
 

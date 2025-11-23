@@ -158,17 +158,71 @@ func (r *tenantRepository) Insert(ctx context.Context, tenant *repositories.Tena
 			tenant.GetOidcRoleMapping(),
 		)
 
+	s.Returning("xmin")
+
 	query, args := s.Build()
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("inserting tenant: %w", err)
 	}
 
+	tenant.SetVersion(xmin)
+	tenant.ClearChanges()
 	return nil
 }
 
 func (r *tenantRepository) Update(ctx context.Context, tenant *repositories.Tenant) error {
-	panic("not yet implemented")
+	if !tenant.HasChanges() {
+		return nil
+	}
+
+	s := sqlbuilder.Update("tenants")
+	s.Where(s.Equal("id", tenant.GetId()))
+	s.Where(s.Equal("xmin", tenant.GetVersion()))
+
+	for _, field := range tenant.GetChanges() {
+		switch field {
+		case repositories.TenantChangeOidcIssuer:
+			s.SetMore(s.Assign("oidc_issuer", tenant.GetOidcIssuer()))
+		case repositories.TenantChangeOidcRoleMapping:
+			s.SetMore(s.Assign("oidc_role_mapping", tenant.GetOidcRoleMapping()))
+		case repositories.TenantChangeOidcClient:
+			s.SetMore(s.Assign("oidc_client", tenant.GetOidcClient()))
+		case repositories.TenantChangeOidcRoleClaim:
+			s.SetMore(s.Assign("oidc_role_claim", tenant.GetOidcRoleClaim()))
+		case repositories.TenantChangeOidcRoleClaimFormat:
+			s.SetMore(s.Assign("oidc_role_claim_format", tenant.GetOidcRoleClaimFormat()))
+		case repositories.TenantChangeDisplayName:
+			s.SetMore(s.Assign("display_name", tenant.GetDisplayName()))
+
+		default:
+			panic(fmt.Errorf("unknown tenant change: %d", field))
+		}
+	}
+
+	s.Returning("xmin")
+	query, args := s.Build()
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
+	if errors.Is(err, sql.ErrNoRows) {
+		// no row was updated, which means the row was either already deleted or concurrently updated
+		return fmt.Errorf("updating tenant: %w", apiError.ErrApiConcurrentUpdate)
+	}
+
+	if err != nil {
+		return fmt.Errorf("updating tenant: %w", err)
+	}
+
+	tenant.SetVersion(xmin)
+	tenant.ClearChanges()
+	return nil
 }
 
 func (r *tenantRepository) Delete(ctx context.Context, id uuid.UUID) error {
@@ -178,7 +232,7 @@ func (r *tenantRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query, args := s.Build()
 	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("deleting tenant: %w", err)
 	}
 
 	return nil

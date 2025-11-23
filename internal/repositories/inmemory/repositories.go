@@ -110,6 +110,7 @@ func (r *repositoryRepository) Insert(_ context.Context, repository *repositorie
 		return fmt.Errorf("failed to insert repository: %w", err)
 	}
 
+	repository.ClearChanges()
 	return nil
 }
 
@@ -119,6 +120,7 @@ func (r *repositoryRepository) Update(_ context.Context, repository *repositorie
 		return fmt.Errorf("failed to update repository: %w", err)
 	}
 
+	repository.ClearChanges()
 	return nil
 }
 

@@ -141,12 +141,19 @@ func (r *fileRepository) Insert(ctx context.Context, file *repositories.File) er
 			file.GetSize(),
 		)
 
+	s.Returning("xmin")
+
 	query, args := s.Build()
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("inserting file: %w", err)
 	}
 
+	file.SetVersion(xmin)
 	return nil
 }
 
@@ -157,7 +164,7 @@ func (r *fileRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query, args := s.Build()
 	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("deleting file: %w", err)
 	}
 
 	return nil

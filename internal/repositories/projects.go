@@ -7,8 +7,16 @@ import (
 	"github.com/the127/dockyard/internal/utils/pointer"
 )
 
+type ProjectChange int
+
+const (
+	ProjectChangeDisplayName ProjectChange = iota
+	ProjectChangeDescription
+)
+
 type Project struct {
 	BaseModel
+	Changes[ProjectChange]
 
 	tenantId uuid.UUID
 
@@ -46,8 +54,12 @@ func (p *Project) GetDisplayName() string {
 }
 
 func (p *Project) SetDisplayName(displayName string) {
+	if p.displayName == displayName {
+		return
+	}
+
 	p.displayName = displayName
-	p.trackChange("displayName", displayName)
+	p.trackChange(ProjectChangeDisplayName)
 }
 
 func (p *Project) GetTenantId() uuid.UUID {
@@ -59,8 +71,12 @@ func (p *Project) GetDescription() *string {
 }
 
 func (p *Project) SetDescription(description *string) {
+	if p.description == description {
+		return
+	}
+
 	p.description = description
-	p.trackChange("description", description)
+	p.trackChange(ProjectChangeDescription)
 }
 
 type ProjectFilter struct {

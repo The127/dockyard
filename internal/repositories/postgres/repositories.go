@@ -155,17 +155,67 @@ func (r *repositoryRepository) Insert(ctx context.Context, repository *repositor
 			repository.GetIsPublic(),
 		)
 
+	s.Returning("xmin")
+
 	query, args := s.Build()
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("inserting repository: %w", err)
 	}
 
+	repository.SetVersion(xmin)
+	repository.ClearChanges()
 	return nil
 }
 
-func (r *repositoryRepository) Update(ctx context.Context, project *repositories.Repository) error {
-	panic("not yet implemented")
+func (r *repositoryRepository) Update(ctx context.Context, repository *repositories.Repository) error {
+	if !repository.HasChanges() {
+		return nil
+	}
+
+	s := sqlbuilder.Update("repositories")
+	s.Where(s.Equal("id", repository.GetId()))
+	s.Where(s.Equal("xmin", repository.GetVersion()))
+
+	for _, field := range repository.GetChanges() {
+		switch field {
+		case repositories.RepositoryChangeDisplayName:
+			s.SetMore(s.Assign("display_name", repository.GetDisplayName()))
+		case repositories.RepositoryChangeDescription:
+			s.SetMore(s.Assign("description", repository.GetDescription()))
+		case repositories.RepositoryChangeReadmeFileId:
+			s.SetMore(s.Assign("readme_file_id", repository.GetReadmeFileId()))
+		case repositories.RepositoryChangeIsPublic:
+			s.SetMore(s.Assign("is_public", repository.GetIsPublic()))
+
+		default:
+			panic(fmt.Errorf("unknown repository change: %d", field))
+		}
+	}
+
+	s.Returning("xmin")
+	query, args := s.Build()
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
+	if errors.Is(err, sql.ErrNoRows) {
+		// no row was updated, which means the row was either already deleted or concurrently updated
+		return fmt.Errorf("updating repository: %w", apiError.ErrApiConcurrentUpdate)
+	}
+
+	if err != nil {
+		return fmt.Errorf("updating repository: %w", err)
+	}
+
+	repository.SetVersion(xmin)
+	repository.ClearChanges()
+	return nil
 }
 
 func (r *repositoryRepository) Delete(ctx context.Context, id uuid.UUID) error {
@@ -175,7 +225,7 @@ func (r *repositoryRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query, args := s.Build()
 	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("deleting repository: %w", err)
 	}
 
 	return nil

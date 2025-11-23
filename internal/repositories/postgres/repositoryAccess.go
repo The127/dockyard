@@ -10,6 +10,7 @@ import (
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
+	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
 type postgresRepositoryAccess struct {
@@ -123,12 +124,59 @@ func (r *repositoryAccessRepository) Insert(ctx context.Context, repositoryAcces
 			repositoryAccess.GetRole(),
 		)
 
+	s.Returning("xmin")
+
 	query, args := s.Build()
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("inserting repository access: %w", err)
 	}
 
+	repositoryAccess.SetVersion(xmin)
+	repositoryAccess.ClearChanges()
+	return nil
+}
+
+func (r *repositoryAccessRepository) Update(ctx context.Context, repositoryAccess *repositories.RepositoryAccess) error {
+	if !repositoryAccess.HasChanges() {
+		return nil
+	}
+
+	s := sqlbuilder.Update("repository_accesses")
+	s.Where(s.Equal("id", repositoryAccess.GetId()))
+	s.Where(s.Equal("xmin", repositoryAccess.GetVersion()))
+
+	for _, field := range repositoryAccess.GetChanges() {
+		switch field {
+		case repositories.RepositoryAccessChangeRole:
+			s.SetMore(s.Assign("role", repositoryAccess.GetRole()))
+		default:
+			panic(fmt.Errorf("unknown repositoryAccess change: %d", field))
+		}
+	}
+
+	s.Returning("xmin")
+	query, args := s.Build()
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
+	if errors.Is(err, sql.ErrNoRows) {
+		// no row was updated, which means the row was either already deleted or concurrently updated
+		return fmt.Errorf("updating repository access: %w", apiError.ErrApiConcurrentUpdate)
+	}
+
+	if err != nil {
+		return fmt.Errorf("updating repository access: %w", err)
+	}
+
+	repositoryAccess.SetVersion(xmin)
+	repositoryAccess.ClearChanges()
 	return nil
 }
 
@@ -139,7 +187,7 @@ func (r *repositoryAccessRepository) Delete(ctx context.Context, id uuid.UUID) e
 	query, args := s.Build()
 	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("deleting repository access: %w", err)
 	}
 
 	return nil

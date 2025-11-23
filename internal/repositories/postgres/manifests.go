@@ -146,12 +146,19 @@ func (r *manifestRepository) Insert(ctx context.Context, manifest *repositories.
 			manifest.GetDigest(),
 		)
 
+	s.Returning("xmin")
+
 	query, args := s.Build()
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("inserting manifest: %w", err)
 	}
 
+	manifest.SetVersion(xmin)
 	return nil
 }
 
@@ -162,7 +169,7 @@ func (r *manifestRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query, args := s.Build()
 	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("deleting manifest: %w", err)
 	}
 
 	return nil

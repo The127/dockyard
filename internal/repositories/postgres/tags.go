@@ -181,18 +181,20 @@ func (r *tagRepository) Insert(ctx context.Context, tag *repositories.Tag) error
 			tag.GetName(),
 		)
 
+	s.Returning("xmin")
+
 	query, args := s.Build()
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("inserting tag: %w", err)
 	}
 
+	tag.SetVersion(xmin)
 	return nil
-}
-
-func (r *tagRepository) Update(ctx context.Context, tag *repositories.Tag) error {
-	//TODO implement me
-	panic("implement me")
 }
 
 func (r *tagRepository) Delete(ctx context.Context, id uuid.UUID) error {

@@ -7,8 +7,16 @@ import (
 	"github.com/the127/dockyard/internal/utils/pointer"
 )
 
+type UserChange int
+
+const (
+	UserChangeDisplayName UserChange = iota
+	UserChangeEmail
+)
+
 type User struct {
 	BaseModel
+	Changes[UserChange]
 
 	tenantId uuid.UUID
 	subject  string
@@ -50,8 +58,12 @@ func (u *User) GetDisplayName() *string {
 }
 
 func (u *User) SetDisplayName(displayName *string) {
+	if u.displayName == displayName {
+		return
+	}
+
 	u.displayName = displayName
-	u.trackChange("displayName", displayName)
+	u.trackChange(UserChangeDisplayName)
 }
 
 func (u *User) GetEmail() *string {
@@ -59,8 +71,12 @@ func (u *User) GetEmail() *string {
 }
 
 func (u *User) SetEmail(email *string) {
+	if u.email == email {
+		return
+	}
+
 	u.email = email
-	u.trackChange("email", email)
+	u.trackChange(UserChangeEmail)
 }
 
 type UserFilter struct {

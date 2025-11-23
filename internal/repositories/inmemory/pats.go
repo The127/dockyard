@@ -92,6 +92,17 @@ func (r *patRepository) Insert(_ context.Context, pat *repositories.Pat) error {
 		return fmt.Errorf("failed to insert pat: %w", err)
 	}
 
+	pat.ClearChanges()
+	return nil
+}
+
+func (r *patRepository) Update(_ context.Context, pat *repositories.Pat) error {
+	err := r.txn.Insert("pats", *pat)
+	if err != nil {
+		return fmt.Errorf("failed to update pat: %w", err)
+	}
+
+	pat.ClearChanges()
 	return nil
 }
 

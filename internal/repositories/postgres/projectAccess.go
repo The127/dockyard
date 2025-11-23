@@ -10,6 +10,7 @@ import (
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
+	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
 type postgresProjectAccess struct {
@@ -123,12 +124,59 @@ func (r *projectAccessRepository) Insert(ctx context.Context, projectAccess *rep
 			projectAccess.GetRole(),
 		)
 
+	s.Returning("xmin")
+
 	query, args := s.Build()
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("inserting project access: %w", err)
 	}
 
+	projectAccess.SetVersion(xmin)
+	projectAccess.ClearChanges()
+	return nil
+}
+
+func (r *projectAccessRepository) Update(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+	if !projectAccess.HasChanges() {
+		return nil
+	}
+
+	s := sqlbuilder.Update("project_accesses")
+	s.Where(s.Equal("id", projectAccess.GetId()))
+	s.Where(s.Equal("xmin", projectAccess.GetVersion()))
+
+	for _, field := range projectAccess.GetChanges() {
+		switch field {
+		case repositories.ProjectAccessChangeRole:
+			s.SetMore(s.Assign("role", projectAccess.GetRole()))
+		default:
+			panic(fmt.Errorf("unknown project access change: %d", field))
+		}
+	}
+
+	s.Returning("xmin")
+	query, args := s.Build()
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
+	if errors.Is(err, sql.ErrNoRows) {
+		// no row was updated, which means the row was either already deleted or concurrently updated
+		return fmt.Errorf("updating project access: %w", apiError.ErrApiConcurrentUpdate)
+	}
+
+	if err != nil {
+		return fmt.Errorf("updating project access: %w", err)
+	}
+
+	projectAccess.SetVersion(xmin)
+	projectAccess.ClearChanges()
 	return nil
 }
 
@@ -139,7 +187,7 @@ func (r *projectAccessRepository) Delete(ctx context.Context, id uuid.UUID) erro
 	query, args := s.Build()
 	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("deleting project access: %w", err)
 	}
 
 	return nil

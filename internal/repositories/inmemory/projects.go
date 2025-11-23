@@ -110,6 +110,7 @@ func (r *projectRepository) Insert(_ context.Context, project *repositories.Proj
 		return fmt.Errorf("failed to insert project: %w", err)
 	}
 
+	project.ClearChanges()
 	return nil
 }
 
@@ -119,6 +120,7 @@ func (r *projectRepository) Update(_ context.Context, project *repositories.Proj
 		return fmt.Errorf("failed to insert project: %w", err)
 	}
 
+	project.ClearChanges()
 	return nil
 }
 

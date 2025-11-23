@@ -104,6 +104,7 @@ func (r *tenantRepository) Insert(_ context.Context, tenant *repositories.Tenant
 		return fmt.Errorf("failed to insert tenant: %w", err)
 	}
 
+	tenant.ClearChanges()
 	return nil
 }
 
@@ -113,6 +114,7 @@ func (r *tenantRepository) Update(_ context.Context, tenant *repositories.Tenant
 		return fmt.Errorf("failed to insert tenant: %w", err)
 	}
 
+	tenant.ClearChanges()
 	return nil
 }
 

@@ -134,12 +134,19 @@ func (r *repositoryBlobRepository) Insert(ctx context.Context, repositoryBlob *r
 			repositoryBlob.GetBlobId(),
 		)
 
+	s.Returning("xmin")
+
 	query, args := s.Build()
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("inserting repository blob: %w", err)
 	}
 
+	repositoryBlob.SetVersion(xmin)
 	return nil
 }
 
@@ -150,7 +157,7 @@ func (r *repositoryBlobRepository) Delete(ctx context.Context, id uuid.UUID) err
 	query, args := s.Build()
 	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("deleting repository blob: %w", err)
 	}
 
 	return nil

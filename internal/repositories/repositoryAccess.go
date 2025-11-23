@@ -7,6 +7,12 @@ import (
 	"github.com/the127/dockyard/internal/utils/pointer"
 )
 
+type RepositoryAccessChange int
+
+const (
+	RepositoryAccessChangeRole RepositoryAccessChange = iota
+)
+
 type RepositoryAccessRole string
 
 const (
@@ -26,6 +32,7 @@ func (r RepositoryAccessRole) AllowPull() bool {
 
 type RepositoryAccess struct {
 	BaseModel
+	Changes[RepositoryAccessChange]
 
 	repositoryId uuid.UUID
 	userId       uuid.UUID
@@ -64,8 +71,12 @@ func (r *RepositoryAccess) GetRole() RepositoryAccessRole {
 }
 
 func (r *RepositoryAccess) SetRole(role RepositoryAccessRole) {
+	if r.role == role {
+		return
+	}
+
 	r.role = role
-	r.trackChange("role", role)
+	r.trackChange(RepositoryAccessChangeRole)
 }
 
 type RepositoryAccessFilter struct {
@@ -128,5 +139,6 @@ func (f *RepositoryAccessFilter) GetUserId() uuid.UUID {
 type RepositoryAccessRepository interface {
 	First(ctx context.Context, filter *RepositoryAccessFilter) (*RepositoryAccess, error)
 	Insert(ctx context.Context, entity *RepositoryAccess) error
+	Update(ctx context.Context, entity *RepositoryAccess) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }

@@ -136,12 +136,57 @@ func (r *patRepository) Insert(ctx context.Context, pat *repositories.Pat) error
 			pq.Array(pat.GetHashedSecret()),
 		)
 
+	s.Returning("xmin")
+
 	query, args := s.Build()
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("inserting pat: %w", err)
 	}
 
+	pat.SetVersion(xmin)
+	return nil
+}
+func (r *patRepository) Update(ctx context.Context, pat *repositories.Pat) error {
+	if !pat.HasChanges() {
+		return nil
+	}
+
+	s := sqlbuilder.Update("pats")
+	s.Where(s.Equal("id", pat.GetId()))
+	s.Where(s.Equal("xmin", pat.GetVersion()))
+
+	for _, field := range pat.GetChanges() {
+		switch field {
+		case repositories.PatChangeDisplayName:
+			s.SetMore(s.Assign("display_name", pat.GetDisplayName()))
+		default:
+			panic(fmt.Errorf("unknown pat change: %d", field))
+		}
+	}
+
+	s.Returning("xmin")
+	query, args := s.Build()
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
+	if errors.Is(err, sql.ErrNoRows) {
+		// no row was updated, which means the row was either already deleted or concurrently updated
+		return fmt.Errorf("updating pat: %w", apiError.ErrApiConcurrentUpdate)
+	}
+
+	if err != nil {
+		return fmt.Errorf("updating pat: %w", err)
+	}
+
+	pat.SetVersion(xmin)
+	pat.ClearChanges()
 	return nil
 }
 
@@ -152,7 +197,7 @@ func (r *patRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query, args := s.Build()
 	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("deleting pat: %w", err)
 	}
 
 	return nil

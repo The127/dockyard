@@ -84,6 +84,17 @@ func (r *repositoryAccessRepository) Insert(_ context.Context, repositoryAccess 
 		return fmt.Errorf("failed to insert repository access: %w", err)
 	}
 
+	repositoryAccess.ClearChanges()
+	return nil
+}
+
+func (r *repositoryAccessRepository) Update(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
+	err := r.txn.Insert("repository_access", *repositoryAccess)
+	if err != nil {
+		return fmt.Errorf("failed to insert project: %w", err)
+	}
+
+	repositoryAccess.ClearChanges()
 	return nil
 }
 

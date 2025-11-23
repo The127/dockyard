@@ -146,18 +146,62 @@ func (r *userRepository) Insert(ctx context.Context, user *repositories.User) er
 			user.GetEmail(),
 		)
 
+	s.Returning("xmin")
+
 	query, args := s.Build()
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("inserting user: %w", err)
 	}
 
+	user.SetVersion(xmin)
+	user.ClearChanges()
 	return nil
 }
 
 func (r *userRepository) Update(ctx context.Context, user *repositories.User) error {
-	//TODO implement me
-	panic("implement me")
+	if !user.HasChanges() {
+		return nil
+	}
+
+	s := sqlbuilder.Update("users")
+	s.Where(s.Equal("id", user.GetId()))
+	s.Where(s.Equal("xmin", user.GetVersion()))
+
+	for _, field := range user.GetChanges() {
+		switch field {
+		case repositories.UserChangeEmail:
+			s.SetMore(s.Assign("email", user.GetEmail()))
+		case repositories.UserChangeDisplayName:
+			s.SetMore(s.Assign("display_name", user.GetDisplayName()))
+		default:
+			panic(fmt.Errorf("unknown user change: %d", field))
+		}
+	}
+
+	s.Returning("xmin")
+	query, args := s.Build()
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
+	if errors.Is(err, sql.ErrNoRows) {
+		// no row was updated, which means the row was either already deleted or concurrently updated
+		return fmt.Errorf("updating user: %w", apiError.ErrApiConcurrentUpdate)
+	}
+
+	if err != nil {
+		return fmt.Errorf("updating user: %w", err)
+	}
+
+	user.SetVersion(xmin)
+	user.ClearChanges()
+	return nil
 }
 
 func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
@@ -167,7 +211,7 @@ func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query, args := s.Build()
 	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("deleting user: %w", err)
 	}
 
 	return nil

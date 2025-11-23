@@ -7,8 +7,18 @@ import (
 	"github.com/the127/dockyard/internal/utils/pointer"
 )
 
+type RepositoryChange int
+
+const (
+	RepositoryChangeDescription RepositoryChange = iota
+	RepositoryChangeDisplayName
+	RepositoryChangeReadmeFileId
+	RepositoryChangeIsPublic
+)
+
 type Repository struct {
 	BaseModel
+	Changes[RepositoryChange]
 
 	projectId uuid.UUID
 
@@ -62,13 +72,26 @@ func (r *Repository) GetDisplayName() string {
 	return r.displayName
 }
 
+func (r *Repository) SetDisplayName(displayName string) {
+	if r.displayName == displayName {
+		return
+	}
+
+	r.displayName = displayName
+	r.trackChange(RepositoryChangeDisplayName)
+}
+
 func (r *Repository) GetDescription() *string {
 	return r.description
 }
 
 func (r *Repository) SetDescription(description *string) {
+	if r.description == description {
+		return
+	}
+
 	r.description = description
-	r.trackChange("description", description)
+	r.trackChange(RepositoryChangeDescription)
 }
 
 func (r *Repository) GetReadmeFileId() *uuid.UUID {
@@ -76,8 +99,12 @@ func (r *Repository) GetReadmeFileId() *uuid.UUID {
 }
 
 func (r *Repository) SetReadmeFileId(readmeFileId *uuid.UUID) {
+	if r.readmeFileId == readmeFileId {
+		return
+	}
+
 	r.readmeFileId = readmeFileId
-	r.trackChange("readmeFileId", readmeFileId)
+	r.trackChange(RepositoryChangeReadmeFileId)
 }
 
 func (r *Repository) GetIsPublic() bool {
@@ -85,8 +112,12 @@ func (r *Repository) GetIsPublic() bool {
 }
 
 func (r *Repository) SetIsPublic(isPublic bool) {
+	if r.isPublic == isPublic {
+		return
+	}
+
 	r.isPublic = isPublic
-	r.trackChange("isPublic", isPublic)
+	r.trackChange(RepositoryChangeIsPublic)
 }
 
 type RepositoryFilter struct {

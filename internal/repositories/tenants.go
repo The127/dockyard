@@ -2,14 +2,27 @@ package repositories
 
 import (
 	"context"
+	"maps"
 
 	"github.com/the127/dockyard/internal/utils/pointer"
 
 	"github.com/google/uuid"
 )
 
+type TenantChange int
+
+const (
+	TenantChangeDisplayName TenantChange = iota
+	TenantChangeOidcClient
+	TenantChangeOidcIssuer
+	TenantChangeOidcRoleClaim
+	TenantChangeOidcRoleClaimFormat
+	TenantChangeOidcRoleMapping
+)
+
 type Tenant struct {
 	BaseModel
+	Changes[TenantChange]
 
 	slug        string
 	displayName string
@@ -78,8 +91,12 @@ func (t *Tenant) GetDisplayName() string {
 }
 
 func (t *Tenant) SetDisplayName(displayName string) {
+	if t.displayName == displayName {
+		return
+	}
+
 	t.displayName = displayName
-	t.trackChange("displayName", displayName)
+	t.trackChange(TenantChangeDisplayName)
 }
 
 func (t *Tenant) GetOidcClient() string {
@@ -87,8 +104,12 @@ func (t *Tenant) GetOidcClient() string {
 }
 
 func (t *Tenant) SetOidcClient(oidcClient string) {
+	if t.oidcClient == oidcClient {
+		return
+	}
+
 	t.oidcClient = oidcClient
-	t.trackChange("oidcClient", oidcClient)
+	t.trackChange(TenantChangeOidcClient)
 }
 
 func (t *Tenant) GetOidcIssuer() string {
@@ -96,8 +117,12 @@ func (t *Tenant) GetOidcIssuer() string {
 }
 
 func (t *Tenant) SetOidcIssuer(oidcIssuer string) {
+	if t.oidcIssuer == oidcIssuer {
+		return
+	}
+
 	t.oidcIssuer = oidcIssuer
-	t.trackChange("oidcIssuer", oidcIssuer)
+	t.trackChange(TenantChangeOidcIssuer)
 }
 
 func (t *Tenant) GetOidcRoleClaim() string {
@@ -105,8 +130,12 @@ func (t *Tenant) GetOidcRoleClaim() string {
 }
 
 func (t *Tenant) SetOidcRoleClaim(oidcRoleClaim string) {
+	if t.oidcRoleClaim == oidcRoleClaim {
+		return
+	}
+
 	t.oidcRoleClaim = oidcRoleClaim
-	t.trackChange("oidcRoleClaim", oidcRoleClaim)
+	t.trackChange(TenantChangeOidcRoleClaim)
 }
 
 func (t *Tenant) GetOidcRoleClaimFormat() string {
@@ -114,8 +143,12 @@ func (t *Tenant) GetOidcRoleClaimFormat() string {
 }
 
 func (t *Tenant) SetOidcRoleClaimFormat(oidcRoleClaimFormat string) {
+	if t.oidcRoleClaimFormat == oidcRoleClaimFormat {
+		return
+	}
+
 	t.oidcRoleClaimFormat = oidcRoleClaimFormat
-	t.trackChange("oidcRoleClaimFormat", oidcRoleClaimFormat)
+	t.trackChange(TenantChangeOidcRoleClaimFormat)
 }
 
 func (t *Tenant) GetOidcRoleMapping() map[string]string {
@@ -123,8 +156,12 @@ func (t *Tenant) GetOidcRoleMapping() map[string]string {
 }
 
 func (t *Tenant) SetOidcRoleMapping(oidcRoleMapping map[string]string) {
+	if maps.Equal(t.oidcRoleMapping, oidcRoleMapping) {
+		return
+	}
+
 	t.oidcRoleMapping = oidcRoleMapping
-	t.trackChange("oidcRoleMapping", oidcRoleMapping)
+	t.trackChange(TenantChangeOidcRoleMapping)
 }
 
 type TenantFilter struct {

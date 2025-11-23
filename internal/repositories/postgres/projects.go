@@ -144,17 +144,62 @@ func (r *projectRepository) Insert(ctx context.Context, project *repositories.Pr
 			project.GetDescription(),
 		)
 
+	s.Returning("xmin")
+
 	query, args := s.Build()
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("inserting project: %w", err)
 	}
 
+	project.SetVersion(xmin)
+	project.ClearChanges()
 	return nil
 }
 
 func (r *projectRepository) Update(ctx context.Context, project *repositories.Project) error {
-	panic("not yet implemented")
+	if !project.HasChanges() {
+		return nil
+	}
+
+	s := sqlbuilder.Update("projects")
+	s.Where(s.Equal("id", project.GetId()))
+	s.Where(s.Equal("xmin", project.GetVersion()))
+
+	for _, field := range project.GetChanges() {
+		switch field {
+		case repositories.ProjectChangeDisplayName:
+			s.SetMore(s.Assign("display_name", project.GetDisplayName()))
+		case repositories.ProjectChangeDescription:
+			s.SetMore(s.Assign("description", project.GetDescription()))
+		default:
+			panic(fmt.Errorf("unknown project change: %d", field))
+		}
+	}
+
+	s.Returning("xmin")
+	query, args := s.Build()
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var xmin uint32
+
+	err := row.Scan(&xmin)
+	if errors.Is(err, sql.ErrNoRows) {
+		// no row was updated, which means the row was either already deleted or concurrently updated
+		return fmt.Errorf("updating project: %w", apiError.ErrApiConcurrentUpdate)
+	}
+
+	if err != nil {
+		return fmt.Errorf("updating project: %w", err)
+	}
+
+	project.SetVersion(xmin)
+	project.ClearChanges()
+	return nil
 }
 
 func (r *projectRepository) Delete(ctx context.Context, id uuid.UUID) error {
@@ -164,7 +209,7 @@ func (r *projectRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	query, args := s.Build()
 	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
-		return fmt.Errorf("executing query: %w", err)
+		return fmt.Errorf("deleting project: %w", err)
 	}
 
 	return nil

@@ -131,15 +131,6 @@ func (r *tagRepository) Insert(_ context.Context, tag *repositories.Tag) error {
 	return nil
 }
 
-func (r *tagRepository) Update(_ context.Context, tag *repositories.Tag) error {
-	err := r.txn.Insert("tags", *tag)
-	if err != nil {
-		return fmt.Errorf("failed to update tag: %w", err)
-	}
-
-	return nil
-}
-
 func (r *tagRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	entry, err := r.First(ctx, repositories.NewTagFilter().ById(id))
 	if err != nil {

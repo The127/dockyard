@@ -7,6 +7,12 @@ import (
 	"github.com/the127/dockyard/internal/utils/pointer"
 )
 
+type ProjectAccessChange int
+
+const (
+	ProjectAccessChangeRole ProjectAccessChange = iota
+)
+
 type ProjectAccessRole string
 
 const (
@@ -16,6 +22,7 @@ const (
 
 type ProjectAccess struct {
 	BaseModel
+	Changes[ProjectAccessChange]
 
 	projectId uuid.UUID
 	userId    uuid.UUID
@@ -54,7 +61,12 @@ func (p *ProjectAccess) GetRole() ProjectAccessRole {
 }
 
 func (p *ProjectAccess) SetRole(role ProjectAccessRole) {
+	if p.role == role {
+		return
+	}
+
 	p.role = role
+	p.trackChange(ProjectAccessChangeRole)
 }
 
 type ProjectAccessFilter struct {
@@ -117,5 +129,6 @@ func (f *ProjectAccessFilter) GetUserId() uuid.UUID {
 type ProjectAccessRepository interface {
 	First(ctx context.Context, filter *ProjectAccessFilter) (*ProjectAccess, error)
 	Insert(ctx context.Context, entity *ProjectAccess) error
+	Update(ctx context.Context, entity *ProjectAccess) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
