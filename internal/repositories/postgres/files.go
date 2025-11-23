@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
@@ -16,9 +15,7 @@ import (
 )
 
 type postgresFile struct {
-	id          uuid.UUID
-	createdAt   time.Time
-	updatedAt   time.Time
+	postgresBaseModel
 	digest      string
 	contentType string
 	data        []byte
@@ -31,11 +28,7 @@ func (f *postgresFile) Map() *repositories.File {
 		f.contentType,
 		f.data,
 		f.size,
-		repositories.NewBaseModelFromDB(
-			f.id,
-			f.createdAt,
-			f.updatedAt,
-		),
+		f.MapBase(),
 	)
 }
 

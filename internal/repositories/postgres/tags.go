@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
@@ -15,29 +14,23 @@ import (
 )
 
 type postgresTag struct {
-	id           uuid.UUID
-	createdAt    time.Time
-	updatedAt    time.Time
+	postgresBaseModel
 	repositoryId uuid.UUID
 	manifestId   uuid.UUID
 	name         string
 	digest       string
 }
 
-func (f *postgresTag) Map(includeDigest bool) *repositories.Tag {
+func (t *postgresTag) Map(includeDigest bool) *repositories.Tag {
 	tag := repositories.NewTagFromDB(
-		f.repositoryId,
-		f.manifestId,
-		f.name,
-		repositories.NewBaseModelFromDB(
-			f.id,
-			f.createdAt,
-			f.updatedAt,
-		),
+		t.repositoryId,
+		t.manifestId,
+		t.name,
+		t.MapBase(),
 	)
 
 	if includeDigest {
-		tag.SetManifestInfo(repositories.TagManifestInfo{Digest: f.digest})
+		tag.SetManifestInfo(repositories.TagManifestInfo{Digest: t.digest})
 	}
 
 	return tag
@@ -101,7 +94,7 @@ func (r *tagRepository) First(ctx context.Context, filter *repositories.TagFilte
 		cols = append(cols, &tag.digest)
 	}
 
-	err := row.Scan(cols)
+	err := row.Scan(cols...)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil

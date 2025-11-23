@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/the127/dockyard/internal/repositories"
@@ -16,9 +15,7 @@ import (
 )
 
 type postgresManifest struct {
-	id        uuid.UUID
-	createdAt time.Time
-	updatedAt time.Time
+	postgresBaseModel
 
 	repositoryId uuid.UUID
 	blobId       uuid.UUID
@@ -26,16 +23,12 @@ type postgresManifest struct {
 	digest string
 }
 
-func (b *postgresManifest) Map() *repositories.Manifest {
+func (m *postgresManifest) Map() *repositories.Manifest {
 	return repositories.NewManifestFromDB(
-		b.repositoryId,
-		b.blobId,
-		b.digest,
-		repositories.NewBaseModelFromDB(
-			b.id,
-			b.createdAt,
-			b.updatedAt,
-		),
+		m.repositoryId,
+		m.blobId,
+		m.digest,
+		m.MapBase(),
 	)
 }
 

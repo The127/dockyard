@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
@@ -15,9 +14,7 @@ import (
 )
 
 type postgresRepository struct {
-	id           uuid.UUID
-	createdAt    time.Time
-	updatedAt    time.Time
+	postgresBaseModel
 	projectId    uuid.UUID
 	slug         string
 	displayName  string
@@ -34,11 +31,7 @@ func (r *postgresRepository) Map() *repositories.Repository {
 		r.description,
 		r.readmeFileId,
 		r.isPublic,
-		repositories.NewBaseModelFromDB(
-			r.id,
-			r.createdAt,
-			r.updatedAt,
-		),
+		r.MapBase(),
 	)
 }
 

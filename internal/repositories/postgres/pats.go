@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
@@ -16,9 +15,7 @@ import (
 )
 
 type postgresPat struct {
-	id           uuid.UUID
-	createdAt    time.Time
-	updatedAt    time.Time
+	postgresBaseModel
 	userId       uuid.UUID
 	displayName  string
 	hashedSecret []byte
@@ -29,11 +26,7 @@ func (p *postgresPat) Map() *repositories.Pat {
 		p.userId,
 		p.displayName,
 		p.hashedSecret,
-		repositories.NewBaseModelFromDB(
-			p.id,
-			p.createdAt,
-			p.updatedAt,
-		),
+		p.MapBase(),
 	)
 }
 

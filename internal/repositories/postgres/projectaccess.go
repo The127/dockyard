@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
@@ -14,24 +13,18 @@ import (
 )
 
 type postgresProjectAccess struct {
-	id        uuid.UUID
-	createdAt time.Time
-	updatedAt time.Time
+	postgresBaseModel
 	projectId uuid.UUID
 	userId    uuid.UUID
 	role      string
 }
 
-func (b *postgresProjectAccess) Map() *repositories.ProjectAccess {
+func (pa *postgresProjectAccess) Map() *repositories.ProjectAccess {
 	return repositories.NewProjectAccessFromDB(
-		b.projectId,
-		b.userId,
-		repositories.ProjectAccessRole(b.role),
-		repositories.NewBaseModelFromDB(
-			b.id,
-			b.createdAt,
-			b.updatedAt,
-		),
+		pa.projectId,
+		pa.userId,
+		repositories.ProjectAccessRole(pa.role),
+		pa.MapBase(),
 	)
 }
 

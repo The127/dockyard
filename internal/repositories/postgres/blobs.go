@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/the127/dockyard/internal/repositories"
@@ -16,22 +15,16 @@ import (
 )
 
 type postgresBlob struct {
-	id        uuid.UUID
-	createdAt time.Time
-	updatedAt time.Time
-	digest    string
-	size      int64
+	postgresBaseModel
+	digest string
+	size   int64
 }
 
 func (b *postgresBlob) Map() *repositories.Blob {
 	return repositories.NewBlobFromDB(
 		b.digest,
 		b.size,
-		repositories.NewBaseModelFromDB(
-			b.id,
-			b.createdAt,
-			b.updatedAt,
-		),
+		b.MapBase(),
 	)
 }
 

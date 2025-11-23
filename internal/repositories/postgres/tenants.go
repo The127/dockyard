@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
@@ -15,9 +14,7 @@ import (
 )
 
 type postgresTenant struct {
-	id          uuid.UUID
-	createdAt   time.Time
-	updatedAt   time.Time
+	postgresBaseModel
 	slug        string
 	displayName string
 
@@ -39,11 +36,7 @@ func (t *postgresTenant) Map() *repositories.Tenant {
 			t.oidcRoleClaimFormat,
 			t.oidcRoleMapping,
 		),
-		repositories.NewBaseModelFromDB(
-			t.id,
-			t.createdAt,
-			t.updatedAt,
-		),
+		t.MapBase(),
 	)
 }
 

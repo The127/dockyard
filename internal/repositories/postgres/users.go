@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
@@ -15,26 +14,20 @@ import (
 )
 
 type postgresUser struct {
-	id          uuid.UUID
-	createdAt   time.Time
-	updatedAt   time.Time
+	postgresBaseModel
 	tenantId    uuid.UUID
 	subject     string
 	displayName *string
 	email       *string
 }
 
-func (f *postgresUser) Map() *repositories.User {
+func (u *postgresUser) Map() *repositories.User {
 	return repositories.NewUserFromDB(
-		f.tenantId,
-		f.subject,
-		f.displayName,
-		f.email,
-		repositories.NewBaseModelFromDB(
-			f.id,
-			f.createdAt,
-			f.updatedAt,
-		),
+		u.tenantId,
+		u.subject,
+		u.displayName,
+		u.email,
+		u.MapBase(),
 	)
 }
 
