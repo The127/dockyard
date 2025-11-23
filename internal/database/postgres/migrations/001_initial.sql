@@ -78,6 +78,8 @@ create table repositories
     description    text,
     readme_file_id uuid,
 
+    is_public      boolean     not null,
+
     primary key (id),
     foreign key (project_id) references projects (id),
     foreign key (readme_file_id) references files (id),
