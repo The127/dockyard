@@ -7,6 +7,7 @@ import (
 	"github.com/the127/dockyard/internal/config"
 	"github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/database/inmemory"
+	"github.com/the127/dockyard/internal/database/postgres"
 	"github.com/the127/dockyard/internal/services"
 )
 
@@ -30,6 +31,9 @@ func connectToDatabase(c config.DatabaseConfig) database.Database {
 	switch c.Mode {
 	case config.DatabaseModeInMemory:
 		db, err = inmemory.NewInMemoryDatabase()
+
+	case config.DatabaseModePostgres:
+		db, err = postgres.NewPostgresDatabase(c.Postgres)
 
 	default:
 		panic(fmt.Errorf("unsupported database mode: %s", c.Mode))
