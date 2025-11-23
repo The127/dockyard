@@ -3,6 +3,7 @@ package ocihandlers
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"fmt"
 	"io"
 	"net/http"
@@ -181,8 +182,11 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: validate manifest
 
+	sum256 := sha256.Sum256(bodyBytes)
+	digest := "sha256:" + fmt.Sprintf("%x", sum256)
+
 	blobs := ioc.GetDependency[blobStorage.Service](scope)
-	uploadResponse, err := blobs.UploadCompleteBlob(ctx, bytes.NewReader(bodyBytes), blobStorage.BlobContentTypeManifest)
+	uploadResponse, err := blobs.UploadCompleteBlob(ctx, digest, bytes.NewReader(bodyBytes), blobStorage.BlobContentTypeManifest)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -211,7 +215,13 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	reference := vars["reference"]
 
-	if !strings.HasPrefix(reference, "sha256:") {
+	if strings.HasPrefix(reference, "sha256:") {
+		// if it's a reference, check if the digest matches
+		if reference != digest {
+			ociError.HandleHttpError(w, r, ociError.NewOciError(ociError.DigestInvalid))
+		}
+	} else {
+		// if it's a tag, insert it into the database
 		err := tx.Tags().Insert(ctx, repositories.NewTag(repository.GetId(), manifest.GetId(), reference))
 		if err != nil {
 			ociError.HandleHttpError(w, r, err)
