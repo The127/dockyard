@@ -109,7 +109,7 @@ func (r *repositoryAccessRepository) List(ctx context.Context, filter *repositor
 }
 
 func (r *repositoryAccessRepository) Insert(ctx context.Context, repositoryAccess *repositories.RepositoryAccess) error {
-	s := sqlbuilder.InsertInto("repository_access").
+	s := sqlbuilder.InsertInto("repository_accesses").
 		Cols(
 			"id",
 			"created_at",
@@ -186,7 +186,7 @@ func (r *repositoryAccessRepository) Update(ctx context.Context, repositoryAcces
 }
 
 func (r *repositoryAccessRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	s := sqlbuilder.DeleteFrom("repository_access")
+	s := sqlbuilder.DeleteFrom("repository_accesses")
 	s.Where(s.Equal("id", id))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
