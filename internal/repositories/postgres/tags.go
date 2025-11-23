@@ -18,20 +18,28 @@ type postgresTag struct {
 	repositoryId uuid.UUID
 	manifestId   uuid.UUID
 	name         string
-	digest       string
+	manifestInfo *tagManifestInfo
 }
 
-func (t *postgresTag) Map(includeDigest bool) *repositories.Tag {
+type tagManifestInfo struct {
+	digest string
+}
+
+func (t *postgresTag) Map() *repositories.Tag {
+	var manifestInfo *repositories.TagManifestInfo
+	if t.manifestInfo != nil {
+		manifestInfo = &repositories.TagManifestInfo{
+			Digest: t.manifestInfo.digest,
+		}
+	}
+
 	tag := repositories.NewTagFromDB(
 		t.repositoryId,
 		t.manifestId,
 		t.name,
+		manifestInfo,
 		t.MapBase(),
 	)
-
-	if includeDigest {
-		tag.SetManifestInfo(repositories.TagManifestInfo{Digest: t.digest})
-	}
 
 	return tag
 }
@@ -91,7 +99,8 @@ func (r *tagRepository) First(ctx context.Context, filter *repositories.TagFilte
 	cols := []any{&tag.id, &tag.createdAt, &tag.updatedAt, &tag.repositoryId, &tag.manifestId, &tag.name}
 
 	if filter.GetIncludeManifestInfo() {
-		cols = append(cols, &tag.digest)
+		tag.manifestInfo = &tagManifestInfo{}
+		cols = append(cols, &tag.manifestInfo.digest)
 	}
 
 	err := row.Scan(cols...)
@@ -102,7 +111,7 @@ func (r *tagRepository) First(ctx context.Context, filter *repositories.TagFilte
 		return nil, fmt.Errorf("scanning row: %w", err)
 	}
 
-	return tag.Map(filter.GetIncludeManifestInfo()), nil
+	return tag.Map(), nil
 }
 
 func (r *tagRepository) Single(ctx context.Context, filter *repositories.TagFilter) (*repositories.Tag, error) {
@@ -132,8 +141,10 @@ func (r *tagRepository) List(ctx context.Context, filter *repositories.TagFilter
 
 	var tag postgresTag
 	cols := []any{&tag.id, &tag.createdAt, &tag.updatedAt, &tag.repositoryId, &tag.manifestId, &tag.name}
+
 	if filter.GetIncludeManifestInfo() {
-		cols = append(cols, &tag.digest)
+		tag.manifestInfo = &tagManifestInfo{}
+		cols = append(cols, &tag.manifestInfo.digest)
 	}
 
 	cols = append(cols, &totalCount)
@@ -144,7 +155,7 @@ func (r *tagRepository) List(ctx context.Context, filter *repositories.TagFilter
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
-		tags = append(tags, tag.Map(filter.GetIncludeManifestInfo()))
+		tags = append(tags, tag.Map())
 	}
 
 	return tags, totalCount, nil

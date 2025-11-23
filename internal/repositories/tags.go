@@ -31,12 +31,13 @@ func NewTag(repositoryId uuid.UUID, repositoryManifestId uuid.UUID, name string)
 	}
 }
 
-func NewTagFromDB(repositoryId uuid.UUID, repositoryManifestId uuid.UUID, name string, base BaseModel) *Tag {
+func NewTagFromDB(repositoryId uuid.UUID, repositoryManifestId uuid.UUID, name string, manifestInfo *TagManifestInfo, base BaseModel) *Tag {
 	return &Tag{
 		BaseModel:            base,
 		repositoryId:         repositoryId,
 		repositoryManifestId: repositoryManifestId,
 		name:                 name,
+		manifestInfo:         manifestInfo,
 	}
 }
 
