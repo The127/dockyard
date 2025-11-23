@@ -2,6 +2,8 @@ package postgres
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 
 	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/repositories"
@@ -128,9 +130,30 @@ func newTransaction(tx *sql.Tx) db.Transaction {
 }
 
 func (t *transaction) Commit() error {
+	if t.tx == nil {
+		return nil
+	}
+
+	err := t.tx.Commit()
+	if err != nil {
+		err = t.tx.Rollback()
+		switch {
+		case errors.Is(err, sql.ErrTxDone):
+			return nil
+
+		default:
+			return fmt.Errorf("closing db transaction: %w", err)
+		}
+	}
+
 	return nil
 }
 
 func (t *transaction) Rollback() error {
+	err := t.tx.Rollback()
+	if err != nil {
+		return fmt.Errorf("rolling back db transaction: %w", err)
+	}
+
 	return nil
 }
