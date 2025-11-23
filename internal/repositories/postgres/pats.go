@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
-	"github.com/lib/pq"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
@@ -72,7 +71,7 @@ func (r *patRepository) First(ctx context.Context, filter *repositories.PatFilte
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var pat postgresPat
-	err := row.Scan(&pat.xmin, &pat.id, &pat.createdAt, &pat.updatedAt, &pat.userId, &pat.displayName, pq.Array(&pat.hashedSecret))
+	err := row.Scan(&pat.xmin, &pat.id, &pat.createdAt, &pat.updatedAt, &pat.userId, &pat.displayName, &pat.hashedSecret)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -110,7 +109,7 @@ func (r *patRepository) List(ctx context.Context, filter *repositories.PatFilter
 	var totalCount int
 	for rows.Next() {
 		var pat postgresPat
-		err := rows.Scan(&pat.xmin, &pat.id, &pat.createdAt, &pat.updatedAt, &pat.userId, &pat.displayName, pq.Array(&pat.hashedSecret), &totalCount)
+		err := rows.Scan(&pat.xmin, &pat.id, &pat.createdAt, &pat.updatedAt, &pat.userId, &pat.displayName, &pat.hashedSecret, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
@@ -136,7 +135,7 @@ func (r *patRepository) Insert(ctx context.Context, pat *repositories.Pat) error
 			pat.GetUpdatedAt(),
 			pat.GetUserId(),
 			pat.GetDisplayName(),
-			pq.Array(pat.GetHashedSecret()),
+			pat.GetHashedSecret(),
 		)
 
 	s.Returning("xmin")
