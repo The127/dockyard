@@ -26,3 +26,9 @@ func (b *Changes[T]) ClearChanges() {
 func (b *Changes[T]) trackChange(key T) {
 	b.changes[key] = struct{}{}
 }
+
+// HasChanges checks if any changes have been tracked in the Changes collection.
+// Returns true if there are tracked changes, false otherwise.
+func (b *Changes[T]) HasChanges() bool {
+	return len(b.changes) > 0
+}
