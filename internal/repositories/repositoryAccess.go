@@ -42,6 +42,15 @@ func NewRepositoryAccess(repositoryId uuid.UUID, userId uuid.UUID, role Reposito
 	}
 }
 
+func NewRepositoryAccessFromDB(repositoryId uuid.UUID, userId uuid.UUID, role RepositoryAccessRole, base BaseModel) *RepositoryAccess {
+	return &RepositoryAccess{
+		BaseModel:    base,
+		repositoryId: repositoryId,
+		userId:       userId,
+		role:         role,
+	}
+}
+
 func (r *RepositoryAccess) GetRepositoryId() uuid.UUID {
 	return r.repositoryId
 }
