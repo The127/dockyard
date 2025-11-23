@@ -14,6 +14,12 @@ type OciRepositoryIdentifier struct {
 	RepositorySlug string `json:"repository"`
 }
 
+func (i OciRepositoryIdentifier) Equals(other OciRepositoryIdentifier) bool {
+	return i.TenantSlug == other.TenantSlug &&
+		i.ProjectSlug == other.ProjectSlug &&
+		i.RepositorySlug == other.RepositorySlug
+}
+
 type OciNameContextKey string
 
 func OciNameMiddleware() mux.MiddlewareFunc {

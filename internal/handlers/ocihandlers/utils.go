@@ -21,10 +21,7 @@ func checkAccess(
 ) error {
 	currentUser := ociAuthentication.GetCurrentUser(ctx)
 	if currentUser.Repository != nil {
-		if currentUser.Repository.TenantSlug == repoIdentifier.TenantSlug &&
-			currentUser.Repository.ProjectSlug == repoIdentifier.ProjectSlug &&
-			currentUser.Repository.RepositorySlug == repoIdentifier.RepositorySlug {
-
+		if currentUser.Repository.Equals(repoIdentifier) {
 			if slices.Contains(currentUser.Access, accessType) {
 				return nil
 			}
