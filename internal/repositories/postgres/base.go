@@ -19,10 +19,15 @@ func (b *postgresBaseModel) MapBase() repositories.BaseModel {
 }
 
 func newPostgresBaseModel(baseModel repositories.BaseModel) postgresBaseModel {
+	var xmin uint = 0
+	if baseModel.GetVersion() != nil {
+		xmin = baseModel.GetVersion().(uint)
+	}
+
 	return postgresBaseModel{
 		id:        baseModel.GetId(),
 		createdAt: baseModel.GetCreatedAt(),
 		updatedAt: baseModel.GetUpdatedAt(),
-		xmin:      baseModel.GetVersion().(uint),
+		xmin:      xmin,
 	}
 }
