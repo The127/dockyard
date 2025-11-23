@@ -54,14 +54,14 @@ func ConnectToDatabase(pc config.PostgresConfig) (*sql.DB, error) {
 }
 
 func (d *database) Migrate() error {
-	migrations := migrate.EmbedFileSystemMigrationSource{
+	migrationSource := migrate.EmbedFileSystemMigrationSource{
 		FileSystem: migrations,
 		Root:       "migrations",
 	}
 
 	logging.Logger.Infof("Applying migrations...")
 
-	n, err := migrate.Exec(d.db, "postgres", migrations, migrate.Up)
+	n, err := migrate.Exec(d.db, "postgres", migrationSource, migrate.Up)
 	if err != nil {
 		return fmt.Errorf("failed to apply migrations: %v", err)
 	}
