@@ -48,23 +48,24 @@ func HandleUpdateRepositoryReadme(ctx context.Context, command UpdateRepositoryR
 	digestBytes := sha256.Sum256(command.Content)
 	digest := fmt.Sprintf("sha256:%x", digestBytes[:])
 
-	if repository.GetReadmeFileId() != nil {
-		err = tx.Files().Delete(ctx, *repository.GetReadmeFileId())
-		if err != nil {
-			return nil, fmt.Errorf("failed to delete readme file: %w", err)
-		}
-	}
-
 	newReadme := repositories.NewFile(digest, "text/markdown", command.Content)
 	err = tx.Files().Insert(ctx, newReadme)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert readme file: %w", err)
 	}
 
+	oldReadmeId := repository.GetReadmeFileId()
 	repository.SetReadmeFileId(pointer.To(newReadme.GetId()))
 	err = tx.Repositories().Update(ctx, repository)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update repository: %w", err)
+	}
+
+	if oldReadmeId != nil {
+		err = tx.Files().Delete(ctx, *oldReadmeId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to delete readme file: %w", err)
+		}
 	}
 
 	return &UpdateRepositoryReadmeResponse{}, nil
