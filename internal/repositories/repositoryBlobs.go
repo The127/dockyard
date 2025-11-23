@@ -22,6 +22,14 @@ func NewRepositoryBlob(repositoryId uuid.UUID, blobId uuid.UUID) *RepositoryBlob
 	}
 }
 
+func NewRepositoryBlobFromDB(repositoryId uuid.UUID, blobId uuid.UUID, base BaseModel) *RepositoryBlob {
+	return &RepositoryBlob{
+		BaseModel:    base,
+		repositoryId: repositoryId,
+		blobId:       blobId,
+	}
+}
+
 func (r *RepositoryBlob) GetRepositoryId() uuid.UUID {
 	return r.repositoryId
 }
@@ -92,6 +100,5 @@ type RepositoryBlobRepository interface {
 	First(ctx context.Context, filter *RepositoryBlobFilter) (*RepositoryBlob, error)
 	List(ctx context.Context, filter *RepositoryBlobFilter) ([]*RepositoryBlob, int, error)
 	Insert(ctx context.Context, repositoryBlob *RepositoryBlob) error
-	Update(ctx context.Context, repositoryBlob *RepositoryBlob) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }

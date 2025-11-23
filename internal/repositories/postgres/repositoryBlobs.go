@@ -1,0 +1,163 @@
+package postgres
+
+import (
+	"context"
+	"database/sql"
+	"errors"
+	"fmt"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/huandu/go-sqlbuilder"
+	"github.com/the127/dockyard/internal/repositories"
+	"github.com/the127/dockyard/internal/utils"
+	"github.com/the127/dockyard/internal/utils/apiError"
+)
+
+type postgresRepositoryBlob struct {
+	id           uuid.UUID
+	createdAt    time.Time
+	updatedAt    time.Time
+	repositoryId uuid.UUID
+	blobId       uuid.UUID
+}
+
+func (rb *postgresRepositoryBlob) Map() *repositories.RepositoryBlob {
+	return repositories.NewRepositoryBlobFromDB(
+		rb.repositoryId,
+		rb.blobId,
+		repositories.NewBaseModelFromDB(
+			rb.id,
+			rb.createdAt,
+			rb.updatedAt,
+		),
+	)
+}
+
+type repositoryBlobRepository struct {
+	tx *sql.Tx
+}
+
+func NewPostgresRepositoryBlobRepository(tx *sql.Tx) repositories.RepositoryBlobRepository {
+	return &repositoryBlobRepository{
+		tx: tx,
+	}
+}
+
+func (r *repositoryBlobRepository) selectQuery(filter *repositories.RepositoryBlobFilter) *sqlbuilder.SelectBuilder {
+	s := sqlbuilder.Select(
+		"repository_blobs.id",
+		"repository_blobs.created_at",
+		"repository_blobs.updated_at",
+		"repository_blobs.repository_id",
+		"repository_blobs.blob_id",
+	).From("repository_blobs")
+
+	if filter.HasId() {
+		s.Where(s.Equal("project_accesses.id", filter.GetId()))
+	}
+
+	if filter.HasRepositoryId() {
+		s.Where(s.Equal("repository_blobs.repository_id", filter.GetRepositoryId()))
+	}
+
+	if filter.HasBlobId() {
+		s.Where(s.Equal("repository_blobs.blob_id", filter.GetBlobId()))
+	}
+
+	return s
+}
+
+func (r *repositoryBlobRepository) First(ctx context.Context, filter *repositories.RepositoryBlobFilter) (*repositories.RepositoryBlob, error) {
+	s := r.selectQuery(filter)
+	s.Limit(1)
+
+	query, args := s.Build()
+	row := r.tx.QueryRowContext(ctx, query, args...)
+
+	var repositoryBlob postgresRepositoryBlob
+	err := row.Scan(&repositoryBlob.id, &repositoryBlob.createdAt, &repositoryBlob.updatedAt, &repositoryBlob.repositoryId, &repositoryBlob.blobId)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return nil, nil
+	case err != nil:
+		return nil, fmt.Errorf("scanning row: %w", err)
+	}
+
+	return repositoryBlob.Map(), nil
+}
+
+func (r *repositoryBlobRepository) Single(ctx context.Context, filter *repositories.RepositoryBlobFilter) (*repositories.RepositoryBlob, error) {
+	result, err := r.First(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
+	if result == nil {
+		return nil, apiError.ErrApiRepositoryBlobNotFound
+	}
+	return result, nil
+}
+
+func (r *repositoryBlobRepository) List(ctx context.Context, filter *repositories.RepositoryBlobFilter) ([]*repositories.RepositoryBlob, int, error) {
+	s := r.selectQuery(filter)
+	s.SelectMore("count(*) over() as total_count")
+
+	query, args := s.Build()
+	rows, err := r.tx.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("querying db: %w", err)
+	}
+	defer utils.PanicOnError(rows.Close, "closing rows")
+
+	var repositoryBlobs []*repositories.RepositoryBlob
+	var totalCount int
+	for rows.Next() {
+		var repositoryBlob postgresRepositoryBlob
+		err := rows.Scan(&repositoryBlob.id, &repositoryBlob.createdAt, &repositoryBlob.updatedAt, &repositoryBlob.repositoryId, &repositoryBlob.blobId, &totalCount)
+		if err != nil {
+			return nil, 0, fmt.Errorf("scanning row: %w", err)
+		}
+		repositoryBlobs = append(repositoryBlobs, repositoryBlob.Map())
+	}
+
+	return repositoryBlobs, totalCount, nil
+}
+
+func (r *repositoryBlobRepository) Insert(ctx context.Context, repositoryBlob *repositories.RepositoryBlob) error {
+	s := sqlbuilder.InsertInto("repository_blobs").
+		Cols(
+			"id",
+			"created_at",
+			"updated_at",
+			"repository_id",
+			"blob_id",
+		).
+		Values(
+			repositoryBlob.GetId(),
+			repositoryBlob.GetCreatedAt(),
+			repositoryBlob.GetUpdatedAt(),
+			repositoryBlob.GetRepositoryId(),
+			repositoryBlob.GetBlobId(),
+		)
+
+	query, args := s.Build()
+	_, err := r.tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("executing query: %w", err)
+	}
+
+	return nil
+}
+
+func (r *repositoryBlobRepository) Delete(ctx context.Context, id uuid.UUID) error {
+	s := sqlbuilder.DeleteFrom("repository_blobs")
+	s.Where(s.Equal("id", id))
+
+	query, args := s.Build()
+	_, err := r.tx.ExecContext(ctx, query, args...)
+	if err != nil {
+		return fmt.Errorf("executing query: %w", err)
+	}
+
+	return nil
+}
