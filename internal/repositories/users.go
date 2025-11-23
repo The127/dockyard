@@ -27,6 +27,16 @@ func NewUser(tenantId uuid.UUID, subject string) *User {
 	}
 }
 
+func NewUserFromDB(tenantId uuid.UUID, subject string, displayName *string, email *string, base BaseModel) *User {
+	return &User{
+		BaseModel:   base,
+		tenantId:    tenantId,
+		subject:     subject,
+		displayName: displayName,
+		email:       email,
+	}
+}
+
 func (u *User) GetTenantId() uuid.UUID {
 	return u.tenantId
 }

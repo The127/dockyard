@@ -86,12 +86,12 @@ create table repositories
 
 create table repository_blobs
 (
-    id             uuid        not null,
-    created_at     timestamptz not null,
-    updated_at     timestamptz not null,
+    id            uuid        not null,
+    created_at    timestamptz not null,
+    updated_at    timestamptz not null,
 
-    repository_id uuid not null,
-    blob_id uuid not null,
+    repository_id uuid        not null,
+    blob_id       uuid        not null,
 
     primary key (id),
     foreign key (repository_id) references repositories (id),
@@ -142,7 +142,7 @@ create table users
     tenant_id    uuid        not null,
 
     oidc_subject text        not null,
-    displayName  text,
+    display_name text,
     email        text,
 
     primary key (id),
@@ -152,13 +152,13 @@ create table users
 
 create table pats
 (
-    id         uuid        not null,
-    created_at timestamptz not null,
-    updated_at timestamptz not null,
+    id            uuid        not null,
+    created_at    timestamptz not null,
+    updated_at    timestamptz not null,
 
-    user_id uuid not null,
-    display_name text not null,
-    hashed_secret bytea not null,
+    user_id       uuid        not null,
+    display_name  text        not null,
+    hashed_secret bytea       not null,
 
     primary key (id),
     foreign key (user_id) references users (id)
@@ -172,7 +172,7 @@ create table project_accesses
 
     project_id uuid        not null,
     user_id    uuid        not null,
-    "role"       text        not null,
+    "role"     text        not null,
 
     primary key (id),
     foreign key (project_id) references projects (id),
@@ -189,7 +189,7 @@ create table repository_accesses
 
     repository_id uuid        not null,
     user_id       uuid        not null,
-    "role"          text        not null,
+    "role"        text        not null,
 
     primary key (id),
     foreign key (repository_id) references repositories (id),
