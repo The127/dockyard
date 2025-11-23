@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
-	"github.com/lib/pq"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
@@ -75,7 +74,7 @@ func (r *fileRepository) First(ctx context.Context, filter *repositories.FileFil
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var file postgresFile
-	err := row.Scan(&file.xmin, &file.id, &file.createdAt, &file.updatedAt, &file.digest, &file.contentType, pq.Array(&file.data), &file.size)
+	err := row.Scan(&file.xmin, &file.id, &file.createdAt, &file.updatedAt, &file.digest, &file.contentType, &file.data, &file.size)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -113,7 +112,7 @@ func (r *fileRepository) List(ctx context.Context, filter *repositories.FileFilt
 	var totalCount int
 	for rows.Next() {
 		var file postgresFile
-		err := rows.Scan(&file.xmin, &file.id, &file.createdAt, &file.updatedAt, &file.digest, &file.contentType, pq.Array(&file.data), &file.size, &totalCount)
+		err := rows.Scan(&file.xmin, &file.id, &file.createdAt, &file.updatedAt, &file.digest, &file.contentType, &file.data, &file.size, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
