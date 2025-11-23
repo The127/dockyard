@@ -156,11 +156,6 @@ func (r *fileRepository) Insert(ctx context.Context, file *repositories.File) er
 	return nil
 }
 
-func (r *fileRepository) Update(ctx context.Context, file *repositories.File) error {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (r *fileRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	s := sqlbuilder.DeleteFrom("files")
 	s.Where(s.Equal("id", id))

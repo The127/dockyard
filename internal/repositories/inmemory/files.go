@@ -107,15 +107,6 @@ func (r *fileRepository) Insert(_ context.Context, file *repositories.File) erro
 	return nil
 }
 
-func (r *fileRepository) Update(_ context.Context, file *repositories.File) error {
-	err := r.txn.Insert("files", *file)
-	if err != nil {
-		return fmt.Errorf("failed to update file: %w", err)
-	}
-
-	return nil
-}
-
 func (r *fileRepository) Delete(_ context.Context, id uuid.UUID) error {
 	entry, err := r.First(context.Background(), repositories.NewFileFilter().ById(id))
 	if err != nil {
