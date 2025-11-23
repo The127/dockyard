@@ -22,7 +22,7 @@ create table files
     updated_at  timestamptz not null,
 
     digest      text        not null,
-    contentType text        not null,
+    content_type text        not null,
     data        bytea       not null,
     size        bigint,
 
