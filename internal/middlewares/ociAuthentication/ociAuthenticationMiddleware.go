@@ -77,9 +77,16 @@ func getOciCurrentUser(r *http.Request) (*CurrentUser, error) {
 		return nil, fmt.Errorf("getting signing key: %w", err)
 	}
 
-	token, err := jwt.Parse(bearerToken, func(token *jwt.Token) (interface{}, error) {
-		return signingKey.PublicKey()
-	}, jwt.WithAudience(tenant.GetId().String()), jwt.WithIssuer(config.C.Server.ExternalDomain), jwt.WithIssuedAt(), jwt.WithExpirationRequired())
+	token, err := jwt.Parse(
+		bearerToken,
+		func(token *jwt.Token) (interface{}, error) {
+			return signingKey.PublicKey()
+		},
+		jwt.WithAudience(tenant.GetId().String()),
+		jwt.WithIssuer(config.C.Server.ExternalDomain),
+		jwt.WithIssuedAt(),
+		jwt.WithExpirationRequired(),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("parsing jwt: %w", err)
 	}
@@ -107,7 +114,7 @@ func getOciCurrentUser(r *http.Request) (*CurrentUser, error) {
 			WithHttpCode(http.StatusUnauthorized)
 	}
 
-	var access []string
+	var access []Access
 
 	accessClaim, ok := claims["access"]
 	if ok {
@@ -116,7 +123,7 @@ func getOciCurrentUser(r *http.Request) (*CurrentUser, error) {
 			for i := range accessClaimSlice {
 				accessClaimString, ok := accessClaimSlice[i].(string)
 				if ok {
-					access = append(access, accessClaimString)
+					access = append(access, Access(accessClaimString))
 				}
 			}
 		}

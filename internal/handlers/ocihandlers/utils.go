@@ -17,7 +17,7 @@ import (
 func checkAccess(
 	ctx context.Context,
 	repoIdentifier middlewares.OciRepositoryIdentifier,
-	accessType Access,
+	accessType ociAuthentication.Access,
 ) error {
 	currentUser := ociAuthentication.GetCurrentUser(ctx)
 	if currentUser.Repository != nil {
@@ -25,7 +25,7 @@ func checkAccess(
 			currentUser.Repository.ProjectSlug == repoIdentifier.ProjectSlug &&
 			currentUser.Repository.RepositorySlug == repoIdentifier.RepositorySlug {
 
-			if slices.Contains(currentUser.Access, string(accessType)) {
+			if slices.Contains(currentUser.Access, accessType) {
 				return nil
 			}
 		}

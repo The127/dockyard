@@ -14,6 +14,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
+	"github.com/the127/dockyard/internal/middlewares/ociAuthentication"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/services"
 	"github.com/the127/dockyard/internal/services/blobStorage"
@@ -65,7 +66,7 @@ func ManifestsDownload(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	repoIdentifier := middlewares.GetRepoIdentifier(ctx)
 
-	err := checkAccess(ctx, repoIdentifier, PullAccess)
+	err := checkAccess(ctx, repoIdentifier, ociAuthentication.PullAccess)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -109,7 +110,7 @@ func ManifestsExists(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	repoIdentifier := middlewares.GetRepoIdentifier(ctx)
 
-	err := checkAccess(ctx, repoIdentifier, PullAccess)
+	err := checkAccess(ctx, repoIdentifier, ociAuthentication.PullAccess)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -148,7 +149,7 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	repoIdentifier := middlewares.GetRepoIdentifier(ctx)
 
-	err := checkAccess(ctx, repoIdentifier, PushAccess)
+	err := checkAccess(ctx, repoIdentifier, ociAuthentication.PushAccess)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return

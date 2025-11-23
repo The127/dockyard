@@ -7,12 +7,19 @@ import (
 	"github.com/the127/dockyard/internal/middlewares"
 )
 
+type Access string
+
+const (
+	PushAccess Access = "push"
+	PullAccess Access = "pull"
+)
+
 type CurrentUser struct {
 	TenantId        uuid.UUID
 	UserId          uuid.UUID
 	IsAuthenticated bool
 	Repository      *middlewares.OciRepositoryIdentifier
-	Access          []string
+	Access          []Access
 }
 
 var CurrentUserContextKey = &CurrentUser{}

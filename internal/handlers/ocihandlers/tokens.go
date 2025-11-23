@@ -19,6 +19,7 @@ import (
 	"github.com/the127/dockyard/internal/config"
 	"github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
+	"github.com/the127/dockyard/internal/middlewares/ociAuthentication"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/services"
 	"github.com/the127/dockyard/internal/services/clock"
@@ -132,14 +133,14 @@ func checkAccessForUserAndRepository(
 	tx database.Transaction,
 	userId uuid.UUID,
 	repository *repositories.Repository,
-	accessType Access,
+	accessType ociAuthentication.Access,
 ) (bool, error) {
 	var repositoryAccessFilter *repositories.RepositoryAccessFilter
 	var repositoryAccess *repositories.RepositoryAccess
 	var err error
 
 	if userId == uuid.Nil {
-		if repository.GetIsPublic() && accessType == PullAccess {
+		if repository.GetIsPublic() && accessType == ociAuthentication.PullAccess {
 			return true, nil
 		} else {
 			return false, nil
@@ -158,11 +159,11 @@ func checkAccessForUserAndRepository(
 		return false, nil
 	}
 
-	if accessType == PushAccess && repositoryAccess.GetRole().AllowPush() {
+	if accessType == ociAuthentication.PushAccess && repositoryAccess.GetRole().AllowPush() {
 		return true, nil
 	}
 
-	if accessType == PullAccess && repositoryAccess.GetRole().AllowPull() {
+	if accessType == ociAuthentication.PullAccess && repositoryAccess.GetRole().AllowPull() {
 		return true, nil
 	}
 
@@ -185,7 +186,7 @@ func restrictScope(ctx context.Context, tx database.Transaction, userId uuid.UUI
 		return nil, err
 	}
 
-	allowedAccesses := make([]Access, 0, len(scope.access))
+	allowedAccesses := make([]ociAuthentication.Access, 0, len(scope.access))
 
 	for _, access := range scope.access {
 		ok, err := checkAccessForUserAndRepository(ctx, tx, userId, repository, access)
@@ -224,14 +225,14 @@ func parseScopeFromRequest(r *http.Request, tenantSlug string) *ociScope {
 		return nil
 	}
 
-	accesses := make([]Access, len(accessStrs))
+	accesses := make([]ociAuthentication.Access, len(accessStrs))
 
 	for _, accessStr := range accessStrs {
-		if accessStr != string(PushAccess) && accessStr != string(PullAccess) {
+		if accessStr != string(ociAuthentication.PushAccess) && accessStr != string(ociAuthentication.PullAccess) {
 			continue
 		}
 
-		accesses = append(accesses, Access(accessStr))
+		accesses = append(accesses, ociAuthentication.Access(accessStr))
 	}
 
 	repositoryParts := strings.Split(repository, "/")
@@ -251,15 +252,8 @@ func parseScopeFromRequest(r *http.Request, tenantSlug string) *ociScope {
 
 type ociScope struct {
 	repository middlewares.OciRepositoryIdentifier
-	access     []Access
+	access     []ociAuthentication.Access
 }
-
-type Access string
-
-const (
-	PushAccess Access = "push"
-	PullAccess Access = "pull"
-)
 
 func getUserId(r *http.Request, tenant *repositories.Tenant) (uuid.UUID, error) {
 	_, password, ok := r.BasicAuth()
