@@ -58,6 +58,17 @@ func NewTenant(slug string, displayName string, oidcConfig TenantOidcConfig) *Te
 	}
 }
 
+func NewTenantFromDB(slug string, displayName string, oidcConfig TenantOidcConfig, base BaseModel) *Tenant {
+	return &Tenant{
+		BaseModel:     base,
+		slug:          slug,
+		displayName:   displayName,
+		oidcClient:    oidcConfig.Client,
+		oidcIssuer:    oidcConfig.Issuer,
+		oidcRoleClaim: oidcConfig.RoleClaim,
+	}
+}
+
 func (t *Tenant) GetSlug() string {
 	return t.slug
 }
