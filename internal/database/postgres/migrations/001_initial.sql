@@ -36,7 +36,7 @@ create table tenants
     updated_at             timestamptz not null,
 
     slug                   text        not null,
-    displayName            text        not null,
+    display_name            text        not null,
 
     oidc_client            text        not null,
     oidc_issuer            text        not null,
@@ -57,7 +57,7 @@ create table projects
     tenant_id   uuid        not null,
 
     slug        text        not null,
-    displayName text        not null,
+    display_name text        not null,
     description text,
 
     primary key (id),
@@ -74,7 +74,7 @@ create table repositories
     project_id     uuid        not null,
 
     slug           text        not null,
-    displayName    text        not null,
+    display_name    text        not null,
     description    text,
     readme_file_id uuid,
 
