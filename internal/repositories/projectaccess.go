@@ -32,6 +32,15 @@ func NewProjectAccess(projectId uuid.UUID, userId uuid.UUID, role ProjectAccessR
 	}
 }
 
+func NewProjectAccessFromDB(projectId uuid.UUID, userId uuid.UUID, role ProjectAccessRole, base BaseModel) *ProjectAccess {
+	return &ProjectAccess{
+		BaseModel: base,
+		projectId: projectId,
+		userId:    userId,
+		role:      role,
+	}
+}
+
 func (p *ProjectAccess) GetProjectId() uuid.UUID {
 	return p.projectId
 }
