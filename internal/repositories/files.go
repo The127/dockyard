@@ -10,32 +10,46 @@ import (
 type File struct {
 	BaseModel
 
-	Digest      string
-	ContentType string
-	Data        []byte
-	Size        int64
+	digest      string
+	contentType string
+	data        []byte
+	size        int64
 }
 
 func NewFile(digest string, contentType string, data []byte) *File {
 	return &File{
 		BaseModel:   NewBaseModel(),
-		Digest:      digest,
-		ContentType: contentType,
-		Data:        data,
-		Size:        int64(len(data)),
+		digest:      digest,
+		contentType: contentType,
+		data:        data,
+		size:        int64(len(data)),
+	}
+}
+
+func NewFileFromDB(digest string, contentType string, data []byte, size int64, base BaseModel) *File {
+	return &File{
+		BaseModel:   base,
+		digest:      digest,
+		contentType: contentType,
+		data:        data,
+		size:        size,
 	}
 }
 
 func (f *File) GetDigest() string {
-	return f.Digest
+	return f.digest
 }
 
 func (f *File) GetContentType() string {
-	return f.ContentType
+	return f.contentType
 }
 
 func (f *File) GetData() []byte {
-	return f.Data
+	return f.data
+}
+
+func (f *File) GetSize() int64 {
+	return f.size
 }
 
 type FileFilter struct {
