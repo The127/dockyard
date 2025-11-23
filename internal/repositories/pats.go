@@ -34,6 +34,15 @@ func NewPat(userId uuid.UUID, displayName string) (*Pat, []byte) {
 	}, secret
 }
 
+func NewPatFromDB(userId uuid.UUID, displayName string, hashedSecret []byte, base BaseModel) *Pat {
+	return &Pat{
+		BaseModel:    base,
+		userId:       userId,
+		displayName:  displayName,
+		hashedSecret: hashedSecret,
+	}
+}
+
 func (p *Pat) GetUserId() uuid.UUID {
 	return p.userId
 }
