@@ -107,15 +107,6 @@ func (r *blobRepository) Insert(_ context.Context, blob *repositories.Blob) erro
 	return nil
 }
 
-func (r *blobRepository) Update(_ context.Context, blob *repositories.Blob) error {
-	err := r.txn.Insert("blobs", *blob)
-	if err != nil {
-		return fmt.Errorf("failed to update blob: %w", err)
-	}
-
-	return nil
-}
-
 func (r *blobRepository) Delete(_ context.Context, id uuid.UUID) error {
 	entry, err := r.First(context.Background(), repositories.NewBlobFilter().ById(id))
 	if err != nil {

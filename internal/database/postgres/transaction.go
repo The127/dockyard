@@ -5,6 +5,7 @@ import (
 
 	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/repositories"
+	"github.com/the127/dockyard/internal/repositories/postgres"
 )
 
 type transaction struct {
@@ -70,8 +71,11 @@ func (t *transaction) Tags() repositories.TagRepository {
 }
 
 func (t *transaction) Blobs() repositories.BlobRepository {
-	//TODO implement me
-	panic("implement me")
+	if t.blobs == nil {
+		t.blobs = postgres.NewPostgresBlobRepository(t.tx)
+	}
+
+	return t.blobs
 }
 
 func (t *transaction) RepositoryBlobs() repositories.RepositoryBlobRepository {

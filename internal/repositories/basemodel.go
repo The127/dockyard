@@ -20,6 +20,14 @@ func NewBaseModel() BaseModel {
 	}
 }
 
+func NewBaseModelFromDB(id uuid.UUID, createdAt time.Time, updatedAt time.Time) BaseModel {
+	return BaseModel{
+		id:        id,
+		createdAt: createdAt,
+		updatedAt: updatedAt,
+	}
+}
+
 func (b *BaseModel) GetId() uuid.UUID {
 	return b.id
 }

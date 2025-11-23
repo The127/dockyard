@@ -22,6 +22,14 @@ func NewBlob(digest string, size int64) *Blob {
 	}
 }
 
+func NewBlobFromDB(digest string, size int64, base BaseModel) *Blob {
+	return &Blob{
+		BaseModel: base,
+		digest:    digest,
+		size:      size,
+	}
+}
+
 func (b *Blob) GetDigest() string {
 	return b.digest
 }
@@ -77,6 +85,5 @@ type BlobRepository interface {
 	First(ctx context.Context, filter *BlobFilter) (*Blob, error)
 	List(ctx context.Context, filter *BlobFilter) ([]*Blob, int, error)
 	Insert(ctx context.Context, blob *Blob) error
-	Update(ctx context.Context, blob *Blob) error
 	Delete(ctx context.Context, id uuid.UUID) error
 }
