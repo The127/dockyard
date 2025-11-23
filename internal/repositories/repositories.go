@@ -30,6 +30,26 @@ func NewRepository(projectId uuid.UUID, slug string, displayName string) *Reposi
 	}
 }
 
+func NewRepositoryFromDB(
+	projectId uuid.UUID,
+	slug string,
+	displayName string,
+	description *string,
+	readmeFileId *uuid.UUID,
+	isPublic bool,
+	base BaseModel,
+) *Repository {
+	return &Repository{
+		BaseModel:    base,
+		projectId:    projectId,
+		slug:         slug,
+		displayName:  displayName,
+		description:  description,
+		readmeFileId: readmeFileId,
+		isPublic:     isPublic,
+	}
+}
+
 func (r *Repository) GetProjectId() uuid.UUID {
 	return r.projectId
 }
