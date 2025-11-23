@@ -34,6 +34,7 @@ type Repository struct {
 func NewRepository(projectId uuid.UUID, slug string, displayName string) *Repository {
 	return &Repository{
 		BaseModel:   NewBaseModel(),
+		Changes:     NewChanges[RepositoryChange](),
 		projectId:   projectId,
 		slug:        slug,
 		displayName: displayName,
@@ -51,6 +52,7 @@ func NewRepositoryFromDB(
 ) *Repository {
 	return &Repository{
 		BaseModel:    base,
+		Changes:      NewChanges[RepositoryChange](),
 		projectId:    projectId,
 		slug:         slug,
 		displayName:  displayName,

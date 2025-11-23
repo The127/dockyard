@@ -28,6 +28,7 @@ type User struct {
 func NewUser(tenantId uuid.UUID, subject string) *User {
 	return &User{
 		BaseModel:   NewBaseModel(),
+		Changes:     NewChanges[UserChange](),
 		tenantId:    tenantId,
 		subject:     subject,
 		displayName: nil,
@@ -38,6 +39,7 @@ func NewUser(tenantId uuid.UUID, subject string) *User {
 func NewUserFromDB(tenantId uuid.UUID, subject string, displayName *string, email *string, base BaseModel) *User {
 	return &User{
 		BaseModel:   base,
+		Changes:     NewChanges[UserChange](),
 		tenantId:    tenantId,
 		subject:     subject,
 		displayName: displayName,

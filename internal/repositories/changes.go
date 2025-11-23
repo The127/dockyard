@@ -6,6 +6,12 @@ type Changes[T comparable] struct {
 	changes map[T]struct{}
 }
 
+func NewChanges[T comparable]() Changes[T] {
+	return Changes[T]{
+		changes: make(map[T]struct{}),
+	}
+}
+
 // GetChanges returns a slice of all tracked changes in the Changes collection.
 func (b *Changes[T]) GetChanges() []T {
 	changes := make([]T, 0, len(b.changes))

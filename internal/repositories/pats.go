@@ -35,6 +35,7 @@ func NewPat(userId uuid.UUID, displayName string) (*Pat, []byte) {
 
 	return &Pat{
 		BaseModel:    NewBaseModel(),
+		Changes:      NewChanges[PatChange](),
 		userId:       userId,
 		displayName:  displayName,
 		hashedSecret: hashedSecret,
@@ -44,6 +45,7 @@ func NewPat(userId uuid.UUID, displayName string) (*Pat, []byte) {
 func NewPatFromDB(userId uuid.UUID, displayName string, hashedSecret []byte, base BaseModel) *Pat {
 	return &Pat{
 		BaseModel:    base,
+		Changes:      NewChanges[PatChange](),
 		userId:       userId,
 		displayName:  displayName,
 		hashedSecret: hashedSecret,

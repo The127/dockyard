@@ -29,6 +29,7 @@ type Project struct {
 func NewProject(tenantId uuid.UUID, slug string, displayName string) *Project {
 	return &Project{
 		BaseModel:   NewBaseModel(),
+		Changes:     NewChanges[ProjectChange](),
 		tenantId:    tenantId,
 		slug:        slug,
 		displayName: displayName,
@@ -38,6 +39,7 @@ func NewProject(tenantId uuid.UUID, slug string, displayName string) *Project {
 func NewProjectFromDB(tenantId uuid.UUID, slug string, displayName string, description *string, base BaseModel) *Project {
 	return &Project{
 		BaseModel:   base,
+		Changes:     NewChanges[ProjectChange](),
 		tenantId:    tenantId,
 		slug:        slug,
 		displayName: displayName,

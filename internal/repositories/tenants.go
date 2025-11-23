@@ -61,6 +61,7 @@ func NewTenantOidcConfig(
 func NewTenant(slug string, displayName string, oidcConfig TenantOidcConfig) *Tenant {
 	return &Tenant{
 		BaseModel:           NewBaseModel(),
+		Changes:             NewChanges[TenantChange](),
 		slug:                slug,
 		displayName:         displayName,
 		oidcClient:          oidcConfig.Client,
@@ -74,6 +75,7 @@ func NewTenant(slug string, displayName string, oidcConfig TenantOidcConfig) *Te
 func NewTenantFromDB(slug string, displayName string, oidcConfig TenantOidcConfig, base BaseModel) *Tenant {
 	return &Tenant{
 		BaseModel:           base,
+		Changes:             NewChanges[TenantChange](),
 		slug:                slug,
 		displayName:         displayName,
 		oidcClient:          oidcConfig.Client,

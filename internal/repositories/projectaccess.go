@@ -33,6 +33,7 @@ type ProjectAccess struct {
 func NewProjectAccess(projectId uuid.UUID, userId uuid.UUID, role ProjectAccessRole) *ProjectAccess {
 	return &ProjectAccess{
 		BaseModel: NewBaseModel(),
+		Changes:   NewChanges[ProjectAccessChange](),
 		projectId: projectId,
 		userId:    userId,
 		role:      role,
@@ -42,6 +43,7 @@ func NewProjectAccess(projectId uuid.UUID, userId uuid.UUID, role ProjectAccessR
 func NewProjectAccessFromDB(projectId uuid.UUID, userId uuid.UUID, role ProjectAccessRole, base BaseModel) *ProjectAccess {
 	return &ProjectAccess{
 		BaseModel: base,
+		Changes:   NewChanges[ProjectAccessChange](),
 		projectId: projectId,
 		userId:    userId,
 		role:      role,

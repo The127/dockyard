@@ -63,7 +63,7 @@ func (r *userRepository) selectQuery(filter *repositories.UserFilter) *sqlbuilde
 	}
 
 	if filter.HasSubject() {
-		s.Where(s.Equal("users.subject", filter.GetSubject()))
+		s.Where(s.Equal("users.oidc_subject", filter.GetSubject()))
 	}
 
 	return s
