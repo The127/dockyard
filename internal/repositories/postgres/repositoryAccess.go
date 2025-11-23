@@ -40,6 +40,7 @@ func NewPostgresRepositoryAccessRepository(tx *sql.Tx) repositories.RepositoryAc
 
 func (r *repositoryAccessRepository) selectQuery(filter *repositories.RepositoryAccessFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
+		"repository_accesses.xmin",
 		"repository_accesses.id",
 		"repository_accesses.created_at",
 		"repository_accesses.updated_at",
@@ -67,7 +68,7 @@ func (r *repositoryAccessRepository) First(ctx context.Context, filter *reposito
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var repositoryAccess postgresRepositoryAccess
-	err := row.Scan(&repositoryAccess.id, &repositoryAccess.createdAt, &repositoryAccess.updatedAt, &repositoryAccess.repositoryId, &repositoryAccess.userId, &repositoryAccess.role)
+	err := row.Scan(&repositoryAccess.xmin, &repositoryAccess.id, &repositoryAccess.createdAt, &repositoryAccess.updatedAt, &repositoryAccess.repositoryId, &repositoryAccess.userId, &repositoryAccess.role)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -93,7 +94,7 @@ func (r *repositoryAccessRepository) List(ctx context.Context, filter *repositor
 	var totalCount int
 	for rows.Next() {
 		var repositoryAccess postgresRepositoryAccess
-		err := rows.Scan(&repositoryAccess.id, &repositoryAccess.createdAt, &repositoryAccess.updatedAt, &repositoryAccess.repositoryId, &repositoryAccess.userId, &repositoryAccess.role, &totalCount)
+		err := rows.Scan(&repositoryAccess.xmin, &repositoryAccess.id, &repositoryAccess.createdAt, &repositoryAccess.updatedAt, &repositoryAccess.repositoryId, &repositoryAccess.userId, &repositoryAccess.role, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

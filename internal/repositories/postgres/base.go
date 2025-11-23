@@ -11,8 +11,9 @@ type postgresBaseModel struct {
 	id        uuid.UUID
 	createdAt time.Time
 	updatedAt time.Time
+	xmin      uint
 }
 
 func (b *postgresBaseModel) MapBase() repositories.BaseModel {
-	return repositories.NewBaseModelFromDB(b.id, b.createdAt, b.updatedAt)
+	return repositories.NewBaseModelFromDB(b.id, b.createdAt, b.updatedAt, b.xmin)
 }

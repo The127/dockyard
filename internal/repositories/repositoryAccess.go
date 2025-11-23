@@ -65,6 +65,7 @@ func (r *RepositoryAccess) GetRole() RepositoryAccessRole {
 
 func (r *RepositoryAccess) SetRole(role RepositoryAccessRole) {
 	r.role = role
+	r.trackChange("role", role)
 }
 
 type RepositoryAccessFilter struct {

@@ -47,6 +47,7 @@ func (p *Project) GetDisplayName() string {
 
 func (p *Project) SetDisplayName(displayName string) {
 	p.displayName = displayName
+	p.trackChange("displayName", displayName)
 }
 
 func (p *Project) GetTenantId() uuid.UUID {
@@ -59,6 +60,7 @@ func (p *Project) GetDescription() *string {
 
 func (p *Project) SetDescription(description *string) {
 	p.description = description
+	p.trackChange("description", description)
 }
 
 type ProjectFilter struct {

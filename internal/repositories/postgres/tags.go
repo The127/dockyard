@@ -59,6 +59,7 @@ func (r *tagRepository) selectQuery(filter *repositories.TagFilter) *sqlbuilder.
 		"tags.id",
 		"tags.created_at",
 		"tags.updated_at",
+		"tags.xmin",
 		"tags.repository_id",
 		"tags.manifest_id",
 		"tags.name",
@@ -96,7 +97,7 @@ func (r *tagRepository) First(ctx context.Context, filter *repositories.TagFilte
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var tag postgresTag
-	cols := []any{&tag.id, &tag.createdAt, &tag.updatedAt, &tag.repositoryId, &tag.manifestId, &tag.name}
+	cols := []any{&tag.id, &tag.createdAt, &tag.updatedAt, &tag.xmin, &tag.repositoryId, &tag.manifestId, &tag.name}
 
 	if filter.GetIncludeManifestInfo() {
 		tag.manifestInfo = &tagManifestInfo{}
@@ -140,7 +141,7 @@ func (r *tagRepository) List(ctx context.Context, filter *repositories.TagFilter
 	var totalCount int
 
 	var tag postgresTag
-	cols := []any{&tag.id, &tag.createdAt, &tag.updatedAt, &tag.repositoryId, &tag.manifestId, &tag.name}
+	cols := []any{&tag.id, &tag.createdAt, &tag.updatedAt, &tag.xmin, &tag.repositoryId, &tag.manifestId, &tag.name}
 
 	if filter.GetIncludeManifestInfo() {
 		tag.manifestInfo = &tagManifestInfo{}

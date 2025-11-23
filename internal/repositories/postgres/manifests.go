@@ -44,6 +44,7 @@ func NewPostgresManifestRepository(tx *sql.Tx) repositories.ManifestRepository {
 
 func (r *manifestRepository) selectQuery(filter *repositories.ManifestFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
+		"manifests.xmin",
 		"manifests.id",
 		"manifests.created_at",
 		"manifests.updated_at",
@@ -79,7 +80,7 @@ func (r *manifestRepository) First(ctx context.Context, filter *repositories.Man
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var manifest postgresManifest
-	err := row.Scan(&manifest.id, &manifest.createdAt, &manifest.updatedAt, &manifest.repositoryId, &manifest.blobId, &manifest.digest)
+	err := row.Scan(&manifest.xmin, &manifest.id, &manifest.createdAt, &manifest.updatedAt, &manifest.repositoryId, &manifest.blobId, &manifest.digest)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -116,7 +117,7 @@ func (r *manifestRepository) List(ctx context.Context, filter *repositories.Mani
 	var totalCount int
 	for rows.Next() {
 		var manifest postgresManifest
-		err := rows.Scan(&manifest.id, &manifest.createdAt, &manifest.updatedAt, &manifest.repositoryId, &manifest.blobId, &manifest.digest, &totalCount)
+		err := rows.Scan(&manifest.xmin, &manifest.id, &manifest.createdAt, &manifest.updatedAt, &manifest.repositoryId, &manifest.blobId, &manifest.digest, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

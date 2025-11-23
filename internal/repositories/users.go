@@ -51,6 +51,7 @@ func (u *User) GetDisplayName() *string {
 
 func (u *User) SetDisplayName(displayName *string) {
 	u.displayName = displayName
+	u.trackChange("displayName", displayName)
 }
 
 func (u *User) GetEmail() *string {
@@ -59,6 +60,7 @@ func (u *User) GetEmail() *string {
 
 func (u *User) SetEmail(email *string) {
 	u.email = email
+	u.trackChange("email", email)
 }
 
 type UserFilter struct {

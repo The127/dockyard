@@ -44,6 +44,7 @@ func NewPostgresFileRepository(tx *sql.Tx) repositories.FileRepository {
 
 func (r *fileRepository) selectQuery(filter *repositories.FileFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
+		"files.xmin",
 		"files.id",
 		"files.created_at",
 		"files.updated_at",
@@ -72,7 +73,7 @@ func (r *fileRepository) First(ctx context.Context, filter *repositories.FileFil
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var file postgresFile
-	err := row.Scan(&file.id, &file.createdAt, &file.updatedAt, &file.digest, &file.contentType, pq.Array(&file.data), &file.size)
+	err := row.Scan(&file.xmin, &file.id, &file.createdAt, &file.updatedAt, &file.digest, &file.contentType, pq.Array(&file.data), &file.size)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -109,7 +110,7 @@ func (r *fileRepository) List(ctx context.Context, filter *repositories.FileFilt
 	var totalCount int
 	for rows.Next() {
 		var file postgresFile
-		err := rows.Scan(&file.id, &file.createdAt, &file.updatedAt, &file.digest, &file.contentType, pq.Array(&file.data), &file.size, &totalCount)
+		err := rows.Scan(&file.xmin, &file.id, &file.createdAt, &file.updatedAt, &file.digest, &file.contentType, pq.Array(&file.data), &file.size, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

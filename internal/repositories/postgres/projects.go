@@ -43,6 +43,7 @@ func NewPostgresProjectRepository(tx *sql.Tx) repositories.ProjectRepository {
 
 func (r *projectRepository) selectQuery(filter *repositories.ProjectFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
+		"projects.xmin",
 		"projects.id",
 		"projects.created_at",
 		"projects.updated_at",
@@ -75,7 +76,7 @@ func (r *projectRepository) First(ctx context.Context, filter *repositories.Proj
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var project postgresProject
-	err := row.Scan(&project.id, &project.createdAt, &project.updatedAt, &project.tenantId, &project.slug, &project.displayName, &project.description)
+	err := row.Scan(&project.xmin, &project.id, &project.createdAt, &project.updatedAt, &project.tenantId, &project.slug, &project.displayName, &project.description)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -112,7 +113,7 @@ func (r *projectRepository) List(ctx context.Context, filter *repositories.Proje
 	var totalCount int
 	for rows.Next() {
 		var project postgresProject
-		err := rows.Scan(&project.id, &project.createdAt, &project.updatedAt, &project.tenantId, &project.slug, &project.displayName, &project.description, &totalCount)
+		err := rows.Scan(&project.xmin, &project.id, &project.createdAt, &project.updatedAt, &project.tenantId, &project.slug, &project.displayName, &project.description, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

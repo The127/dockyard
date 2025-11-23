@@ -68,6 +68,7 @@ func (r *Repository) GetDescription() *string {
 
 func (r *Repository) SetDescription(description *string) {
 	r.description = description
+	r.trackChange("description", description)
 }
 
 func (r *Repository) GetReadmeFileId() *uuid.UUID {
@@ -76,6 +77,7 @@ func (r *Repository) GetReadmeFileId() *uuid.UUID {
 
 func (r *Repository) SetReadmeFileId(readmeFileId *uuid.UUID) {
 	r.readmeFileId = readmeFileId
+	r.trackChange("readmeFileId", readmeFileId)
 }
 
 func (r *Repository) GetIsPublic() bool {
@@ -84,6 +86,7 @@ func (r *Repository) GetIsPublic() bool {
 
 func (r *Repository) SetIsPublic(isPublic bool) {
 	r.isPublic = isPublic
+	r.trackChange("isPublic", isPublic)
 }
 
 type RepositoryFilter struct {

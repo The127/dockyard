@@ -46,6 +46,7 @@ func (r *userRepository) selectQuery(filter *repositories.UserFilter) *sqlbuilde
 		"users.id",
 		"users.created_at",
 		"users.updated_at",
+		"users.xmin",
 		"users.tenant_id",
 		"users.oidc_subject",
 		"users.display_name",
@@ -75,7 +76,7 @@ func (r *userRepository) First(ctx context.Context, filter *repositories.UserFil
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var user postgresUser
-	err := row.Scan(&user.id, &user.createdAt, &user.updatedAt, &user.tenantId, &user.subject, &user.displayName, &user.email)
+	err := row.Scan(&user.id, &user.createdAt, &user.updatedAt, &user.xmin, &user.tenantId, &user.subject, &user.displayName, &user.email)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -114,7 +115,7 @@ func (r *userRepository) List(ctx context.Context, filter *repositories.UserFilt
 	for rows.Next() {
 		var user postgresUser
 
-		err := rows.Scan(&user.id, &user.createdAt, &user.updatedAt, &user.tenantId, &user.subject, &user.displayName, &user.email, &totalCount)
+		err := rows.Scan(&user.id, &user.createdAt, &user.updatedAt, &user.xmin, &user.tenantId, &user.subject, &user.displayName, &user.email, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

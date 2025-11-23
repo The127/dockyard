@@ -79,6 +79,7 @@ func (t *Tenant) GetDisplayName() string {
 
 func (t *Tenant) SetDisplayName(displayName string) {
 	t.displayName = displayName
+	t.trackChange("displayName", displayName)
 }
 
 func (t *Tenant) GetOidcClient() string {
@@ -87,6 +88,7 @@ func (t *Tenant) GetOidcClient() string {
 
 func (t *Tenant) SetOidcClient(oidcClient string) {
 	t.oidcClient = oidcClient
+	t.trackChange("oidcClient", oidcClient)
 }
 
 func (t *Tenant) GetOidcIssuer() string {
@@ -95,6 +97,7 @@ func (t *Tenant) GetOidcIssuer() string {
 
 func (t *Tenant) SetOidcIssuer(oidcIssuer string) {
 	t.oidcIssuer = oidcIssuer
+	t.trackChange("oidcIssuer", oidcIssuer)
 }
 
 func (t *Tenant) GetOidcRoleClaim() string {
@@ -103,6 +106,7 @@ func (t *Tenant) GetOidcRoleClaim() string {
 
 func (t *Tenant) SetOidcRoleClaim(oidcRoleClaim string) {
 	t.oidcRoleClaim = oidcRoleClaim
+	t.trackChange("oidcRoleClaim", oidcRoleClaim)
 }
 
 func (t *Tenant) GetOidcRoleClaimFormat() string {
@@ -111,6 +115,7 @@ func (t *Tenant) GetOidcRoleClaimFormat() string {
 
 func (t *Tenant) SetOidcRoleClaimFormat(oidcRoleClaimFormat string) {
 	t.oidcRoleClaimFormat = oidcRoleClaimFormat
+	t.trackChange("oidcRoleClaimFormat", oidcRoleClaimFormat)
 }
 
 func (t *Tenant) GetOidcRoleMapping() map[string]string {
@@ -119,6 +124,7 @@ func (t *Tenant) GetOidcRoleMapping() map[string]string {
 
 func (t *Tenant) SetOidcRoleMapping(oidcRoleMapping map[string]string) {
 	t.oidcRoleMapping = oidcRoleMapping
+	t.trackChange("oidcRoleMapping", oidcRoleMapping)
 }
 
 type TenantFilter struct {

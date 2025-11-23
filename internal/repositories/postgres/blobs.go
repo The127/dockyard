@@ -43,6 +43,7 @@ func (r *blobRepository) selectQuery(filter *repositories.BlobFilter) *sqlbuilde
 		"blobs.id",
 		"blobs.created_at",
 		"blobs.updated_at",
+		"blobs.xmin",
 		"blobs.digest",
 		"blobs.size",
 	).From("blobs")
@@ -66,7 +67,7 @@ func (r *blobRepository) First(ctx context.Context, filter *repositories.BlobFil
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var blob postgresBlob
-	err := row.Scan(&blob.id, &blob.createdAt, &blob.updatedAt, &blob.digest, &blob.size)
+	err := row.Scan(&blob.id, &blob.createdAt, &blob.updatedAt, &blob.xmin, &blob.digest, &blob.size)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -103,7 +104,7 @@ func (r *blobRepository) List(ctx context.Context, filter *repositories.BlobFilt
 	var totalCount int
 	for rows.Next() {
 		var blob postgresBlob
-		err := rows.Scan(&blob.id, &blob.createdAt, &blob.updatedAt, &blob.digest, &blob.size, &totalCount)
+		err := rows.Scan(&blob.id, &blob.createdAt, &blob.updatedAt, &blob.xmin, &blob.digest, &blob.size, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

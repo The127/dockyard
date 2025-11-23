@@ -47,6 +47,7 @@ func NewPostgresRepositoryRepository(tx *sql.Tx) repositories.RepositoryReposito
 
 func (r *repositoryRepository) selectQuery(filter *repositories.RepositoryFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
+		"repositories.xmin",
 		"repositories.id",
 		"repositories.created_at",
 		"repositories.updated_at",
@@ -81,7 +82,7 @@ func (r *repositoryRepository) First(ctx context.Context, filter *repositories.R
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var repository postgresRepository
-	err := row.Scan(&repository.id, &repository.createdAt, &repository.updatedAt, &repository.projectId, &repository.slug, &repository.displayName, &repository.description, &repository.readmeFileId, &repository.isPublic)
+	err := row.Scan(&repository.xmin, &repository.id, &repository.createdAt, &repository.updatedAt, &repository.projectId, &repository.slug, &repository.displayName, &repository.description, &repository.readmeFileId, &repository.isPublic)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -118,7 +119,7 @@ func (r *repositoryRepository) List(ctx context.Context, filter *repositories.Re
 	var totalCount int
 	for rows.Next() {
 		var repository postgresRepository
-		err := rows.Scan(&repository.id, &repository.createdAt, &repository.updatedAt, &repository.projectId, &repository.slug, &repository.displayName, &repository.description, &repository.readmeFileId, &repository.isPublic, &totalCount)
+		err := rows.Scan(&repository.xmin, &repository.id, &repository.createdAt, &repository.updatedAt, &repository.projectId, &repository.slug, &repository.displayName, &repository.description, &repository.readmeFileId, &repository.isPublic, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

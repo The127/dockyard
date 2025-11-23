@@ -42,6 +42,7 @@ func NewPostgresPatRepository(tx *sql.Tx) repositories.PatRepository {
 
 func (r *patRepository) selectQuery(filter *repositories.PatFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
+		"pats.xmin",
 		"pats.id",
 		"pats.created_at",
 		"pats.updated_at",
@@ -69,7 +70,7 @@ func (r *patRepository) First(ctx context.Context, filter *repositories.PatFilte
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var pat postgresPat
-	err := row.Scan(&pat.id, &pat.createdAt, &pat.updatedAt, &pat.userId, &pat.displayName, pq.Array(&pat.hashedSecret))
+	err := row.Scan(&pat.xmin, &pat.id, &pat.createdAt, &pat.updatedAt, &pat.userId, &pat.displayName, pq.Array(&pat.hashedSecret))
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -106,7 +107,7 @@ func (r *patRepository) List(ctx context.Context, filter *repositories.PatFilter
 	var totalCount int
 	for rows.Next() {
 		var pat postgresPat
-		err := rows.Scan(&pat.id, &pat.createdAt, &pat.updatedAt, &pat.userId, &pat.displayName, pq.Array(&pat.hashedSecret), &totalCount)
+		err := rows.Scan(&pat.xmin, &pat.id, &pat.createdAt, &pat.updatedAt, &pat.userId, &pat.displayName, pq.Array(&pat.hashedSecret), &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

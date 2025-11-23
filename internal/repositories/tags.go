@@ -59,6 +59,7 @@ func (t *Tag) GetManifestInfo() *TagManifestInfo {
 
 func (t *Tag) SetManifestInfo(manifestInfo TagManifestInfo) {
 	t.manifestInfo = &manifestInfo
+	// do not track changes on manifest info
 }
 
 type TagFilter struct {

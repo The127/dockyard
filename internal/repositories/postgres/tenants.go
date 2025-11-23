@@ -55,6 +55,7 @@ func (r *tenantRepository) selectQuery(filter *repositories.TenantFilter) *sqlbu
 		"tenants.id",
 		"tenants.created_at",
 		"tenants.updated_at",
+		"tenants.xmin",
 		"tenants.slug",
 		"tenants.display_name",
 		"tenants.oidc_client",
@@ -83,7 +84,7 @@ func (r *tenantRepository) First(ctx context.Context, filter *repositories.Tenan
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var tenant postgresTenant
-	err := row.Scan(&tenant.id, &tenant.createdAt, &tenant.updatedAt, &tenant.slug, &tenant.displayName, &tenant.oidcClient, &tenant.oidcIssuer, &tenant.oidcRoleClaim, &tenant.oidcRoleClaimFormat, &tenant.oidcRoleMapping)
+	err := row.Scan(&tenant.id, &tenant.createdAt, &tenant.updatedAt, &tenant.xmin, &tenant.slug, &tenant.displayName, &tenant.oidcClient, &tenant.oidcIssuer, &tenant.oidcRoleClaim, &tenant.oidcRoleClaimFormat, &tenant.oidcRoleMapping)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -120,7 +121,7 @@ func (r *tenantRepository) List(ctx context.Context, filter *repositories.Tenant
 	var totalCount int
 	for rows.Next() {
 		var tenant postgresTenant
-		err := rows.Scan(&tenant.id, &tenant.createdAt, &tenant.updatedAt, &tenant.slug, &tenant.displayName, &tenant.oidcClient, &tenant.oidcIssuer, &tenant.oidcRoleClaim, &tenant.oidcRoleClaimFormat, &tenant.oidcRoleMapping, &totalCount)
+		err := rows.Scan(&tenant.id, &tenant.createdAt, &tenant.updatedAt, &tenant.xmin, &tenant.slug, &tenant.displayName, &tenant.oidcClient, &tenant.oidcIssuer, &tenant.oidcRoleClaim, &tenant.oidcRoleClaimFormat, &tenant.oidcRoleMapping, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
