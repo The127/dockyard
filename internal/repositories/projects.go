@@ -27,6 +27,16 @@ func NewProject(tenantId uuid.UUID, slug string, displayName string) *Project {
 	}
 }
 
+func NewProjectFromDB(tenantId uuid.UUID, slug string, displayName string, description *string, base BaseModel) *Project {
+	return &Project{
+		BaseModel:   base,
+		tenantId:    tenantId,
+		slug:        slug,
+		displayName: displayName,
+		description: description,
+	}
+}
+
 func (p *Project) GetSlug() string {
 	return p.slug
 }
