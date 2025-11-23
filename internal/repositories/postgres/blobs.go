@@ -84,8 +84,8 @@ func (r *blobRepository) First(ctx context.Context, filter *repositories.BlobFil
 	return blob.Map(), nil
 }
 
-func (r *blobRepository) Single(_ context.Context, filter *repositories.BlobFilter) (*repositories.Blob, error) {
-	result, err := r.First(context.Background(), filter)
+func (r *blobRepository) Single(ctx context.Context, filter *repositories.BlobFilter) (*repositories.Blob, error) {
+	result, err := r.First(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -95,12 +95,12 @@ func (r *blobRepository) Single(_ context.Context, filter *repositories.BlobFilt
 	return result, nil
 }
 
-func (r *blobRepository) List(_ context.Context, _ *repositories.BlobFilter) ([]*repositories.Blob, int, error) {
-	s := r.selectQuery(&repositories.BlobFilter{})
+func (r *blobRepository) List(ctx context.Context, filter *repositories.BlobFilter) ([]*repositories.Blob, int, error) {
+	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
 	query, args := s.Build()
-	rows, err := r.tx.QueryContext(context.Background(), query, args...)
+	rows, err := r.tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
 	}
@@ -146,12 +146,12 @@ func (r *blobRepository) Insert(ctx context.Context, blob *repositories.Blob) er
 	return nil
 }
 
-func (r *blobRepository) Delete(_ context.Context, id uuid.UUID) error {
+func (r *blobRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	s := sqlbuilder.DeleteFrom("blob")
 	s.Where(s.Equal("id", id))
 
 	query, args := s.Build()
-	_, err := r.tx.ExecContext(context.Background(), query, args...)
+	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("executing query: %w", err)
 	}
