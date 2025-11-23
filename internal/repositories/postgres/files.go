@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/lib/pq"
+	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
 	"github.com/the127/dockyard/internal/utils/apiError"
@@ -69,7 +70,8 @@ func (r *fileRepository) First(ctx context.Context, filter *repositories.FileFil
 	s := r.selectQuery(filter)
 	s.Limit(1)
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var file postgresFile
@@ -99,7 +101,8 @@ func (r *fileRepository) List(ctx context.Context, filter *repositories.FileFilt
 	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	rows, err := r.tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
@@ -143,7 +146,8 @@ func (r *fileRepository) Insert(ctx context.Context, file *repositories.File) er
 
 	s.Returning("xmin")
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
@@ -161,7 +165,8 @@ func (r *fileRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	s := sqlbuilder.DeleteFrom("files")
 	s.Where(s.Equal("id", id))
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting file: %w", err)

@@ -8,6 +8,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
+	"github.com/lib/pq/hstore"
+	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
 	"github.com/the127/dockyard/internal/utils/apiError"
@@ -22,10 +24,15 @@ type postgresTenant struct {
 	oidcIssuer          string
 	oidcRoleClaim       string
 	oidcRoleClaimFormat string
-	oidcRoleMapping     map[string]string
+	oidcRoleMapping     hstore.Hstore
 }
 
 func (t *postgresTenant) Map() *repositories.Tenant {
+	oidcRoleMapping := make(map[string]string)
+	for k, v := range t.oidcRoleMapping.Map {
+		oidcRoleMapping[k] = v.String
+	}
+
 	return repositories.NewTenantFromDB(
 		t.slug,
 		t.displayName,
@@ -34,10 +41,31 @@ func (t *postgresTenant) Map() *repositories.Tenant {
 			t.oidcIssuer,
 			t.oidcRoleClaim,
 			t.oidcRoleClaimFormat,
-			t.oidcRoleMapping,
+			oidcRoleMapping,
 		),
 		t.MapBase(),
 	)
+}
+
+func newPostgresTenant(tenant *repositories.Tenant) *postgresTenant {
+	oidcRoleMapping := hstore.Hstore{
+		Map: make(map[string]sql.NullString),
+	}
+
+	for k, v := range tenant.GetOidcRoleMapping() {
+		oidcRoleMapping.Map[k] = sql.NullString{String: v, Valid: true}
+	}
+
+	return &postgresTenant{
+		postgresBaseModel:   newPostgresBaseModel(tenant.BaseModel),
+		slug:                tenant.GetSlug(),
+		displayName:         tenant.GetDisplayName(),
+		oidcClient:          tenant.GetOidcClient(),
+		oidcIssuer:          tenant.GetOidcIssuer(),
+		oidcRoleClaim:       tenant.GetOidcRoleClaim(),
+		oidcRoleClaimFormat: tenant.GetOidcRoleClaimFormat(),
+		oidcRoleMapping:     oidcRoleMapping,
+	}
 }
 
 type tenantRepository struct {
@@ -80,7 +108,8 @@ func (r *tenantRepository) First(ctx context.Context, filter *repositories.Tenan
 	s := r.selectQuery(filter)
 	s.Limit(1)
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var tenant postgresTenant
@@ -110,7 +139,8 @@ func (r *tenantRepository) List(ctx context.Context, filter *repositories.Tenant
 	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	rows, err := r.tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
@@ -132,6 +162,8 @@ func (r *tenantRepository) List(ctx context.Context, filter *repositories.Tenant
 }
 
 func (r *tenantRepository) Insert(ctx context.Context, tenant *repositories.Tenant) error {
+	pgTenant := newPostgresTenant(tenant)
+
 	s := sqlbuilder.InsertInto("tenants").
 		Cols(
 			"id",
@@ -146,21 +178,22 @@ func (r *tenantRepository) Insert(ctx context.Context, tenant *repositories.Tena
 			"oidc_role_mapping",
 		).
 		Values(
-			tenant.GetId(),
-			tenant.GetCreatedAt(),
-			tenant.GetUpdatedAt(),
-			tenant.GetSlug(),
-			tenant.GetDisplayName(),
-			tenant.GetOidcClient(),
-			tenant.GetOidcIssuer(),
-			tenant.GetOidcRoleClaim(),
-			tenant.GetOidcRoleClaimFormat(),
-			tenant.GetOidcRoleMapping(),
+			pgTenant.id,
+			pgTenant.createdAt,
+			pgTenant.updatedAt,
+			pgTenant.slug,
+			pgTenant.displayName,
+			pgTenant.oidcClient,
+			pgTenant.oidcIssuer,
+			pgTenant.oidcRoleClaim,
+			pgTenant.oidcRoleClaimFormat,
+			pgTenant.oidcRoleMapping,
 		)
 
 	s.Returning("xmin")
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
@@ -184,20 +217,22 @@ func (r *tenantRepository) Update(ctx context.Context, tenant *repositories.Tena
 	s.Where(s.Equal("id", tenant.GetId()))
 	s.Where(s.Equal("xmin", tenant.GetVersion()))
 
+	pgTenant := newPostgresTenant(tenant)
+
 	for _, field := range tenant.GetChanges() {
 		switch field {
-		case repositories.TenantChangeOidcIssuer:
-			s.SetMore(s.Assign("oidc_issuer", tenant.GetOidcIssuer()))
-		case repositories.TenantChangeOidcRoleMapping:
-			s.SetMore(s.Assign("oidc_role_mapping", tenant.GetOidcRoleMapping()))
 		case repositories.TenantChangeOidcClient:
-			s.SetMore(s.Assign("oidc_client", tenant.GetOidcClient()))
+			s.SetMore(s.Assign("oidc_client", pgTenant.oidcClient))
+		case repositories.TenantChangeOidcIssuer:
+			s.SetMore(s.Assign("oidc_issuer", pgTenant.oidcIssuer))
+		case repositories.TenantChangeOidcRoleMapping:
+			s.SetMore(s.Assign("oidc_role_mapping", pgTenant.oidcRoleMapping))
 		case repositories.TenantChangeOidcRoleClaim:
-			s.SetMore(s.Assign("oidc_role_claim", tenant.GetOidcRoleClaim()))
+			s.SetMore(s.Assign("oidc_role_claim", pgTenant.oidcRoleClaim))
 		case repositories.TenantChangeOidcRoleClaimFormat:
-			s.SetMore(s.Assign("oidc_role_claim_format", tenant.GetOidcRoleClaimFormat()))
+			s.SetMore(s.Assign("oidc_role_claim_format", pgTenant.oidcRoleClaimFormat))
 		case repositories.TenantChangeDisplayName:
-			s.SetMore(s.Assign("display_name", tenant.GetDisplayName()))
+			s.SetMore(s.Assign("display_name", pgTenant.displayName))
 
 		default:
 			panic(fmt.Errorf("unknown tenant change: %d", field))
@@ -205,7 +240,8 @@ func (r *tenantRepository) Update(ctx context.Context, tenant *repositories.Tena
 	}
 
 	s.Returning("xmin")
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
@@ -229,7 +265,8 @@ func (r *tenantRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	s := sqlbuilder.DeleteFrom("tenants")
 	s.Where(s.Equal("id", id))
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting tenant: %w", err)

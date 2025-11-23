@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
+	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
 	"github.com/the127/dockyard/internal/utils/apiError"
@@ -66,7 +67,8 @@ func (r *repositoryBlobRepository) First(ctx context.Context, filter *repositori
 	s := r.selectQuery(filter)
 	s.Limit(1)
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var repositoryBlob postgresRepositoryBlob
@@ -96,7 +98,8 @@ func (r *repositoryBlobRepository) List(ctx context.Context, filter *repositorie
 	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	rows, err := r.tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
@@ -136,7 +139,8 @@ func (r *repositoryBlobRepository) Insert(ctx context.Context, repositoryBlob *r
 
 	s.Returning("xmin")
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
@@ -154,7 +158,8 @@ func (r *repositoryBlobRepository) Delete(ctx context.Context, id uuid.UUID) err
 	s := sqlbuilder.DeleteFrom("repository_blobs")
 	s.Where(s.Equal("id", id))
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting repository blob: %w", err)

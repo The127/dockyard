@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
+	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
 	"github.com/the127/dockyard/internal/utils/apiError"
@@ -93,7 +94,8 @@ func (r *tagRepository) First(ctx context.Context, filter *repositories.TagFilte
 	s := r.selectQuery(filter)
 	s.Limit(1)
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var tag postgresTag
@@ -130,7 +132,8 @@ func (r *tagRepository) List(ctx context.Context, filter *repositories.TagFilter
 	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	rows, err := r.tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
@@ -183,7 +186,8 @@ func (r *tagRepository) Insert(ctx context.Context, tag *repositories.Tag) error
 
 	s.Returning("xmin")
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
@@ -201,7 +205,8 @@ func (r *tagRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	s := sqlbuilder.DeleteFrom("tags")
 	s.Where(s.Equal("id", id))
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("executing query: %w", err)

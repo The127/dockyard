@@ -1,7 +1,13 @@
 server:
   port: 8082
 database:
-  mode: memory
+  mode: postgres
+  postgres:
+    host: localhost
+    port: 5788
+    username: user
+    password: password
+    sslMode: disable
 cache:
   mode: memory
 blob:

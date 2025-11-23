@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/lib/pq"
+	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
 	"github.com/the127/dockyard/internal/utils/apiError"
@@ -66,7 +67,8 @@ func (r *patRepository) First(ctx context.Context, filter *repositories.PatFilte
 	s := r.selectQuery(filter)
 	s.Limit(1)
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var pat postgresPat
@@ -96,7 +98,8 @@ func (r *patRepository) List(ctx context.Context, filter *repositories.PatFilter
 	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	rows, err := r.tx.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
@@ -138,7 +141,8 @@ func (r *patRepository) Insert(ctx context.Context, pat *repositories.Pat) error
 
 	s.Returning("xmin")
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
@@ -170,7 +174,8 @@ func (r *patRepository) Update(ctx context.Context, pat *repositories.Pat) error
 	}
 
 	s.Returning("xmin")
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
@@ -194,7 +199,8 @@ func (r *patRepository) Delete(ctx context.Context, id uuid.UUID) error {
 	s := sqlbuilder.DeleteFrom("pats")
 	s.Where(s.Equal("id", id))
 
-	query, args := s.Build()
+	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	_, err := r.tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting pat: %w", err)
