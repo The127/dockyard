@@ -31,6 +31,15 @@ func NewTag(repositoryId uuid.UUID, repositoryManifestId uuid.UUID, name string)
 	}
 }
 
+func NewTagFromDB(repositoryId uuid.UUID, repositoryManifestId uuid.UUID, name string, base BaseModel) *Tag {
+	return &Tag{
+		BaseModel:            base,
+		repositoryId:         repositoryId,
+		repositoryManifestId: repositoryManifestId,
+		name:                 name,
+	}
+}
+
 func (t *Tag) GetName() string {
 	return t.name
 }
