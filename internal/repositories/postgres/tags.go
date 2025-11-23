@@ -83,7 +83,7 @@ func (r *tagRepository) selectQuery(filter *repositories.TagFilter) *sqlbuilder.
 	}
 
 	if filter.GetIncludeManifestInfo() {
-		s.Join("INNER", "manifests", "manifests.id = tags.manifest_id")
+		s.JoinWithOption(sqlbuilder.InnerJoin, "manifests", "manifests.id = tags.manifest_id")
 		s.SelectMore("manifests.digest as manifest_digest")
 	}
 
