@@ -26,48 +26,75 @@ type transaction struct {
 }
 
 func (t *transaction) Tenants() repositories.TenantRepository {
-	//TODO implement me
-	panic("implement me")
+	if t.tenants == nil {
+		t.tenants = postgres.NewPostgresTenantRepository(t.tx)
+	}
+
+	return t.tenants
 }
 
 func (t *transaction) Projects() repositories.ProjectRepository {
-	//TODO implement me
-	panic("implement me")
+	if t.projects == nil {
+		t.projects = postgres.NewPostgresProjectRepository(t.tx)
+	}
+
+	return t.projects
 }
 
 func (t *transaction) ProjectAccess() repositories.ProjectAccessRepository {
-	//TODO implement me
-	panic("implement me")
+	if t.projectAccess == nil {
+		t.projectAccess = postgres.NewPostgresProjectAccessRepository(t.tx)
+	}
+
+	return t.projectAccess
 }
 
 func (t *transaction) Users() repositories.UserRepository {
-	//TODO implement me
-	panic("implement me")
+	if t.users == nil {
+		t.users = postgres.NewPostgresUserRepository(t.tx)
+	}
+
+	return t.users
 }
 
 func (t *transaction) Pats() repositories.PatRepository {
-	//TODO implement me
-	panic("implement me")
+	if t.pats == nil {
+		t.pats = postgres.NewPostgresPatRepository(t.tx)
+	}
+
+	return t.pats
 }
 
 func (t *transaction) Repositories() repositories.RepositoryRepository {
-	//TODO implement me
-	panic("implement me")
+	if t.repos == nil {
+		t.repos = postgres.NewPostgresRepositoryRepository(t.tx)
+	}
+
+	return t.repos
 }
 
 func (t *transaction) RepositoryAccess() repositories.RepositoryAccessRepository {
-	//TODO implement me
-	panic("implement me")
+	if t.repositoryAccess == nil {
+		t.repositoryAccess = postgres.NewPostgresRepositoryAccessRepository(t.tx)
+	}
+
+	return t.repositoryAccess
 }
 
 func (t *transaction) Manifests() repositories.ManifestRepository {
-	//TODO implement me
-	panic("implement me")
+	if t.manifest == nil {
+		t.manifest = postgres.NewPostgresManifestRepository(t.tx)
+	}
+
+	return t.manifest
 }
 
 func (t *transaction) Tags() repositories.TagRepository {
-	//TODO implement me
-	panic("implement me")
+	if t.tags == nil {
+		t.tags = postgres.NewPostgresTagRepository(t.tx)
+	}
+
+	return t.tags
 }
 
 func (t *transaction) Blobs() repositories.BlobRepository {
@@ -79,13 +106,19 @@ func (t *transaction) Blobs() repositories.BlobRepository {
 }
 
 func (t *transaction) RepositoryBlobs() repositories.RepositoryBlobRepository {
-	//TODO implement me
-	panic("implement me")
+	if t.repositoryBlobs == nil {
+		t.repositoryBlobs = postgres.NewPostgresRepositoryBlobRepository(t.tx)
+	}
+
+	return t.repositoryBlobs
 }
 
 func (t *transaction) Files() repositories.FileRepository {
-	//TODO implement me
-	panic("implement me")
+	if t.files == nil {
+		t.files = postgres.NewPostgresFileRepository(t.tx)
+	}
+
+	return t.files
 }
 
 func newTransaction(tx *sql.Tx) db.Transaction {
