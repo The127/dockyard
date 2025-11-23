@@ -24,6 +24,9 @@ var ErrApiRepositoryBlobNotFound = fmt.Errorf("repository blob not found: %w", E
 var ErrApiFileNotFound = fmt.Errorf("file not found: %w", ErrApiNotFound)
 var ErrApiPatNotFound = fmt.Errorf("pat not found: %w", ErrApiNotFound)
 
+var ErrApiConflict = errors.New("conflict")
+var ErrApiConcurrentUpdate = fmt.Errorf("concurrent update: %w", ErrApiConflict)
+
 var ErrApiUnauthorized = errors.New("unauthorized")
 
 func HandleHttpError(w http.ResponseWriter, err error) {
@@ -45,6 +48,10 @@ func HandleHttpError(w http.ResponseWriter, err error) {
 
 	case errors.Is(err, ErrApiUnauthorized):
 		code = http.StatusUnauthorized
+		message = err.Error()
+
+	case errors.Is(err, ErrApiConflict):
+		code = http.StatusConflict
 		message = err.Error()
 
 	default:
