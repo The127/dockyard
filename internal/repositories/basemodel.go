@@ -11,7 +11,6 @@ type BaseModel struct {
 	createdAt time.Time
 	updatedAt time.Time
 	version   any
-	changes   map[string]any
 }
 
 func NewBaseModel() BaseModel {
@@ -20,7 +19,6 @@ func NewBaseModel() BaseModel {
 		createdAt: time.Now(),
 		updatedAt: time.Now(),
 		version:   nil,
-		changes:   make(map[string]any),
 	}
 }
 
@@ -30,7 +28,6 @@ func NewBaseModelFromDB(id uuid.UUID, createdAt time.Time, updatedAt time.Time, 
 		createdAt: createdAt,
 		updatedAt: updatedAt,
 		version:   version,
-		changes:   make(map[string]any),
 	}
 }
 
@@ -50,10 +47,9 @@ func (b *BaseModel) GetVersion() any {
 	return b.version
 }
 
-func (b *BaseModel) GetChanges() map[string]any {
-	return b.changes
-}
-
-func (b *BaseModel) trackChange(key string, value any) {
-	b.changes[key] = value
+// SetVersion is used to update the version of the model.
+// This is used to prevent concurrent updates.
+// This function should only be called by the repositories.
+func (b *BaseModel) SetVersion(version any) {
+	b.version = version
 }
