@@ -67,10 +67,21 @@ type DatabaseMode string
 
 const (
 	DatabaseModeInMemory DatabaseMode = "memory"
+	DatabaseModePostgres DatabaseMode = "postgres"
 )
 
 type DatabaseConfig struct {
-	Mode DatabaseMode
+	Mode     DatabaseMode
+	Postgres PostgresConfig
+}
+
+type PostgresConfig struct {
+	Host     string
+	Port     int
+	Username string
+	Password string
+	Database string
+	SslMode  string
 }
 
 type KvMode string
@@ -221,7 +232,45 @@ func setInitialTenantDefaultsOrPanic() {
 	}
 }
 
-func setDatabaseDefaultsOrPanic() {}
+func setDatabaseDefaultsOrPanic() {
+	switch C.Database.Mode {
+	case DatabaseModeInMemory:
+		return
+
+	case DatabaseModePostgres:
+		setPostgresDefaultsOrPanic()
+	}
+}
+
+func setPostgresDefaultsOrPanic() {
+	if C.Database.Postgres.Host == "" {
+		if args.IsProduction() {
+			panic("Database.Postgres.Host must be set in production.")
+		}
+
+		C.Database.Postgres.Host = "localhost"
+	}
+
+	if C.Database.Postgres.Port == 0 {
+		C.Database.Postgres.Port = 5432
+	}
+
+	if C.Database.Postgres.Username == "" {
+		panic("Database.Postgres.Username must be set.")
+	}
+
+	if C.Database.Postgres.Password == "" {
+		panic("Database.Postgres.Password must be set.")
+	}
+
+	if C.Database.Postgres.Database == "" {
+		C.Database.Postgres.Database = "dockyard"
+	}
+
+	if C.Database.Postgres.SslMode == "" {
+		C.Database.Postgres.SslMode = "enable"
+	}
+}
 
 func setKvDefaultsOrPanic() {
 	if C.Kv.Mode == "" {
