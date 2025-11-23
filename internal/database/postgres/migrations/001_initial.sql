@@ -172,7 +172,7 @@ create table project_accesses
 
     project_id uuid        not null,
     user_id    uuid        not null,
-    role       text        not null,
+    "role"       text        not null,
 
     primary key (id),
     foreign key (project_id) references projects (id),
@@ -189,7 +189,7 @@ create table repository_accesses
 
     repository_id uuid        not null,
     user_id       uuid        not null,
-    role          text        not null,
+    "role"          text        not null,
 
     primary key (id),
     foreign key (repository_id) references repositories (id),
