@@ -15,8 +15,8 @@ import (
 	"github.com/the127/dockyard/internal/jsontypes"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/services/kv"
+	"github.com/the127/dockyard/internal/storageBackends"
 	"github.com/the127/dockyard/internal/utils/ociError"
-	"github.com/the127/dockyard/storageBackends"
 )
 
 type StartUploadSessionParams struct {

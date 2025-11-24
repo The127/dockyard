@@ -9,8 +9,8 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
+	"github.com/the127/dockyard/internal/storageBackends"
 	"github.com/the127/dockyard/internal/utils/ociError"
-	"github.com/the127/dockyard/storageBackends"
 )
 
 type blobInfo struct {

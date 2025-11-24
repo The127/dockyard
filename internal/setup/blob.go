@@ -6,7 +6,7 @@ import (
 	"github.com/The127/ioc"
 	"github.com/the127/dockyard/internal/config"
 	"github.com/the127/dockyard/internal/services/blobStorage"
-	"github.com/the127/dockyard/storageBackends/inmemory"
+	"github.com/the127/dockyard/internal/storageBackends/inmemory"
 )
 
 func Blob(dc *ioc.DependencyCollection, c config.BlobStorageConfig) {
