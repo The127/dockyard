@@ -79,53 +79,52 @@ func (b *backend) InitiateUpload(_ context.Context, id uuid.UUID, contentType st
 }
 
 func (b *backend) UploadAddChunk(_ context.Context, state storageBackends.StorageBackendState, reader io.Reader) (storageBackends.StorageBackendState, error) {
-	id, ok := state["id"]
-	if !ok {
-		return state, fmt.Errorf("missing id in state")
+	decodedState, err := decodeTempState(state)
+	if err != nil {
+		return nil, fmt.Errorf("decoding state: %w", err)
 	}
 
-	tempState := b.getTemp(id)
+	tempData := b.getTemp(decodedState.id)
 
-	if tempState == nil {
+	if tempData == nil {
 		return state, fmt.Errorf("upload not initiated")
 	}
 
-	_, err := io.Copy(tempState.buffer, reader)
-	return state, err
+	_, err = io.Copy(tempData.buffer, reader)
+	if err != nil {
+		return nil, fmt.Errorf("copying chunk to buffer: %w", err)
+	}
+
+	return state, nil
 }
 
 func (b *backend) CompleteUpload(_ context.Context, digest string, state storageBackends.StorageBackendState) error {
-	id, ok := state["id"]
-	if !ok {
-		return fmt.Errorf("missing id in state")
+	decodedState, err := decodeTempState(state)
+	if err != nil {
+		return fmt.Errorf("decoding state: %w", err)
 	}
 
-	contentType, ok := state["content-type"]
-	if !ok {
-		return fmt.Errorf("missing content-type in state")
-	}
+	tempData := b.getTemp(decodedState.id)
 
-	tempState := b.getTemp(id)
-
-	if tempState == nil {
+	if tempData == nil {
 		return fmt.Errorf("upload not initiated")
 	}
 
 	b.setBlob(digest, &blobInfo{
-		contentType: contentType,
-		data:        tempState.buffer.Bytes(),
+		contentType: decodedState.contentType,
+		data:        tempData.buffer.Bytes(),
 	})
 
 	return nil
 }
 
 func (b *backend) AbortUpload(_ context.Context, state storageBackends.StorageBackendState) error {
-	id, ok := state["id"]
-	if !ok {
-		return fmt.Errorf("missing id in state")
+	decodedState, err := decodeTempState(state)
+	if err != nil {
+		return fmt.Errorf("decoding state: %w", err)
 	}
 
-	b.setTemp(id, nil)
+	b.setTemp(decodedState.id, nil)
 
 	return nil
 }
