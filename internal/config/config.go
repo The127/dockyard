@@ -105,16 +105,23 @@ type KvConfig struct {
 type BlobStorageMode string
 
 const (
-	BlobStorageModeInMemory BlobStorageMode = "memory"
-	BlobStorageModeS3       BlobStorageMode = "s3"
+	BlobStorageModeInMemory  BlobStorageMode = "memory"
+	BlobStorageModeDirectory BlobStorageMode = "directory"
+	BlobStorageModeS3        BlobStorageMode = "s3"
 )
 
 type BlobStorageConfig struct {
-	Mode BlobStorageMode
-	S3   struct {
-		// TODO: add config
-		Proxy bool
-	}
+	Mode      BlobStorageMode
+	Directory DirectoryBlobStorageConfig
+	S3        S3BlobStorageConfig
+}
+
+type DirectoryBlobStorageConfig struct {
+	Path     string
+	TempPath string
+}
+
+type S3BlobStorageConfig struct {
 }
 
 var C Config
@@ -320,7 +327,20 @@ func setBlobDefaultsOrPanic() {
 	case BlobStorageModeInMemory:
 		return
 
+	case BlobStorageModeDirectory:
+		setBlobStorageDirectoryDefaultsOrPanic()
+
 	default:
 		panic(fmt.Errorf("unsupported blob storage mode: %s", C.Blob.Mode))
+	}
+}
+
+func setBlobStorageDirectoryDefaultsOrPanic() {
+	if C.Blob.Directory.Path == "" {
+		panic("Blob.Directory.Path must be set.")
+	}
+
+	if C.Blob.Directory.TempPath == "" {
+		C.Blob.Directory.TempPath = C.Blob.Directory.Path + "/temp"
 	}
 }
