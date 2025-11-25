@@ -20,36 +20,65 @@ type blobInfo struct {
 
 type backend struct {
 	blobs   map[string]blobInfo
-	temp    map[string]tempState
+	temp    map[string]tempBlob
 	blobsMu *sync.RWMutex
 	tempMu  *sync.RWMutex
 }
 
-type tempState struct {
+type tempBlob struct {
 	buffer *bytes.Buffer
 }
 
 func New() storageBackends.StorageBackend {
 	return &backend{
 		blobs:   make(map[string]blobInfo),
-		temp:    make(map[string]tempState),
+		temp:    make(map[string]tempBlob),
 		blobsMu: &sync.RWMutex{},
 		tempMu:  &sync.RWMutex{},
 	}
 }
 
-func (b *backend) InitiateUpload(ctx context.Context, id uuid.UUID, contentType string) (storageBackends.StorageBackendState, error) {
-	b.setTemp(id.String(), &tempState{
-		buffer: &bytes.Buffer{},
-	})
+type tempState struct {
+	id          string
+	contentType string
+}
 
-	return map[string]string{
-		"id":           id.String(),
-		"content-type": contentType,
+func (t tempState) encode() storageBackends.StorageBackendState {
+	return storageBackends.StorageBackendState{
+		"id":          t.id,
+		"contentType": t.contentType,
+	}
+}
+
+func decodeTempState(state storageBackends.StorageBackendState) (tempState, error) {
+	id, ok := state["id"]
+	if !ok {
+		return tempState{}, fmt.Errorf("missing id in state")
+	}
+
+	contentType, ok := state["contentType"]
+	if !ok {
+		return tempState{}, fmt.Errorf("missing contentType in state")
+	}
+
+	return tempState{
+		id:          id,
+		contentType: contentType,
 	}, nil
 }
 
-func (b *backend) UploadAddChunk(ctx context.Context, state storageBackends.StorageBackendState, reader io.Reader) (storageBackends.StorageBackendState, error) {
+func (b *backend) InitiateUpload(_ context.Context, id uuid.UUID, contentType string) (storageBackends.StorageBackendState, error) {
+	b.setTemp(id.String(), &tempBlob{
+		buffer: &bytes.Buffer{},
+	})
+
+	return tempState{
+		id:          id.String(),
+		contentType: contentType,
+	}.encode(), nil
+}
+
+func (b *backend) UploadAddChunk(_ context.Context, state storageBackends.StorageBackendState, reader io.Reader) (storageBackends.StorageBackendState, error) {
 	id, ok := state["id"]
 	if !ok {
 		return state, fmt.Errorf("missing id in state")
@@ -65,7 +94,7 @@ func (b *backend) UploadAddChunk(ctx context.Context, state storageBackends.Stor
 	return state, err
 }
 
-func (b *backend) CompleteUpload(ctx context.Context, digest string, state storageBackends.StorageBackendState) error {
+func (b *backend) CompleteUpload(_ context.Context, digest string, state storageBackends.StorageBackendState) error {
 	id, ok := state["id"]
 	if !ok {
 		return fmt.Errorf("missing id in state")
@@ -90,7 +119,7 @@ func (b *backend) CompleteUpload(ctx context.Context, digest string, state stora
 	return nil
 }
 
-func (b *backend) AbortUpload(ctx context.Context, state storageBackends.StorageBackendState) error {
+func (b *backend) AbortUpload(_ context.Context, state storageBackends.StorageBackendState) error {
 	id, ok := state["id"]
 	if !ok {
 		return fmt.Errorf("missing id in state")
@@ -101,12 +130,12 @@ func (b *backend) AbortUpload(ctx context.Context, state storageBackends.Storage
 	return nil
 }
 
-func (b *backend) DeleteBlob(ctx context.Context, digest string) error {
+func (b *backend) DeleteBlob(_ context.Context, digest string) error {
 	b.setBlob(digest, nil)
 	return nil
 }
 
-func (b *backend) DownloadBlob(ctx context.Context, w http.ResponseWriter, digest string) error {
+func (b *backend) DownloadBlob(_ context.Context, w http.ResponseWriter, digest string) error {
 	blob := b.getBlob(digest)
 	if blob == nil {
 		return ociError.NewOciError(ociError.BlobUnknown)
@@ -144,7 +173,7 @@ func (b *backend) getBlob(digest string) *blobInfo {
 	return &data
 }
 
-func (b *backend) setTemp(digest string, state *tempState) {
+func (b *backend) setTemp(digest string, state *tempBlob) {
 	b.tempMu.Lock()
 	defer b.tempMu.Unlock()
 
@@ -155,7 +184,7 @@ func (b *backend) setTemp(digest string, state *tempState) {
 	}
 }
 
-func (b *backend) getTemp(digest string) *tempState {
+func (b *backend) getTemp(digest string) *tempBlob {
 	b.tempMu.RLock()
 	defer b.tempMu.RUnlock()
 
