@@ -23,7 +23,7 @@ require (
 	github.com/redis/go-redis/v9 v9.16.0
 	github.com/rubenv/sql-migrate v1.8.1
 	github.com/stretchr/testify v1.11.1
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 )
 
 require (
