@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/the127/dockyard/internal/config"
@@ -94,14 +95,14 @@ func (b *backend) UploadAddChunk(_ context.Context, state storageBackends.Storag
 		return nil, fmt.Errorf("decoding state: %w", err)
 	}
 
-	dataFile, err := os.OpenFile(decodedState.filePath, os.O_APPEND|os.O_WRONLY, os.ModePerm)
+	tmpDataFile, err := os.OpenFile(decodedState.filePath, os.O_APPEND|os.O_WRONLY, os.ModePerm)
 	if err != nil {
 		return nil, fmt.Errorf("opening data file: %w", err)
 	}
 
-	defer utils.PanicOnError(dataFile.Close, "closing data file")
+	defer utils.PanicOnError(tmpDataFile.Close, "closing data file")
 
-	_, err = io.Copy(dataFile, reader)
+	_, err = io.Copy(tmpDataFile, reader)
 	if err != nil {
 		return nil, fmt.Errorf("writing chunk to data file: %w", err)
 	}
@@ -115,7 +116,12 @@ func (b *backend) CompleteUpload(_ context.Context, digest string, state storage
 		return fmt.Errorf("decoding state: %w", err)
 	}
 
-	dataPath := path.Join(b.path, digest)
+	dataPath := b.getDataFilePath(digest)
+	err = os.MkdirAll(path.Dir(dataPath), os.ModePerm)
+	if err != nil {
+		return fmt.Errorf("ensuring directory exists: %w", err)
+	}
+
 	err = os.Rename(decodedState.filePath, dataPath)
 	if err != nil {
 		return fmt.Errorf("renaming data file: %w", err)
@@ -144,7 +150,7 @@ func (b *backend) AbortUpload(_ context.Context, state storageBackends.StorageBa
 }
 
 func (b *backend) DeleteBlob(_ context.Context, digest string) error {
-	dataPath := path.Join(b.path, digest)
+	dataPath := b.getDataFilePath(digest)
 	err := os.Remove(dataPath)
 	if err != nil {
 		return fmt.Errorf("removing data file: %w", err)
@@ -159,7 +165,7 @@ func (b *backend) DeleteBlob(_ context.Context, digest string) error {
 }
 
 func (b *backend) DownloadBlob(_ context.Context, w http.ResponseWriter, digest string) error {
-	dataPath := path.Join(b.path, digest)
+	dataPath := b.getDataFilePath(digest)
 	infoPath := dataPath + ".info"
 	contentType, err := os.ReadFile(infoPath)
 	switch {
@@ -186,4 +192,13 @@ func (b *backend) DownloadBlob(_ context.Context, w http.ResponseWriter, digest 
 	}
 
 	return nil
+}
+
+func (b *backend) getDataFilePath(digest string) string {
+	trimmed := strings.TrimPrefix(digest, "sha256:")
+
+	first := trimmed[:2]
+	second := trimmed[2:4]
+
+	return path.Join(b.path, first, second, trimmed)
 }
