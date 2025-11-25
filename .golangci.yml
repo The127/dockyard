@@ -1,0 +1,47 @@
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  concurrency: 4
+
+
+linters:
+  enable:
+    - govet          # vet checks
+    - staticcheck    # modern catch-all linter
+    - errcheck       # check ignored errors
+    - ineffassign    # detect ineffectual assignments
+    - unused         # unused variables/constants
+    - revive         # style and best practices
+    - gocritic       # deep Go-specific checks
+    - unparam        # unused function parameters
+    - dogsled        # too many assignments to same variable
+    - nakedret       # naked returns
+    - prealloc       # slice/map preallocation
+    - misspell       # typos
+    - dupl           # duplicate code
+    - testifylint    # test hygiene
+  disable:
+    - funlen         # disable too strict function length
+    - depguard       # optional dependency guard
+    - lll            # line length, IDEs usually handle it
+    - dupl           #
+  settings:
+    revive:
+      severity: warning
+      rules:
+        - name: exported
+          disabled: true
+    gocritic:
+      disabled-checks:
+        - unlambda
+
+issues:
+  max-same-issues: 3
+  max-issues-per-linter: 50
+
+# Optional: add formatters if you want to enforce gofumpt/gci auto-formatting
+# formatters:
+#   - gofumpt
+#   - gci
