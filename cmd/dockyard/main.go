@@ -51,6 +51,9 @@ func main() {
 	case config.BlobStorageModeInMemory:
 		hostBlobApi = true
 
+	case config.BlobStorageModeDirectory:
+		hostBlobApi = true
+
 	case config.BlobStorageModeS3:
 		hostBlobApi = false
 

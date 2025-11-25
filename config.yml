@@ -11,7 +11,10 @@ database:
 cache:
   mode: memory
 blob:
-  mode: memory
+  mode: directory
+  directory:
+    path: ./blobs
+    tempPath: /tmp/blobs
 kms:
   mode: memory
 initialTenant:
