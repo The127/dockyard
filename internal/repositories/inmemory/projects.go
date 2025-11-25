@@ -20,7 +20,7 @@ func NewInMemoryProjectRepository(txn *memdb.Txn) repositories.ProjectRepository
 	}
 }
 
-func (r *projectRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.ProjectFilter) ([]*repositories.Project, int, error) {
+func (r *projectRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.ProjectFilter) ([]*repositories.Project, int) {
 	var result []*repositories.Project
 
 	obj := iterator.Next()
@@ -36,7 +36,7 @@ func (r *projectRepository) applyFilter(iterator memdb.ResultIterator, filter *r
 
 	count := len(result)
 
-	return result, count, nil
+	return result, count
 }
 
 func (r *projectRepository) matches(project *repositories.Project, filter *repositories.ProjectFilter) bool {
@@ -67,10 +67,7 @@ func (r *projectRepository) First(_ context.Context, filter *repositories.Projec
 		return nil, fmt.Errorf("failed to get projects: %w", err)
 	}
 
-	result, _, err := r.applyFilter(iterator, filter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to apply filter: %w", err)
-	}
+	result, _ := r.applyFilter(iterator, filter)
 
 	if len(result) == 0 {
 		return nil, nil
@@ -96,10 +93,7 @@ func (r *projectRepository) List(_ context.Context, filter *repositories.Project
 		return nil, 0, err
 	}
 
-	result, count, err := r.applyFilter(iterator, filter)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to apply filter: %w", err)
-	}
+	result, count := r.applyFilter(iterator, filter)
 
 	return result, count, err
 }

@@ -20,7 +20,7 @@ func NewInMemoryFileRepository(txn *memdb.Txn) repositories.FileRepository {
 	}
 }
 
-func (r *fileRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.FileFilter) ([]*repositories.File, int, error) {
+func (r *fileRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.FileFilter) ([]*repositories.File, int) {
 	var result []*repositories.File
 
 	obj := iterator.Next()
@@ -36,7 +36,7 @@ func (r *fileRepository) applyFilter(iterator memdb.ResultIterator, filter *repo
 
 	count := len(result)
 
-	return result, count, nil
+	return result, count
 }
 
 func (r *fileRepository) matches(file *repositories.File, filter *repositories.FileFilter) bool {
@@ -61,10 +61,7 @@ func (r *fileRepository) First(_ context.Context, filter *repositories.FileFilte
 		return nil, err
 	}
 
-	result, _, err := r.applyFilter(iterator, filter)
-	if err != nil {
-		return nil, err
-	}
+	result, _ := r.applyFilter(iterator, filter)
 
 	if len(result) == 0 {
 		return nil, nil
@@ -90,10 +87,7 @@ func (r *fileRepository) List(_ context.Context, filter *repositories.FileFilter
 		return nil, 0, err
 	}
 
-	result, count, err := r.applyFilter(iterator, filter)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to apply filter: %w", err)
-	}
+	result, count := r.applyFilter(iterator, filter)
 
 	return result, count, nil
 }

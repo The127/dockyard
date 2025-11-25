@@ -20,7 +20,7 @@ func NewInMemoryPatRepository(txn *memdb.Txn) repositories.PatRepository {
 	}
 }
 
-func (r *patRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.PatFilter) ([]*repositories.Pat, int, error) {
+func (r *patRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.PatFilter) ([]*repositories.Pat, int) {
 	var result []*repositories.Pat
 
 	obj := iterator.Next()
@@ -36,7 +36,7 @@ func (r *patRepository) applyFilter(iterator memdb.ResultIterator, filter *repos
 
 	count := len(result)
 
-	return result, count, nil
+	return result, count
 }
 
 func (r *patRepository) matches(pat *repositories.Pat, filter *repositories.PatFilter) bool {
@@ -61,10 +61,7 @@ func (r *patRepository) First(_ context.Context, filter *repositories.PatFilter)
 		return nil, fmt.Errorf("failed to get pats: %w", err)
 	}
 
-	result, _, err := r.applyFilter(iterator, filter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to apply filter: %w", err)
-	}
+	result, _ := r.applyFilter(iterator, filter)
 
 	if len(result) == 0 {
 		return nil, nil
@@ -112,10 +109,7 @@ func (r *patRepository) List(_ context.Context, filter *repositories.PatFilter) 
 		return nil, 0, fmt.Errorf("failed to get pats: %w", err)
 	}
 
-	pats, count, err := r.applyFilter(iterator, filter)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to apply filter: %w", err)
-	}
+	pats, count := r.applyFilter(iterator, filter)
 
 	return pats, count, nil
 }

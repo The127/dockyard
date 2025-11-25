@@ -19,7 +19,7 @@ func NewInMemoryProjectAccessRepository(txn *memdb.Txn) repositories.ProjectAcce
 	}
 }
 
-func (r *projectAccessRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.ProjectAccessFilter) ([]*repositories.ProjectAccess, int, error) {
+func (r *projectAccessRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.ProjectAccessFilter) ([]*repositories.ProjectAccess, int) {
 	var result []*repositories.ProjectAccess
 
 	obj := iterator.Next()
@@ -35,7 +35,7 @@ func (r *projectAccessRepository) applyFilter(iterator memdb.ResultIterator, fil
 
 	count := len(result)
 
-	return result, count, nil
+	return result, count
 }
 
 func (r *projectAccessRepository) matches(projectAccess *repositories.ProjectAccess, filter *repositories.ProjectAccessFilter) bool {
@@ -66,10 +66,7 @@ func (r *projectAccessRepository) First(_ context.Context, filter *repositories.
 		return nil, err
 	}
 
-	result, _, err := r.applyFilter(iterator, filter)
-	if err != nil {
-		return nil, err
-	}
+	result, _ := r.applyFilter(iterator, filter)
 
 	if len(result) == 0 {
 		return nil, nil

@@ -222,7 +222,7 @@ func (s *service) CompleteUpload(ctx context.Context, sessionId uuid.UUID, expec
 	if expectedDigest != digest {
 		err := s.backend.AbortUpload(ctx, session.BackendState)
 		if err != nil {
-			return nil, fmt.Errorf("failed to abort upload: %w, additional error occured while aborting: %w", ociError.NewOciError(ociError.DigestInvalid), err)
+			return nil, fmt.Errorf("failed to abort upload: %w, additional error occurred while aborting: %w", ociError.NewOciError(ociError.DigestInvalid), err)
 		}
 		return nil, ociError.NewOciError(ociError.DigestInvalid)
 	}
@@ -284,7 +284,7 @@ func (s *service) UploadCompleteBlob(ctx context.Context, digest string, reader 
 	if gotDigest != digest {
 		err := s.backend.AbortUpload(ctx, uploadState)
 		if err != nil {
-			return nil, fmt.Errorf("failed to abort upload: %w, additional error occured while aborting: %w", ociError.NewOciError(ociError.DigestInvalid), err)
+			return nil, fmt.Errorf("failed to abort upload: %w, additional error occurred while aborting: %w", ociError.NewOciError(ociError.DigestInvalid), err)
 		}
 
 		return nil, ociError.NewOciError(ociError.DigestInvalid)
@@ -301,7 +301,7 @@ func (s *service) UploadCompleteBlob(ctx context.Context, digest string, reader 
 }
 
 func (s *service) DeleteBlob(ctx context.Context, digest string) error {
-	//TODO implement me
+	// TODO implement me
 	panic("implement me")
 }
 

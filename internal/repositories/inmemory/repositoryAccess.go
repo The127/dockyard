@@ -19,7 +19,7 @@ func NewInMemoryRepositoryAccessRepository(txn *memdb.Txn) repositories.Reposito
 	}
 }
 
-func (r *repositoryAccessRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.RepositoryAccessFilter) ([]*repositories.RepositoryAccess, int, error) {
+func (r *repositoryAccessRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.RepositoryAccessFilter) ([]*repositories.RepositoryAccess, int) {
 	var result []*repositories.RepositoryAccess
 
 	obj := iterator.Next()
@@ -35,7 +35,7 @@ func (r *repositoryAccessRepository) applyFilter(iterator memdb.ResultIterator, 
 
 	count := len(result)
 
-	return result, count, nil
+	return result, count
 }
 
 func (r *repositoryAccessRepository) matches(repositoryAccess *repositories.RepositoryAccess, filter *repositories.RepositoryAccessFilter) bool {
@@ -66,10 +66,7 @@ func (r *repositoryAccessRepository) First(_ context.Context, filter *repositori
 		return nil, err
 	}
 
-	result, _, err := r.applyFilter(iterator, filter)
-	if err != nil {
-		return nil, err
-	}
+	result, _ := r.applyFilter(iterator, filter)
 
 	if len(result) == 0 {
 		return nil, nil

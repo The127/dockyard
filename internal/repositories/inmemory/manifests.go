@@ -20,7 +20,7 @@ func NewInMemoryManifestRepository(txn *memdb.Txn) repositories.ManifestReposito
 	}
 }
 
-func (r *manifestRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.ManifestFilter) ([]*repositories.Manifest, int, error) {
+func (r *manifestRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.ManifestFilter) ([]*repositories.Manifest, int) {
 	var result []*repositories.Manifest
 
 	obj := iterator.Next()
@@ -36,7 +36,7 @@ func (r *manifestRepository) applyFilter(iterator memdb.ResultIterator, filter *
 
 	count := len(result)
 
-	return result, count, nil
+	return result, count
 }
 
 func (r *manifestRepository) matches(manifest *repositories.Manifest, filter *repositories.ManifestFilter) bool {
@@ -73,10 +73,7 @@ func (r *manifestRepository) First(_ context.Context, filter *repositories.Manif
 		return nil, fmt.Errorf("failed to get manifests: %w", err)
 	}
 
-	result, _, err := r.applyFilter(iterator, filter)
-	if err != nil {
-		return nil, fmt.Errorf("failed to apply filter: %w", err)
-	}
+	result, _ := r.applyFilter(iterator, filter)
 
 	if len(result) == 0 {
 		return nil, nil
@@ -102,10 +99,7 @@ func (r *manifestRepository) List(_ context.Context, filter *repositories.Manife
 		return nil, 0, fmt.Errorf("failed to get manifests: %w", err)
 	}
 
-	result, count, err := r.applyFilter(iterator, filter)
-	if err != nil {
-		return nil, 0, fmt.Errorf("failed to apply filter: %w", err)
-	}
+	result, count := r.applyFilter(iterator, filter)
 
 	return result, count, nil
 }
