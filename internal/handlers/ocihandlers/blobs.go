@@ -19,7 +19,7 @@ import (
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
 
-func getRepositoryBlob(ctx context.Context, tx database.Transaction, repositoryId uuid.UUID, digest string) (*repositories.RepositoryBlob, *repositories.Blob, error) {
+func getRepositoryBlob(ctx context.Context, tx database.Transaction, repositoryId uuid.UUID, digest string) (*repositories.RepositoryBlob, *repositories.Blob, error) { // nolint:unparam
 	blob, err := tx.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(digest))
 	if err != nil {
 		return nil, nil, err

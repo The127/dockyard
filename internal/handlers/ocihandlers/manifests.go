@@ -22,7 +22,7 @@ import (
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
 
-func getManifestByReference(ctx context.Context, tx database.Transaction, repositoryId uuid.UUID, reference string) (*repositories.Manifest, *repositories.Blob, error) {
+func getManifestByReference(ctx context.Context, tx database.Transaction, repositoryId uuid.UUID, reference string) (*repositories.Manifest, *repositories.Blob, error) { // nolint:unparam
 	var manifestFilter *repositories.ManifestFilter
 	if !strings.HasPrefix(reference, "sha256:") {
 		tag, err := tx.Tags().First(ctx, repositories.NewTagFilter().ByRepositoryId(repositoryId).ByName(reference))
