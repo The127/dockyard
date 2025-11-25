@@ -56,7 +56,7 @@ func HttpBodyAsJson(w http.ResponseWriter, r *http.Request, v any) error {
 		}
 	}
 
-	err = ensureNoTrailingData(err, decoder)
+	err = ensureNoTrailingData(decoder)
 	if err != nil {
 		return err
 	}
@@ -64,8 +64,8 @@ func HttpBodyAsJson(w http.ResponseWriter, r *http.Request, v any) error {
 	return nil
 }
 
-func ensureNoTrailingData(err error, decoder *json.Decoder) error {
-	err = decoder.Decode(&struct{}{})
+func ensureNoTrailingData(decoder *json.Decoder) error {
+	err := decoder.Decode(&struct{}{})
 	if !errors.Is(err, io.EOF) {
 		return fmt.Errorf("unexpected trailing data: %w", apiError.ErrApiBadRequest)
 	}
