@@ -6,9 +6,11 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/The127/ioc"
 	"github.com/The127/mediatr"
+	"github.com/avast/retry-go"
 	"github.com/the127/dockyard/internal/args"
 	"github.com/the127/dockyard/internal/commands"
 	"github.com/the127/dockyard/internal/config"
@@ -34,7 +36,18 @@ func main() {
 	})
 
 	db := setup.Database(dc, config.C.Database)
-	err := db.Migrate()
+
+	err := retry.Do(
+		func() error {
+			return db.Migrate()
+		},
+		retry.Attempts(5),
+		retry.Delay(time.Second*5),
+		retry.DelayType(retry.FixedDelay),
+		retry.OnRetry(func(n uint, err error) {
+			logging.Logger.Warnf("failed to migrate database: %s, retrying in 5 seconds", err)
+		}),
+	)
 	if err != nil {
 		logging.Logger.Panicf("failed to migrate database: %s", err)
 	}
