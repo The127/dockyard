@@ -1,3 +1,5 @@
+github.com/The127/go-clock v0.0.0-20251223175028-de53998b7f1b h1:sM4z/HKmzNtT8Dg6qHrQ50k7XXLYPzH0OwzjBy8zQNI=
+github.com/The127/go-clock v0.0.0-20251223175028-de53998b7f1b/go.mod h1:9Dsq0v3wOZuFQF7Z42J9FnZlAb6U/p7iSU3dpEwhemA=
 github.com/The127/ioc v0.0.0-20251110122812-609720f03d90 h1:vnMcb4LtHamQ9afoYgXl0RwVqHmP7nJLQ91HMfj7XcY=
 github.com/The127/ioc v0.0.0-20251110122812-609720f03d90/go.mod h1:c8VKvlL6+fblOI7zJqnhN5cg0rzU0w4WwJw0VgyhGjE=
 github.com/The127/mediatr v0.0.0-20251110111536-44e365a25098 h1:/KYKRB1Hq37g/RYSfAb/USvM/6LPchs7aDOonk+eGQQ=

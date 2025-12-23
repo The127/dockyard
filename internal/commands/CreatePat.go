@@ -5,12 +5,12 @@ import (
 	"encoding/base64"
 	"fmt"
 
+	"github.com/The127/go-clock"
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/services"
-	"github.com/the127/dockyard/internal/services/clock"
 )
 
 type CreatePat struct {

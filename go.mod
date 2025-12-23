@@ -3,6 +3,7 @@ module github.com/the127/dockyard
 go 1.25
 
 require (
+	github.com/The127/go-clock v0.0.0-20251223175028-de53998b7f1b
 	github.com/The127/ioc v0.0.0-20251110122812-609720f03d90
 	github.com/The127/mediatr v0.0.0-20251110111536-44e365a25098
 	github.com/The127/signr v0.0.1
