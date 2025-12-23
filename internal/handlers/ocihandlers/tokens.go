@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/The127/go-clock"
 	"github.com/The127/ioc"
 	"github.com/The127/signr"
 	"github.com/golang-jwt/jwt/v5"
@@ -22,7 +23,6 @@ import (
 	"github.com/the127/dockyard/internal/middlewares/ociAuthentication"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/services"
-	"github.com/the127/dockyard/internal/services/clock"
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
 

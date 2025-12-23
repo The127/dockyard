@@ -3,11 +3,11 @@ package setup
 import (
 	"fmt"
 
+	"github.com/The127/go-clock"
 	"github.com/The127/ioc"
 	"github.com/The127/signr"
 	signrMemory "github.com/The127/signr/backends/memory"
 	"github.com/the127/dockyard/internal/config"
-	"github.com/the127/dockyard/internal/services/clock"
 )
 
 func Kms(dc *ioc.DependencyCollection, c config.KmsConfig) {

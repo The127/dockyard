@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/The127/go-clock"
 	"github.com/The127/ioc"
 	"github.com/The127/mediatr"
 	"github.com/avast/retry-go"
@@ -19,7 +20,6 @@ import (
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/server"
 	"github.com/the127/dockyard/internal/services"
-	"github.com/the127/dockyard/internal/services/clock"
 	"github.com/the127/dockyard/internal/setup"
 	"github.com/the127/dockyard/internal/utils"
 )
@@ -32,7 +32,7 @@ func main() {
 	dc := ioc.NewDependencyCollection()
 
 	ioc.RegisterSingleton(dc, func(dp *ioc.DependencyProvider) clock.Service {
-		return clock.NewClockService()
+		return clock.NewSystemClock()
 	})
 
 	db := setup.Database(dc, config.C.Database)
