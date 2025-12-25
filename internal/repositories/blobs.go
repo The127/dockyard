@@ -85,5 +85,5 @@ type BlobRepository interface {
 	First(ctx context.Context, filter *BlobFilter) (*Blob, error)
 	List(ctx context.Context, filter *BlobFilter) ([]*Blob, int, error)
 	Insert(ctx context.Context, blob *Blob) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Delete(ctx context.Context, blob *Blob) error
 }

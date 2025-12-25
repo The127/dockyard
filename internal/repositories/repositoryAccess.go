@@ -143,5 +143,5 @@ type RepositoryAccessRepository interface {
 	First(ctx context.Context, filter *RepositoryAccessFilter) (*RepositoryAccess, error)
 	Insert(ctx context.Context, entity *RepositoryAccess) error
 	Update(ctx context.Context, entity *RepositoryAccess) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Delete(ctx context.Context, entity *RepositoryAccess) error
 }

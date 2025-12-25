@@ -186,5 +186,5 @@ type RepositoryRepository interface {
 	List(ctx context.Context, filter *RepositoryFilter) ([]*Repository, int, error)
 	Insert(ctx context.Context, repository *Repository) error
 	Update(ctx context.Context, repository *Repository) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Delete(ctx context.Context, repository *Repository) error
 }

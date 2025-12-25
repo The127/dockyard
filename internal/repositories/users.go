@@ -145,5 +145,5 @@ type UserRepository interface {
 	List(ctx context.Context, filter *UserFilter) ([]*User, int, error)
 	Insert(ctx context.Context, user *User) error
 	Update(ctx context.Context, user *User) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Delete(ctx context.Context, user *User) error
 }

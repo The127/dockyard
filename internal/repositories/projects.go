@@ -145,5 +145,5 @@ type ProjectRepository interface {
 	List(ctx context.Context, filter *ProjectFilter) ([]*Project, int, error)
 	Insert(ctx context.Context, project *Project) error
 	Update(ctx context.Context, project *Project) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Delete(ctx context.Context, project *Project) error
 }

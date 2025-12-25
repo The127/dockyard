@@ -217,5 +217,5 @@ type TenantRepository interface {
 	List(ctx context.Context, filter *TenantFilter) ([]*Tenant, int, error)
 	Insert(ctx context.Context, tenant *Tenant) error
 	Update(ctx context.Context, tenant *Tenant) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Delete(ctx context.Context, tenant *Tenant) error
 }

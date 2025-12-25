@@ -123,5 +123,5 @@ type ManifestRepository interface {
 	First(ctx context.Context, filter *ManifestFilter) (*Manifest, error)
 	List(ctx context.Context, filter *ManifestFilter) ([]*Manifest, int, error)
 	Insert(ctx context.Context, manifest *Manifest) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Delete(ctx context.Context, manifest *Manifest) error
 }

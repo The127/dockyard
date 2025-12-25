@@ -133,5 +133,5 @@ type ProjectAccessRepository interface {
 	First(ctx context.Context, filter *ProjectAccessFilter) (*ProjectAccess, error)
 	Insert(ctx context.Context, entity *ProjectAccess) error
 	Update(ctx context.Context, entity *ProjectAccess) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Delete(ctx context.Context, entity *ProjectAccess) error
 }
