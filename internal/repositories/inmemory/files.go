@@ -10,21 +10,21 @@ import (
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
-type fileRepository struct {
+type FileRepository struct {
 	txn           *memdb.Txn
 	changeTracker *change.Tracker
 	entityType    int
 }
 
-func NewInMemoryFileRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *fileRepository {
-	return &fileRepository{
+func NewInMemoryFileRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *FileRepository {
+	return &FileRepository{
 		txn:           txn,
 		changeTracker: changeTracker,
 		entityType:    entityType,
 	}
 }
 
-func (r *fileRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.FileFilter) ([]*repositories.File, int) {
+func (r *FileRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.FileFilter) ([]*repositories.File, int) {
 	var result []*repositories.File
 
 	obj := iterator.Next()
@@ -43,7 +43,7 @@ func (r *fileRepository) applyFilter(iterator memdb.ResultIterator, filter *repo
 	return result, count
 }
 
-func (r *fileRepository) matches(file *repositories.File, filter *repositories.FileFilter) bool {
+func (r *FileRepository) matches(file *repositories.File, filter *repositories.FileFilter) bool {
 	if filter.HasId() {
 		if file.GetId() != filter.GetId() {
 			return false
@@ -59,7 +59,7 @@ func (r *fileRepository) matches(file *repositories.File, filter *repositories.F
 	return true
 }
 
-func (r *fileRepository) First(_ context.Context, filter *repositories.FileFilter) (*repositories.File, error) {
+func (r *FileRepository) First(_ context.Context, filter *repositories.FileFilter) (*repositories.File, error) {
 	iterator, err := r.txn.Get("files", "id")
 	if err != nil {
 		return nil, err
@@ -74,7 +74,7 @@ func (r *fileRepository) First(_ context.Context, filter *repositories.FileFilte
 	return result[0], nil
 }
 
-func (r *fileRepository) Single(_ context.Context, filter *repositories.FileFilter) (*repositories.File, error) {
+func (r *FileRepository) Single(_ context.Context, filter *repositories.FileFilter) (*repositories.File, error) {
 	result, err := r.First(context.Background(), filter)
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func (r *fileRepository) Single(_ context.Context, filter *repositories.FileFilt
 	return result, nil
 }
 
-func (r *fileRepository) List(_ context.Context, filter *repositories.FileFilter) ([]*repositories.File, int, error) {
+func (r *FileRepository) List(_ context.Context, filter *repositories.FileFilter) ([]*repositories.File, int, error) {
 	iterator, err := r.txn.Get("files", "id")
 	if err != nil {
 		return nil, 0, err
@@ -96,12 +96,12 @@ func (r *fileRepository) List(_ context.Context, filter *repositories.FileFilter
 	return result, count, nil
 }
 
-func (r *fileRepository) Insert(_ context.Context, file *repositories.File) error {
+func (r *FileRepository) Insert(_ context.Context, file *repositories.File) error {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, file))
 	return nil
 }
 
-func (r *fileRepository) ExecuteInsert(_ context.Context, file *repositories.File) error {
+func (r *FileRepository) ExecuteInsert(_ context.Context, file *repositories.File) error {
 	err := r.txn.Insert("files", *file)
 	if err != nil {
 		return fmt.Errorf("failed to insert file: %w", err)
@@ -110,12 +110,12 @@ func (r *fileRepository) ExecuteInsert(_ context.Context, file *repositories.Fil
 	return nil
 }
 
-func (r *fileRepository) Delete(_ context.Context, file *repositories.File) error {
+func (r *FileRepository) Delete(_ context.Context, file *repositories.File) error {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, file))
 	return nil
 }
 
-func (r *fileRepository) ExecuteDelete(_ context.Context, file *repositories.File) error {
+func (r *FileRepository) ExecuteDelete(_ context.Context, file *repositories.File) error {
 	err := r.txn.Delete("files", file)
 	if err != nil {
 		return fmt.Errorf("failed to delete file: %w", err)

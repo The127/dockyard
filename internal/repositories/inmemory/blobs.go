@@ -10,21 +10,21 @@ import (
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
-type blobRepository struct {
+type BlobRepository struct {
 	txn           *memdb.Txn
 	changeTracker *change.Tracker
 	entityType    int
 }
 
-func NewInMemoryBlobRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *blobRepository {
-	return &blobRepository{
+func NewInMemoryBlobRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *BlobRepository {
+	return &BlobRepository{
 		txn:           txn,
 		changeTracker: changeTracker,
 		entityType:    entityType,
 	}
 }
 
-func (r *blobRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.BlobFilter) ([]*repositories.Blob, int) {
+func (r *BlobRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.BlobFilter) ([]*repositories.Blob, int) {
 	var result []*repositories.Blob
 
 	obj := iterator.Next()
@@ -43,7 +43,7 @@ func (r *blobRepository) applyFilter(iterator memdb.ResultIterator, filter *repo
 	return result, count
 }
 
-func (r *blobRepository) matches(blob *repositories.Blob, filter *repositories.BlobFilter) bool {
+func (r *BlobRepository) matches(blob *repositories.Blob, filter *repositories.BlobFilter) bool {
 	if filter.HasId() {
 		if blob.GetId() != filter.GetId() {
 			return false
@@ -59,7 +59,7 @@ func (r *blobRepository) matches(blob *repositories.Blob, filter *repositories.B
 	return true
 }
 
-func (r *blobRepository) First(_ context.Context, filter *repositories.BlobFilter) (*repositories.Blob, error) {
+func (r *BlobRepository) First(_ context.Context, filter *repositories.BlobFilter) (*repositories.Blob, error) {
 	iterator, err := r.txn.Get("blobs", "id")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get blobs: %w", err)
@@ -74,7 +74,7 @@ func (r *blobRepository) First(_ context.Context, filter *repositories.BlobFilte
 	return result[0], nil
 }
 
-func (r *blobRepository) Single(_ context.Context, filter *repositories.BlobFilter) (*repositories.Blob, error) {
+func (r *BlobRepository) Single(_ context.Context, filter *repositories.BlobFilter) (*repositories.Blob, error) {
 	result, err := r.First(context.Background(), filter)
 	if err != nil {
 		return nil, err
@@ -85,7 +85,7 @@ func (r *blobRepository) Single(_ context.Context, filter *repositories.BlobFilt
 	return result, nil
 }
 
-func (r *blobRepository) List(_ context.Context, filter *repositories.BlobFilter) ([]*repositories.Blob, int, error) {
+func (r *BlobRepository) List(_ context.Context, filter *repositories.BlobFilter) ([]*repositories.Blob, int, error) {
 	iterator, err := r.txn.Get("blobs", "id")
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get blobs: %w", err)
@@ -96,12 +96,12 @@ func (r *blobRepository) List(_ context.Context, filter *repositories.BlobFilter
 	return result, count, nil
 }
 
-func (r *blobRepository) Insert(_ context.Context, blob *repositories.Blob) error {
+func (r *BlobRepository) Insert(_ context.Context, blob *repositories.Blob) error {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, blob))
 	return nil
 }
 
-func (r *blobRepository) ExecuteInsert(_ context.Context, blob *repositories.Blob) error {
+func (r *BlobRepository) ExecuteInsert(_ context.Context, blob *repositories.Blob) error {
 	err := r.txn.Insert("blobs", *blob)
 	if err != nil {
 		return fmt.Errorf("failed to insert blob: %w", err)
@@ -110,12 +110,12 @@ func (r *blobRepository) ExecuteInsert(_ context.Context, blob *repositories.Blo
 	return nil
 }
 
-func (r *blobRepository) Delete(_ context.Context, blob *repositories.Blob) error {
+func (r *BlobRepository) Delete(_ context.Context, blob *repositories.Blob) error {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, blob))
 	return nil
 }
 
-func (r *blobRepository) ExecuteDelete(_ context.Context, blob *repositories.Blob) error {
+func (r *BlobRepository) ExecuteDelete(_ context.Context, blob *repositories.Blob) error {
 	err := r.txn.Delete("blobs", blob)
 	if err != nil {
 		return fmt.Errorf("failed to delete blob: %w", err)

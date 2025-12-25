@@ -9,21 +9,21 @@ import (
 	"github.com/the127/dockyard/internal/repositories"
 )
 
-type projectAccessRepository struct {
+type ProjectAccessRepository struct {
 	txn           *memdb.Txn
 	changeTracker *change.Tracker
 	entityType    int
 }
 
-func NewInMemoryProjectAccessRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *projectAccessRepository {
-	return &projectAccessRepository{
+func NewInMemoryProjectAccessRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *ProjectAccessRepository {
+	return &ProjectAccessRepository{
 		txn:           txn,
 		changeTracker: changeTracker,
 		entityType:    entityType,
 	}
 }
 
-func (r *projectAccessRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.ProjectAccessFilter) ([]*repositories.ProjectAccess, int) {
+func (r *ProjectAccessRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.ProjectAccessFilter) ([]*repositories.ProjectAccess, int) {
 	var result []*repositories.ProjectAccess
 
 	obj := iterator.Next()
@@ -42,7 +42,7 @@ func (r *projectAccessRepository) applyFilter(iterator memdb.ResultIterator, fil
 	return result, count
 }
 
-func (r *projectAccessRepository) matches(projectAccess *repositories.ProjectAccess, filter *repositories.ProjectAccessFilter) bool {
+func (r *ProjectAccessRepository) matches(projectAccess *repositories.ProjectAccess, filter *repositories.ProjectAccessFilter) bool {
 	if filter.HasId() {
 		if projectAccess.GetId() != filter.GetId() {
 			return false
@@ -64,7 +64,7 @@ func (r *projectAccessRepository) matches(projectAccess *repositories.ProjectAcc
 	return true
 }
 
-func (r *projectAccessRepository) First(_ context.Context, filter *repositories.ProjectAccessFilter) (*repositories.ProjectAccess, error) {
+func (r *ProjectAccessRepository) First(_ context.Context, filter *repositories.ProjectAccessFilter) (*repositories.ProjectAccess, error) {
 	iterator, err := r.txn.Get("project_access", "id")
 	if err != nil {
 		return nil, err
@@ -79,12 +79,12 @@ func (r *projectAccessRepository) First(_ context.Context, filter *repositories.
 	return result[0], nil
 }
 
-func (r *projectAccessRepository) Insert(_ context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) Insert(_ context.Context, projectAccess *repositories.ProjectAccess) error {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, projectAccess))
 	return nil
 }
 
-func (r *projectAccessRepository) ExecuteInsert(_ context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) ExecuteInsert(_ context.Context, projectAccess *repositories.ProjectAccess) error {
 	err := r.txn.Insert("project_access", *projectAccess)
 	if err != nil {
 		return fmt.Errorf("failed to insert project access: %w", err)
@@ -94,12 +94,12 @@ func (r *projectAccessRepository) ExecuteInsert(_ context.Context, projectAccess
 	return nil
 }
 
-func (r *projectAccessRepository) Update(_ context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) Update(_ context.Context, projectAccess *repositories.ProjectAccess) error {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, projectAccess))
 	return nil
 }
 
-func (r *projectAccessRepository) ExecuteUpdate(_ context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) ExecuteUpdate(_ context.Context, projectAccess *repositories.ProjectAccess) error {
 	err := r.txn.Insert("project_access", *projectAccess)
 	if err != nil {
 		return fmt.Errorf("failed to insert project: %w", err)
@@ -109,12 +109,12 @@ func (r *projectAccessRepository) ExecuteUpdate(_ context.Context, projectAccess
 	return nil
 }
 
-func (r *projectAccessRepository) Delete(_ context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) Delete(_ context.Context, projectAccess *repositories.ProjectAccess) error {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, projectAccess))
 	return nil
 }
 
-func (r *projectAccessRepository) ExecuteDelete(_ context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) ExecuteDelete(_ context.Context, projectAccess *repositories.ProjectAccess) error {
 	err := r.txn.Delete("project_access", projectAccess)
 	if err != nil {
 		return fmt.Errorf("failed to delete project access: %w", err)

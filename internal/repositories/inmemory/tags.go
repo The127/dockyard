@@ -10,21 +10,21 @@ import (
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
-type tagRepository struct {
+type TagRepository struct {
 	txn           *memdb.Txn
 	changeTracker *change.Tracker
 	entityType    int
 }
 
-func NewInMemoryTagRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *tagRepository {
-	return &tagRepository{
+func NewInMemoryTagRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *TagRepository {
+	return &TagRepository{
 		txn:           txn,
 		changeTracker: changeTracker,
 		entityType:    entityType,
 	}
 }
 
-func (r *tagRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.TagFilter) ([]*repositories.Tag, int, error) {
+func (r *TagRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.TagFilter) ([]*repositories.Tag, int, error) {
 	var result []*repositories.Tag
 
 	obj := iterator.Next()
@@ -55,7 +55,7 @@ func (r *tagRepository) applyFilter(iterator memdb.ResultIterator, filter *repos
 	return result, count, nil
 }
 
-func (r *tagRepository) matches(tag *repositories.Tag, filter *repositories.TagFilter) bool {
+func (r *TagRepository) matches(tag *repositories.Tag, filter *repositories.TagFilter) bool {
 	if filter.HasId() {
 		if tag.GetId() != filter.GetId() {
 			return false
@@ -83,7 +83,7 @@ func (r *tagRepository) matches(tag *repositories.Tag, filter *repositories.TagF
 	return true
 }
 
-func (r *tagRepository) First(_ context.Context, filter *repositories.TagFilter) (*repositories.Tag, error) {
+func (r *TagRepository) First(_ context.Context, filter *repositories.TagFilter) (*repositories.Tag, error) {
 	iterator, err := r.txn.Get("tags", "id")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tags: %w", err)
@@ -101,7 +101,7 @@ func (r *tagRepository) First(_ context.Context, filter *repositories.TagFilter)
 	return result[0], nil
 }
 
-func (r *tagRepository) Single(_ context.Context, filter *repositories.TagFilter) (*repositories.Tag, error) {
+func (r *TagRepository) Single(_ context.Context, filter *repositories.TagFilter) (*repositories.Tag, error) {
 	result, err := r.First(context.Background(), filter)
 	if err != nil {
 		return nil, err
@@ -112,7 +112,7 @@ func (r *tagRepository) Single(_ context.Context, filter *repositories.TagFilter
 	return result, nil
 }
 
-func (r *tagRepository) List(_ context.Context, filter *repositories.TagFilter) ([]*repositories.Tag, int, error) {
+func (r *TagRepository) List(_ context.Context, filter *repositories.TagFilter) ([]*repositories.Tag, int, error) {
 	iterator, err := r.txn.Get("tags", "id")
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get tags: %w", err)
@@ -126,12 +126,12 @@ func (r *tagRepository) List(_ context.Context, filter *repositories.TagFilter) 
 	return result, count, nil
 }
 
-func (r *tagRepository) Insert(_ context.Context, tag *repositories.Tag) error {
+func (r *TagRepository) Insert(_ context.Context, tag *repositories.Tag) error {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, tag))
 	return nil
 }
 
-func (r *tagRepository) ExecuteInsert(_ context.Context, tag *repositories.Tag) error {
+func (r *TagRepository) ExecuteInsert(_ context.Context, tag *repositories.Tag) error {
 	err := r.txn.Insert("tags", *tag)
 	if err != nil {
 		return fmt.Errorf("failed to insert tag: %w", err)
@@ -140,12 +140,12 @@ func (r *tagRepository) ExecuteInsert(_ context.Context, tag *repositories.Tag) 
 	return nil
 }
 
-func (r *tagRepository) Delete(_ context.Context, tag *repositories.Tag) error {
+func (r *TagRepository) Delete(_ context.Context, tag *repositories.Tag) error {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, tag))
 	return nil
 }
 
-func (r *tagRepository) ExecuteDelete(_ context.Context, tag *repositories.Tag) error {
+func (r *TagRepository) ExecuteDelete(_ context.Context, tag *repositories.Tag) error {
 	err := r.txn.Delete("tags", tag)
 	if err != nil {
 		return fmt.Errorf("failed to delete tag: %w", err)

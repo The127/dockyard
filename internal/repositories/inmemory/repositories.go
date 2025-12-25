@@ -10,21 +10,21 @@ import (
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
-type repositoryRepository struct {
+type RepositoryRepository struct {
 	txn           *memdb.Txn
 	changeTracker *change.Tracker
 	entityType    int
 }
 
-func NewInMemoryRepositoryRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *repositoryRepository {
-	return &repositoryRepository{
+func NewInMemoryRepositoryRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *RepositoryRepository {
+	return &RepositoryRepository{
 		txn:           txn,
 		changeTracker: changeTracker,
 		entityType:    entityType,
 	}
 }
 
-func (r *repositoryRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.RepositoryFilter) ([]*repositories.Repository, int) {
+func (r *RepositoryRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.RepositoryFilter) ([]*repositories.Repository, int) {
 	var result []*repositories.Repository
 
 	obj := iterator.Next()
@@ -43,7 +43,7 @@ func (r *repositoryRepository) applyFilter(iterator memdb.ResultIterator, filter
 	return result, count
 }
 
-func (r *repositoryRepository) matches(repository *repositories.Repository, filter *repositories.RepositoryFilter) bool {
+func (r *RepositoryRepository) matches(repository *repositories.Repository, filter *repositories.RepositoryFilter) bool {
 	if filter.HasSlug() {
 		if repository.GetSlug() != filter.GetSlug() {
 			return false
@@ -65,7 +65,7 @@ func (r *repositoryRepository) matches(repository *repositories.Repository, filt
 	return true
 }
 
-func (r *repositoryRepository) First(_ context.Context, filter *repositories.RepositoryFilter) (*repositories.Repository, error) {
+func (r *RepositoryRepository) First(_ context.Context, filter *repositories.RepositoryFilter) (*repositories.Repository, error) {
 	iterator, err := r.txn.Get("repositories", "id")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get repositories: %w", err)
@@ -80,7 +80,7 @@ func (r *repositoryRepository) First(_ context.Context, filter *repositories.Rep
 	return result[0], nil
 }
 
-func (r *repositoryRepository) Single(_ context.Context, filter *repositories.RepositoryFilter) (*repositories.Repository, error) {
+func (r *RepositoryRepository) Single(_ context.Context, filter *repositories.RepositoryFilter) (*repositories.Repository, error) {
 	result, err := r.First(context.Background(), filter)
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func (r *repositoryRepository) Single(_ context.Context, filter *repositories.Re
 	return result, nil
 }
 
-func (r *repositoryRepository) List(_ context.Context, filter *repositories.RepositoryFilter) ([]*repositories.Repository, int, error) {
+func (r *RepositoryRepository) List(_ context.Context, filter *repositories.RepositoryFilter) ([]*repositories.Repository, int, error) {
 	iterator, err := r.txn.Get("repositories", "id")
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get repositories: %w", err)
@@ -102,12 +102,12 @@ func (r *repositoryRepository) List(_ context.Context, filter *repositories.Repo
 	return result, count, nil
 }
 
-func (r *repositoryRepository) Insert(_ context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) Insert(_ context.Context, repository *repositories.Repository) error {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, repository))
 	return nil
 }
 
-func (r *repositoryRepository) ExecuteInsert(_ context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) ExecuteInsert(_ context.Context, repository *repositories.Repository) error {
 	err := r.txn.Insert("repositories", *repository)
 	if err != nil {
 		return fmt.Errorf("failed to insert repository: %w", err)
@@ -117,12 +117,12 @@ func (r *repositoryRepository) ExecuteInsert(_ context.Context, repository *repo
 	return nil
 }
 
-func (r *repositoryRepository) Update(_ context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) Update(_ context.Context, repository *repositories.Repository) error {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, repository))
 	return nil
 }
 
-func (r *repositoryRepository) ExecuteUpdate(_ context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) ExecuteUpdate(_ context.Context, repository *repositories.Repository) error {
 	err := r.txn.Insert("repositories", *repository)
 	if err != nil {
 		return fmt.Errorf("failed to update repository: %w", err)
@@ -132,12 +132,12 @@ func (r *repositoryRepository) ExecuteUpdate(_ context.Context, repository *repo
 	return nil
 }
 
-func (r *repositoryRepository) Delete(_ context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) Delete(_ context.Context, repository *repositories.Repository) error {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, repository))
 	return nil
 }
 
-func (r *repositoryRepository) ExecuteDelete(_ context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) ExecuteDelete(_ context.Context, repository *repositories.Repository) error {
 	err := r.txn.Delete("repositories", repository)
 	if err != nil {
 		return fmt.Errorf("failed to delete repository: %w", err)

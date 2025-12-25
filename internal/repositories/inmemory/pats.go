@@ -10,21 +10,21 @@ import (
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
-type patRepository struct {
+type PatRepository struct {
 	txn           *memdb.Txn
 	changeTracker *change.Tracker
 	entityType    int
 }
 
-func NewInMemoryPatRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *patRepository {
-	return &patRepository{
+func NewInMemoryPatRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *PatRepository {
+	return &PatRepository{
 		txn:           txn,
 		changeTracker: changeTracker,
 		entityType:    entityType,
 	}
 }
 
-func (r *patRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.PatFilter) ([]*repositories.Pat, int) {
+func (r *PatRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.PatFilter) ([]*repositories.Pat, int) {
 	var result []*repositories.Pat
 
 	obj := iterator.Next()
@@ -43,7 +43,7 @@ func (r *patRepository) applyFilter(iterator memdb.ResultIterator, filter *repos
 	return result, count
 }
 
-func (r *patRepository) matches(pat *repositories.Pat, filter *repositories.PatFilter) bool {
+func (r *PatRepository) matches(pat *repositories.Pat, filter *repositories.PatFilter) bool {
 	if filter.HasId() {
 		if pat.GetId() != filter.GetId() {
 			return false
@@ -59,7 +59,7 @@ func (r *patRepository) matches(pat *repositories.Pat, filter *repositories.PatF
 	return true
 }
 
-func (r *patRepository) First(_ context.Context, filter *repositories.PatFilter) (*repositories.Pat, error) {
+func (r *PatRepository) First(_ context.Context, filter *repositories.PatFilter) (*repositories.Pat, error) {
 	iterator, err := r.txn.Get("pats", "id")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get pats: %w", err)
@@ -74,7 +74,7 @@ func (r *patRepository) First(_ context.Context, filter *repositories.PatFilter)
 	return result[0], nil
 }
 
-func (r *patRepository) Single(_ context.Context, filter *repositories.PatFilter) (*repositories.Pat, error) {
+func (r *PatRepository) Single(_ context.Context, filter *repositories.PatFilter) (*repositories.Pat, error) {
 	result, err := r.First(context.Background(), filter)
 	if err != nil {
 		return nil, err
@@ -87,7 +87,7 @@ func (r *patRepository) Single(_ context.Context, filter *repositories.PatFilter
 	return result, nil
 }
 
-func (r *patRepository) List(_ context.Context, filter *repositories.PatFilter) ([]*repositories.Pat, int, error) {
+func (r *PatRepository) List(_ context.Context, filter *repositories.PatFilter) ([]*repositories.Pat, int, error) {
 	iterator, err := r.txn.Get("pats", "id")
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get pats: %w", err)
@@ -98,12 +98,12 @@ func (r *patRepository) List(_ context.Context, filter *repositories.PatFilter) 
 	return pats, count, nil
 }
 
-func (r *patRepository) Insert(_ context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) Insert(_ context.Context, pat *repositories.Pat) error {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, pat))
 	return nil
 }
 
-func (r *patRepository) ExecuteInsert(_ context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) ExecuteInsert(_ context.Context, pat *repositories.Pat) error {
 	err := r.txn.Insert("pats", *pat)
 	if err != nil {
 		return fmt.Errorf("failed to insert pat: %w", err)
@@ -113,12 +113,12 @@ func (r *patRepository) ExecuteInsert(_ context.Context, pat *repositories.Pat) 
 	return nil
 }
 
-func (r *patRepository) Update(_ context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) Update(_ context.Context, pat *repositories.Pat) error {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, pat))
 	return nil
 }
 
-func (r *patRepository) ExecuteUpdate(_ context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) ExecuteUpdate(_ context.Context, pat *repositories.Pat) error {
 	err := r.txn.Insert("pats", *pat)
 	if err != nil {
 		return fmt.Errorf("failed to update pat: %w", err)
@@ -128,12 +128,12 @@ func (r *patRepository) ExecuteUpdate(_ context.Context, pat *repositories.Pat) 
 	return nil
 }
 
-func (r *patRepository) Delete(_ context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) Delete(_ context.Context, pat *repositories.Pat) error {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, pat))
 	return nil
 }
 
-func (r *patRepository) ExecuteDelete(_ context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) ExecuteDelete(_ context.Context, pat *repositories.Pat) error {
 	err := r.txn.Delete("pats", pat)
 	if err != nil {
 		return fmt.Errorf("failed to delete pat: %w", err)
