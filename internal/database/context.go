@@ -35,5 +35,5 @@ type Context interface {
 	RepositoryBlobs() repositories.RepositoryBlobRepository
 	Files() repositories.FileRepository
 
-	SaveChanges(ctx context.Context)
+	SaveChanges(ctx context.Context) error
 }

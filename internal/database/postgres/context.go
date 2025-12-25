@@ -30,7 +30,7 @@ type Context struct {
 	files            repositories.FileRepository
 }
 
-func newTransaction(db *sql.DB) *Context {
+func newContext(db *sql.DB) *Context {
 	return &Context{
 		db: db,
 	}
