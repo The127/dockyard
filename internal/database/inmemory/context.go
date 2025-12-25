@@ -16,18 +16,18 @@ type Context struct {
 	txn           *memdb.Txn
 	changeTracker *change.Tracker
 
-	tenants          inmemory.TenantRepository
-	projects         inmemory.ProjectRepository
-	projectAccess    inmemory.ProjectAccessRepository
-	users            inmemory.UserRepository
-	pats             inmemory.PatRepository
-	repos            inmemory.RepositoryRepository
-	repositoryAccess inmemory.RepositoryAccessRepository
-	manifest         inmemory.ManifestRepository
-	tags             inmemory.TagRepository
-	blobs            inmemory.BlobRepository
-	repositoryBlobs  inmemory.RepositoryBlobRepository
-	files            inmemory.FileRepository
+	tenants          *inmemory.TenantRepository
+	projects         *inmemory.ProjectRepository
+	projectAccess    *inmemory.ProjectAccessRepository
+	users            *inmemory.UserRepository
+	pats             *inmemory.PatRepository
+	repos            *inmemory.RepositoryRepository
+	repositoryAccess *inmemory.RepositoryAccessRepository
+	manifest         *inmemory.ManifestRepository
+	tags             *inmemory.TagRepository
+	blobs            *inmemory.BlobRepository
+	repositoryBlobs  *inmemory.RepositoryBlobRepository
+	files            *inmemory.FileRepository
 }
 
 func newContext(db *memdb.MemDB) *Context {
