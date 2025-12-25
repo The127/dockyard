@@ -198,7 +198,7 @@ func (c *Context) applyChange(ctx context.Context, tx *sql.Tx, entry *change.Ent
 		return c.applyFileChange(ctx, tx, entry)
 
 	default:
-		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+		return fmt.Errorf("unsupported change type: %v", entry.GetChangeType())
 	}
 }
 
@@ -214,7 +214,7 @@ func (c *Context) applyTenantChange(ctx context.Context, tx *sql.Tx, entry *chan
 		return c.tenants.ExecuteDelete(ctx, tx, entry.GetItem().(*repositories.Tenant))
 
 	default:
-		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+		return fmt.Errorf("unsupported change type: %v", entry.GetChangeType())
 	}
 }
 
@@ -230,7 +230,7 @@ func (c *Context) applyProjectChange(ctx context.Context, tx *sql.Tx, entry *cha
 		return c.projects.ExecuteDelete(ctx, tx, entry.GetItem().(*repositories.Project))
 
 	default:
-		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+		return fmt.Errorf("unsupported change type: %v", entry.GetChangeType())
 	}
 }
 
@@ -246,7 +246,7 @@ func (c *Context) applyProjectAccessChange(ctx context.Context, tx *sql.Tx, entr
 		return c.projectAccess.ExecuteDelete(ctx, tx, entry.GetItem().(*repositories.ProjectAccess))
 
 	default:
-		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+		return fmt.Errorf("unsupported change type: %v", entry.GetChangeType())
 	}
 }
 
@@ -262,7 +262,7 @@ func (c *Context) applyUserChange(ctx context.Context, tx *sql.Tx, entry *change
 		return c.users.ExecuteDelete(ctx, tx, entry.GetItem().(*repositories.User))
 
 	default:
-		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+		return fmt.Errorf("unsupported change type: %v", entry.GetChangeType())
 	}
 }
 
@@ -278,7 +278,7 @@ func (c *Context) applyPatChange(ctx context.Context, tx *sql.Tx, entry *change.
 		return c.pats.ExecuteDelete(ctx, tx, entry.GetItem().(*repositories.Pat))
 
 	default:
-		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+		return fmt.Errorf("unsupported change type: %v", entry.GetChangeType())
 	}
 }
 
@@ -294,7 +294,7 @@ func (c *Context) applyRepositoryChange(ctx context.Context, tx *sql.Tx, entry *
 		return c.repos.ExecuteDelete(ctx, tx, entry.GetItem().(*repositories.Repository))
 
 	default:
-		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+		return fmt.Errorf("unsupported change type: %v", entry.GetChangeType())
 	}
 }
 
@@ -310,7 +310,7 @@ func (c *Context) applyRepositoryAccessChange(ctx context.Context, tx *sql.Tx, e
 		return c.repositoryAccess.ExecuteDelete(ctx, tx, entry.GetItem().(*repositories.RepositoryAccess))
 
 	default:
-		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+		return fmt.Errorf("unsupported change type: %v", entry.GetChangeType())
 	}
 }
 
@@ -323,7 +323,7 @@ func (c *Context) applyManifestChange(ctx context.Context, tx *sql.Tx, entry *ch
 		return c.manifest.ExecuteDelete(ctx, tx, entry.GetItem().(*repositories.Manifest))
 
 	default:
-		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+		return fmt.Errorf("unsupported change type: %v", entry.GetChangeType())
 	}
 }
 
@@ -336,7 +336,7 @@ func (c *Context) applyTagChange(ctx context.Context, tx *sql.Tx, entry *change.
 		return c.tags.ExecuteDelete(ctx, tx, entry.GetItem().(*repositories.Tag))
 
 	default:
-		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+		return fmt.Errorf("unsupported change type: %v", entry.GetChangeType())
 	}
 }
 
@@ -349,7 +349,7 @@ func (c *Context) applyBlobChange(ctx context.Context, tx *sql.Tx, entry *change
 		return c.blobs.ExecuteDelete(ctx, tx, entry.GetItem().(*repositories.Blob))
 
 	default:
-		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+		return fmt.Errorf("unsupported change type: %v", entry.GetChangeType())
 	}
 }
 
@@ -362,7 +362,7 @@ func (c *Context) applyRepositoryBlobChange(ctx context.Context, tx *sql.Tx, ent
 		return c.repositoryBlobs.ExecuteDelete(ctx, tx, entry.GetItem().(*repositories.RepositoryBlob))
 
 	default:
-		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+		return fmt.Errorf("unsupported change type: %v", entry.GetChangeType())
 	}
 }
 
@@ -375,6 +375,6 @@ func (c *Context) applyFileChange(ctx context.Context, tx *sql.Tx, entry *change
 		return c.files.ExecuteDelete(ctx, tx, entry.GetItem().(*repositories.File))
 
 	default:
-		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+		return fmt.Errorf("unsupported change type: %v", entry.GetChangeType())
 	}
 }
