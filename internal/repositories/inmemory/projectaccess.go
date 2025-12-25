@@ -84,8 +84,8 @@ func (r *ProjectAccessRepository) Insert(_ context.Context, projectAccess *repos
 	return nil
 }
 
-func (r *ProjectAccessRepository) ExecuteInsert(_ context.Context, projectAccess *repositories.ProjectAccess) error {
-	err := r.txn.Insert("project_access", *projectAccess)
+func (r *ProjectAccessRepository) ExecuteInsert(tx *memdb.Txn, projectAccess *repositories.ProjectAccess) error {
+	err := tx.Insert("project_access", *projectAccess)
 	if err != nil {
 		return fmt.Errorf("failed to insert project access: %w", err)
 	}
@@ -99,8 +99,8 @@ func (r *ProjectAccessRepository) Update(_ context.Context, projectAccess *repos
 	return nil
 }
 
-func (r *ProjectAccessRepository) ExecuteUpdate(_ context.Context, projectAccess *repositories.ProjectAccess) error {
-	err := r.txn.Insert("project_access", *projectAccess)
+func (r *ProjectAccessRepository) ExecuteUpdate(tx *memdb.Txn, projectAccess *repositories.ProjectAccess) error {
+	err := tx.Insert("project_access", *projectAccess)
 	if err != nil {
 		return fmt.Errorf("failed to insert project: %w", err)
 	}
@@ -114,8 +114,8 @@ func (r *ProjectAccessRepository) Delete(_ context.Context, projectAccess *repos
 	return nil
 }
 
-func (r *ProjectAccessRepository) ExecuteDelete(_ context.Context, projectAccess *repositories.ProjectAccess) error {
-	err := r.txn.Delete("project_access", projectAccess)
+func (r *ProjectAccessRepository) ExecuteDelete(tx *memdb.Txn, projectAccess *repositories.ProjectAccess) error {
+	err := tx.Delete("project_access", projectAccess)
 	if err != nil {
 		return fmt.Errorf("failed to delete project access: %w", err)
 	}

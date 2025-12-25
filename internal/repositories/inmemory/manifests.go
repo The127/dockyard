@@ -113,8 +113,8 @@ func (r *ManifestRepository) Insert(_ context.Context, manifest *repositories.Ma
 	return nil
 }
 
-func (r *ManifestRepository) ExecuteInsert(_ context.Context, manifest *repositories.Manifest) error {
-	err := r.txn.Insert("manifests", *manifest)
+func (r *ManifestRepository) ExecuteInsert(tx *memdb.Txn, manifest *repositories.Manifest) error {
+	err := tx.Insert("manifests", *manifest)
 	if err != nil {
 		return fmt.Errorf("failed to insert manifest: %w", err)
 	}
@@ -127,8 +127,8 @@ func (r *ManifestRepository) Update(_ context.Context, manifest *repositories.Ma
 	return nil
 }
 
-func (r *ManifestRepository) ExecuteUpdate(_ context.Context, manifest *repositories.Manifest) error {
-	err := r.txn.Insert("manifests", *manifest)
+func (r *ManifestRepository) ExecuteUpdate(tx *memdb.Txn, manifest *repositories.Manifest) error {
+	err := tx.Insert("manifests", *manifest)
 	if err != nil {
 		return fmt.Errorf("failed to update manifest: %w", err)
 	}
@@ -141,8 +141,8 @@ func (r *ManifestRepository) Delete(_ context.Context, manifest *repositories.Ma
 	return nil
 }
 
-func (r *ManifestRepository) ExecuteDelete(_ context.Context, manifest *repositories.Manifest) error {
-	err := r.txn.Delete("manifests", manifest)
+func (r *ManifestRepository) ExecuteDelete(tx *memdb.Txn, manifest *repositories.Manifest) error {
+	err := tx.Delete("manifests", manifest)
 	if err != nil {
 		return fmt.Errorf("failed to delete manifest: %w", err)
 	}

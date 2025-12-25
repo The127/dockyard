@@ -107,8 +107,8 @@ func (r *RepositoryRepository) Insert(_ context.Context, repository *repositorie
 	return nil
 }
 
-func (r *RepositoryRepository) ExecuteInsert(_ context.Context, repository *repositories.Repository) error {
-	err := r.txn.Insert("repositories", *repository)
+func (r *RepositoryRepository) ExecuteInsert(tx *memdb.Txn, repository *repositories.Repository) error {
+	err := tx.Insert("repositories", *repository)
 	if err != nil {
 		return fmt.Errorf("failed to insert repository: %w", err)
 	}
@@ -122,8 +122,8 @@ func (r *RepositoryRepository) Update(_ context.Context, repository *repositorie
 	return nil
 }
 
-func (r *RepositoryRepository) ExecuteUpdate(_ context.Context, repository *repositories.Repository) error {
-	err := r.txn.Insert("repositories", *repository)
+func (r *RepositoryRepository) ExecuteUpdate(tx *memdb.Txn, repository *repositories.Repository) error {
+	err := tx.Insert("repositories", *repository)
 	if err != nil {
 		return fmt.Errorf("failed to update repository: %w", err)
 	}
@@ -137,8 +137,8 @@ func (r *RepositoryRepository) Delete(_ context.Context, repository *repositorie
 	return nil
 }
 
-func (r *RepositoryRepository) ExecuteDelete(_ context.Context, repository *repositories.Repository) error {
-	err := r.txn.Delete("repositories", repository)
+func (r *RepositoryRepository) ExecuteDelete(tx *memdb.Txn, repository *repositories.Repository) error {
+	err := tx.Delete("repositories", repository)
 	if err != nil {
 		return fmt.Errorf("failed to delete repository: %w", err)
 	}

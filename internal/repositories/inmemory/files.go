@@ -101,8 +101,8 @@ func (r *FileRepository) Insert(_ context.Context, file *repositories.File) erro
 	return nil
 }
 
-func (r *FileRepository) ExecuteInsert(_ context.Context, file *repositories.File) error {
-	err := r.txn.Insert("files", *file)
+func (r *FileRepository) ExecuteInsert(tx *memdb.Txn, file *repositories.File) error {
+	err := tx.Insert("files", *file)
 	if err != nil {
 		return fmt.Errorf("failed to insert file: %w", err)
 	}
@@ -115,8 +115,8 @@ func (r *FileRepository) Delete(_ context.Context, file *repositories.File) erro
 	return nil
 }
 
-func (r *FileRepository) ExecuteDelete(_ context.Context, file *repositories.File) error {
-	err := r.txn.Delete("files", file)
+func (r *FileRepository) ExecuteDelete(tx *memdb.Txn, file *repositories.File) error {
+	err := tx.Delete("files", file)
 	if err != nil {
 		return fmt.Errorf("failed to delete file: %w", err)
 	}

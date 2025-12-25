@@ -84,8 +84,8 @@ func (r *RepositoryAccessRepository) Insert(_ context.Context, repositoryAccess 
 	return nil
 }
 
-func (r *RepositoryAccessRepository) ExecuteInsert(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
-	err := r.txn.Insert("repository_access", *repositoryAccess)
+func (r *RepositoryAccessRepository) ExecuteInsert(tx *memdb.Txn, repositoryAccess *repositories.RepositoryAccess) error {
+	err := tx.Insert("repository_access", *repositoryAccess)
 	if err != nil {
 		return fmt.Errorf("failed to insert repository access: %w", err)
 	}
@@ -99,8 +99,8 @@ func (r *RepositoryAccessRepository) Update(_ context.Context, repositoryAccess 
 	return nil
 }
 
-func (r *RepositoryAccessRepository) ExecuteUpdate(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
-	err := r.txn.Insert("repository_access", *repositoryAccess)
+func (r *RepositoryAccessRepository) ExecuteUpdate(tx *memdb.Txn, repositoryAccess *repositories.RepositoryAccess) error {
+	err := tx.Insert("repository_access", *repositoryAccess)
 	if err != nil {
 		return fmt.Errorf("failed to insert project: %w", err)
 	}
@@ -114,8 +114,8 @@ func (r *RepositoryAccessRepository) Delete(_ context.Context, repositoryAccess 
 	return nil
 }
 
-func (r *RepositoryAccessRepository) ExecuteDelete(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
-	err := r.txn.Delete("repository_access", repositoryAccess)
+func (r *RepositoryAccessRepository) ExecuteDelete(tx *memdb.Txn, repositoryAccess *repositories.RepositoryAccess) error {
+	err := tx.Delete("repository_access", repositoryAccess)
 	if err != nil {
 		return fmt.Errorf("failed to delete repository access: %w", err)
 	}

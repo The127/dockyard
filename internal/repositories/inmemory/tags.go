@@ -131,8 +131,8 @@ func (r *TagRepository) Insert(_ context.Context, tag *repositories.Tag) error {
 	return nil
 }
 
-func (r *TagRepository) ExecuteInsert(_ context.Context, tag *repositories.Tag) error {
-	err := r.txn.Insert("tags", *tag)
+func (r *TagRepository) ExecuteInsert(tx *memdb.Txn, tag *repositories.Tag) error {
+	err := tx.Insert("tags", *tag)
 	if err != nil {
 		return fmt.Errorf("failed to insert tag: %w", err)
 	}
@@ -145,8 +145,8 @@ func (r *TagRepository) Delete(_ context.Context, tag *repositories.Tag) error {
 	return nil
 }
 
-func (r *TagRepository) ExecuteDelete(_ context.Context, tag *repositories.Tag) error {
-	err := r.txn.Delete("tags", tag)
+func (r *TagRepository) ExecuteDelete(tx *memdb.Txn, tag *repositories.Tag) error {
+	err := tx.Delete("tags", tag)
 	if err != nil {
 		return fmt.Errorf("failed to delete tag: %w", err)
 	}

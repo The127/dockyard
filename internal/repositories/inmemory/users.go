@@ -108,8 +108,8 @@ func (r *UserRepository) Insert(_ context.Context, user *repositories.User) erro
 	return nil
 }
 
-func (r *UserRepository) ExecuteInsert(_ context.Context, user *repositories.User) error {
-	err := r.txn.Insert("users", *user)
+func (r *UserRepository) ExecuteInsert(tx *memdb.Txn, user *repositories.User) error {
+	err := tx.Insert("users", *user)
 	if err != nil {
 		return fmt.Errorf("failed to insert user: %w", err)
 	}
@@ -123,8 +123,8 @@ func (r *UserRepository) Update(_ context.Context, user *repositories.User) erro
 	return nil
 }
 
-func (r *UserRepository) ExecuteUpdate(_ context.Context, user *repositories.User) error {
-	err := r.txn.Insert("users", *user)
+func (r *UserRepository) ExecuteUpdate(tx *memdb.Txn, user *repositories.User) error {
+	err := tx.Insert("users", *user)
 	if err != nil {
 		return fmt.Errorf("failed to insert user: %w", err)
 	}
@@ -138,8 +138,8 @@ func (r *UserRepository) Delete(_ context.Context, user *repositories.User) erro
 	return nil
 }
 
-func (r *UserRepository) ExecuteDelete(_ context.Context, user *repositories.User) error {
-	err := r.txn.Delete("users", user)
+func (r *UserRepository) ExecuteDelete(tx *memdb.Txn, user *repositories.User) error {
+	err := tx.Delete("users", user)
 	if err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}

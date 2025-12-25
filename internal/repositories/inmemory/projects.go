@@ -107,8 +107,8 @@ func (r *ProjectRepository) Insert(_ context.Context, project *repositories.Proj
 	return nil
 }
 
-func (r *ProjectRepository) ExecuteInsert(_ context.Context, project *repositories.Project) error {
-	err := r.txn.Insert("projects", *project)
+func (r *ProjectRepository) ExecuteInsert(tx *memdb.Txn, project *repositories.Project) error {
+	err := tx.Insert("projects", *project)
 	if err != nil {
 		return fmt.Errorf("failed to insert project: %w", err)
 	}
@@ -122,8 +122,8 @@ func (r *ProjectRepository) Update(_ context.Context, project *repositories.Proj
 	return nil
 }
 
-func (r *ProjectRepository) ExecuteUpdate(_ context.Context, project *repositories.Project) error {
-	err := r.txn.Insert("projects", *project)
+func (r *ProjectRepository) ExecuteUpdate(tx *memdb.Txn, project *repositories.Project) error {
+	err := tx.Insert("projects", *project)
 	if err != nil {
 		return fmt.Errorf("failed to insert project: %w", err)
 	}
@@ -137,8 +137,8 @@ func (r *ProjectRepository) Delete(_ context.Context, project *repositories.Proj
 	return nil
 }
 
-func (r *ProjectRepository) ExecuteDelete(_ context.Context, project *repositories.Project) error {
-	err := r.txn.Delete("projects", project)
+func (r *ProjectRepository) ExecuteDelete(tx *memdb.Txn, project *repositories.Project) error {
+	err := tx.Delete("projects", project)
 	if err != nil {
 		return fmt.Errorf("failed to delete project: %w", err)
 	}

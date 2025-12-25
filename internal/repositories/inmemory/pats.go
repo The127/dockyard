@@ -103,8 +103,8 @@ func (r *PatRepository) Insert(_ context.Context, pat *repositories.Pat) error {
 	return nil
 }
 
-func (r *PatRepository) ExecuteInsert(_ context.Context, pat *repositories.Pat) error {
-	err := r.txn.Insert("pats", *pat)
+func (r *PatRepository) ExecuteInsert(tx *memdb.Txn, pat *repositories.Pat) error {
+	err := tx.Insert("pats", *pat)
 	if err != nil {
 		return fmt.Errorf("failed to insert pat: %w", err)
 	}
@@ -118,8 +118,8 @@ func (r *PatRepository) Update(_ context.Context, pat *repositories.Pat) error {
 	return nil
 }
 
-func (r *PatRepository) ExecuteUpdate(_ context.Context, pat *repositories.Pat) error {
-	err := r.txn.Insert("pats", *pat)
+func (r *PatRepository) ExecuteUpdate(tx *memdb.Txn, pat *repositories.Pat) error {
+	err := tx.Insert("pats", *pat)
 	if err != nil {
 		return fmt.Errorf("failed to update pat: %w", err)
 	}
@@ -133,8 +133,8 @@ func (r *PatRepository) Delete(_ context.Context, pat *repositories.Pat) error {
 	return nil
 }
 
-func (r *PatRepository) ExecuteDelete(_ context.Context, pat *repositories.Pat) error {
-	err := r.txn.Delete("pats", pat)
+func (r *PatRepository) ExecuteDelete(tx *memdb.Txn, pat *repositories.Pat) error {
+	err := tx.Delete("pats", pat)
 	if err != nil {
 		return fmt.Errorf("failed to delete pat: %w", err)
 	}

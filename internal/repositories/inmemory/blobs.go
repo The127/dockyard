@@ -101,8 +101,8 @@ func (r *BlobRepository) Insert(_ context.Context, blob *repositories.Blob) erro
 	return nil
 }
 
-func (r *BlobRepository) ExecuteInsert(_ context.Context, blob *repositories.Blob) error {
-	err := r.txn.Insert("blobs", *blob)
+func (r *BlobRepository) ExecuteInsert(tx *memdb.Txn, blob *repositories.Blob) error {
+	err := tx.Insert("blobs", *blob)
 	if err != nil {
 		return fmt.Errorf("failed to insert blob: %w", err)
 	}
@@ -115,8 +115,8 @@ func (r *BlobRepository) Delete(_ context.Context, blob *repositories.Blob) erro
 	return nil
 }
 
-func (r *BlobRepository) ExecuteDelete(_ context.Context, blob *repositories.Blob) error {
-	err := r.txn.Delete("blobs", blob)
+func (r *BlobRepository) ExecuteDelete(tx *memdb.Txn, blob *repositories.Blob) error {
+	err := tx.Delete("blobs", blob)
 	if err != nil {
 		return fmt.Errorf("failed to delete blob: %w", err)
 	}

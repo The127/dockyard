@@ -198,6 +198,15 @@ func (c *Context) applyTenantChange(tx *memdb.Txn, entry *change.Entry) error {
 
 func (c *Context) applyProjectChange(tx *memdb.Txn, entry *change.Entry) error {
 	switch entry.GetChangeType() {
+	case change.Added:
+		return c.projects.ExecuteInsert(tx, entry.GetItem().(*repositories.Project))
+
+	case change.Updated:
+		return c.projects.ExecuteUpdate(tx, entry.GetItem().(*repositories.Project))
+
+	case change.Deleted:
+		return c.projects.ExecuteDelete(tx, entry.GetItem().(*repositories.Project))
+
 	default:
 		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
 	}
@@ -205,6 +214,15 @@ func (c *Context) applyProjectChange(tx *memdb.Txn, entry *change.Entry) error {
 
 func (c *Context) applyProjectAccessChange(tx *memdb.Txn, entry *change.Entry) error {
 	switch entry.GetChangeType() {
+	case change.Added:
+		return c.projectAccess.ExecuteInsert(tx, entry.GetItem().(*repositories.ProjectAccess))
+
+	case change.Updated:
+		return c.projectAccess.ExecuteUpdate(tx, entry.GetItem().(*repositories.ProjectAccess))
+
+	case change.Deleted:
+		return c.projectAccess.ExecuteDelete(tx, entry.GetItem().(*repositories.ProjectAccess))
+
 	default:
 		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
 	}
@@ -212,6 +230,15 @@ func (c *Context) applyProjectAccessChange(tx *memdb.Txn, entry *change.Entry) e
 
 func (c *Context) applyUserChange(tx *memdb.Txn, entry *change.Entry) error {
 	switch entry.GetChangeType() {
+	case change.Added:
+		return c.users.ExecuteInsert(tx, entry.GetItem().(*repositories.User))
+
+	case change.Updated:
+		return c.users.ExecuteUpdate(tx, entry.GetItem().(*repositories.User))
+
+	case change.Deleted:
+		return c.users.ExecuteDelete(tx, entry.GetItem().(*repositories.User))
+
 	default:
 		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
 	}
@@ -219,6 +246,15 @@ func (c *Context) applyUserChange(tx *memdb.Txn, entry *change.Entry) error {
 
 func (c *Context) applyPatChange(tx *memdb.Txn, entry *change.Entry) error {
 	switch entry.GetChangeType() {
+	case change.Added:
+		return c.pats.ExecuteInsert(tx, entry.GetItem().(*repositories.Pat))
+
+	case change.Updated:
+		return c.pats.ExecuteUpdate(tx, entry.GetItem().(*repositories.Pat))
+
+	case change.Deleted:
+		return c.pats.ExecuteDelete(tx, entry.GetItem().(*repositories.Pat))
+
 	default:
 		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
 	}
@@ -226,6 +262,15 @@ func (c *Context) applyPatChange(tx *memdb.Txn, entry *change.Entry) error {
 
 func (c *Context) applyRepositoryChange(tx *memdb.Txn, entry *change.Entry) error {
 	switch entry.GetChangeType() {
+	case change.Added:
+		return c.repos.ExecuteInsert(tx, entry.GetItem().(*repositories.Repository))
+
+	case change.Updated:
+		return c.repos.ExecuteUpdate(tx, entry.GetItem().(*repositories.Repository))
+
+	case change.Deleted:
+		return c.repos.ExecuteDelete(tx, entry.GetItem().(*repositories.Repository))
+
 	default:
 		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
 	}
@@ -233,6 +278,15 @@ func (c *Context) applyRepositoryChange(tx *memdb.Txn, entry *change.Entry) erro
 
 func (c *Context) applyRepositoryAccessChange(tx *memdb.Txn, entry *change.Entry) error {
 	switch entry.GetChangeType() {
+	case change.Added:
+		return c.repositoryAccess.ExecuteInsert(tx, entry.GetItem().(*repositories.RepositoryAccess))
+
+	case change.Updated:
+		return c.repositoryAccess.ExecuteUpdate(tx, entry.GetItem().(*repositories.RepositoryAccess))
+
+	case change.Deleted:
+		return c.repositoryAccess.ExecuteDelete(tx, entry.GetItem().(*repositories.RepositoryAccess))
+
 	default:
 		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
 	}
@@ -240,6 +294,15 @@ func (c *Context) applyRepositoryAccessChange(tx *memdb.Txn, entry *change.Entry
 
 func (c *Context) applyManifestChange(tx *memdb.Txn, entry *change.Entry) error {
 	switch entry.GetChangeType() {
+	case change.Added:
+		return c.manifest.ExecuteInsert(tx, entry.GetItem().(*repositories.Manifest))
+
+	case change.Updated:
+		return c.manifest.ExecuteUpdate(tx, entry.GetItem().(*repositories.Manifest))
+
+	case change.Deleted:
+		return c.manifest.ExecuteDelete(tx, entry.GetItem().(*repositories.Manifest))
+
 	default:
 		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
 	}
@@ -247,6 +310,12 @@ func (c *Context) applyManifestChange(tx *memdb.Txn, entry *change.Entry) error 
 
 func (c *Context) applyTagChange(tx *memdb.Txn, entry *change.Entry) error {
 	switch entry.GetChangeType() {
+	case change.Added:
+		return c.tags.ExecuteInsert(tx, entry.GetItem().(*repositories.Tag))
+
+	case change.Deleted:
+		return c.tags.ExecuteDelete(tx, entry.GetItem().(*repositories.Tag))
+
 	default:
 		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
 	}
@@ -254,6 +323,12 @@ func (c *Context) applyTagChange(tx *memdb.Txn, entry *change.Entry) error {
 
 func (c *Context) applyBlobChange(tx *memdb.Txn, entry *change.Entry) error {
 	switch entry.GetChangeType() {
+	case change.Added:
+		return c.blobs.ExecuteInsert(tx, entry.GetItem().(*repositories.Blob))
+
+	case change.Deleted:
+		return c.blobs.ExecuteDelete(tx, entry.GetItem().(*repositories.Blob))
+
 	default:
 		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
 	}
@@ -261,6 +336,12 @@ func (c *Context) applyBlobChange(tx *memdb.Txn, entry *change.Entry) error {
 
 func (c *Context) applyRepositoryBlobChange(tx *memdb.Txn, entry *change.Entry) error {
 	switch entry.GetChangeType() {
+	case change.Added:
+		return c.repositoryBlobs.ExecuteInsert(tx, entry.GetItem().(*repositories.RepositoryBlob))
+
+	case change.Deleted:
+		return c.repositoryBlobs.ExecuteDelete(tx, entry.GetItem().(*repositories.RepositoryBlob))
+
 	default:
 		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
 	}
@@ -268,6 +349,12 @@ func (c *Context) applyRepositoryBlobChange(tx *memdb.Txn, entry *change.Entry) 
 
 func (c *Context) applyFileChange(tx *memdb.Txn, entry *change.Entry) error {
 	switch entry.GetChangeType() {
+	case change.Added:
+		return c.files.ExecuteInsert(tx, entry.GetItem().(*repositories.File))
+
+	case change.Deleted:
+		return c.files.ExecuteDelete(tx, entry.GetItem().(*repositories.File))
+
 	default:
 		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
 	}
