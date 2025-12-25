@@ -150,6 +150,6 @@ type TagRepository interface {
 	Single(ctx context.Context, filter *TagFilter) (*Tag, error)
 	First(ctx context.Context, filter *TagFilter) (*Tag, error)
 	List(ctx context.Context, filter *TagFilter) ([]*Tag, int, error)
-	Insert(ctx context.Context, tag *Tag) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Insert(tag *Tag)
+	Delete(tag *Tag)
 }

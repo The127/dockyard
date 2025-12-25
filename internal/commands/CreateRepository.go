@@ -6,9 +6,9 @@ import (
 
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
+	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 )
 
 type CreateRepository struct {
@@ -26,14 +26,9 @@ type CreateRepositoryResponse struct {
 
 func HandleCreateRepository(ctx context.Context, command CreateRepository) (*CreateRepositoryResponse, error) {
 	scope := middlewares.GetScope(ctx)
+	dbContext := ioc.GetDependency[db.Context](scope)
 
-	db := ioc.GetDependency[services.DbService](scope)
-	tx, err := db.GetTransaction()
-	if err != nil {
-		return nil, fmt.Errorf("getting transaction: %w", err)
-	}
-
-	tenantRepository := tx.Tenants()
+	tenantRepository := dbContext.Tenants()
 	tenantFilter := repositories.NewTenantFilter().
 		BySlug(command.TenantSlug)
 	tenant, err := tenantRepository.Single(ctx, tenantFilter)
@@ -41,7 +36,7 @@ func HandleCreateRepository(ctx context.Context, command CreateRepository) (*Cre
 		return nil, fmt.Errorf("failed to get tenant: %w", err)
 	}
 
-	projectRepository := tx.Projects()
+	projectRepository := dbContext.Projects()
 	projectFilter := repositories.NewProjectFilter().
 		ByTenantId(tenant.GetId()).
 		BySlug(command.ProjectSlug)
@@ -54,17 +49,11 @@ func HandleCreateRepository(ctx context.Context, command CreateRepository) (*Cre
 	repository.SetDescription(command.Description)
 	repository.SetIsPublic(command.IsPublic)
 
-	repositoryRepository := tx.Repositories()
-	err = repositoryRepository.Insert(ctx, repository)
-	if err != nil {
-		return nil, fmt.Errorf("failed to insert repository: %w", err)
-	}
+	repositoryRepository := dbContext.Repositories()
+	repositoryRepository.Insert(repository)
 
 	repositoryAccess := repositories.NewRepositoryAccess(repository.GetId(), command.UserId, repositories.RepositoryAccessRoleAdmin)
-	err = tx.RepositoryAccess().Insert(ctx, repositoryAccess)
-	if err != nil {
-		return nil, fmt.Errorf("failed to insert repository access: %w", err)
-	}
+	dbContext.RepositoryAccess().Insert(repositoryAccess)
 
 	return &CreateRepositoryResponse{
 		Id: repository.GetId(),

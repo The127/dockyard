@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/The127/ioc"
+	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
-	"github.com/the127/dockyard/internal/services"
 )
 
 type PatchRepository struct {
@@ -22,14 +22,9 @@ type PatchRepositoryResponse struct{}
 
 func HandlePatchRepository(ctx context.Context, command PatchRepository) (*PatchRepositoryResponse, error) {
 	scope := middlewares.GetScope(ctx)
-	dbService := ioc.GetDependency[services.DbService](scope)
+	dbContext := ioc.GetDependency[db.Context](scope)
 
-	tx, err := dbService.GetTransaction()
-	if err != nil {
-		return nil, fmt.Errorf("getting transaction: %w", err)
-	}
-
-	_, _, repository, err := getRepository(ctx, tx, command.TenantSlug, command.ProjectSlug, command.RepositorySlug)
+	_, _, repository, err := getRepository(ctx, dbContext, command.TenantSlug, command.ProjectSlug, command.RepositorySlug)
 	if err != nil {
 		return nil, fmt.Errorf("getting repository: %w", err)
 	}
@@ -42,10 +37,7 @@ func HandlePatchRepository(ctx context.Context, command PatchRepository) (*Patch
 		repository.SetIsPublic(*command.IsPublic)
 	}
 
-	err = tx.Repositories().Update(ctx, repository)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update repository: %w", err)
-	}
+	dbContext.Repositories().Update(repository)
 
 	return nil, nil
 }

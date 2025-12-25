@@ -8,9 +8,9 @@ import (
 	"github.com/The127/go-clock"
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
+	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 )
 
 type CreatePat struct {
@@ -24,12 +24,7 @@ type CreatePatResponse struct {
 
 func HandleCreatePat(ctx context.Context, command CreatePat) (*CreatePatResponse, error) {
 	scope := middlewares.GetScope(ctx)
-	dbService := ioc.GetDependency[services.DbService](scope)
-
-	tx, err := dbService.GetTransaction()
-	if err != nil {
-		return nil, fmt.Errorf("getting transaction: %w", err)
-	}
+	dbContext := ioc.GetDependency[db.Context](scope)
 
 	clockService := ioc.GetDependency[clock.Service](scope)
 	var displayName = command.DisplayName
@@ -39,10 +34,7 @@ func HandleCreatePat(ctx context.Context, command CreatePat) (*CreatePatResponse
 	}
 
 	pat, secret := repositories.NewPat(command.UserId, displayName)
-	err = tx.Pats().Insert(ctx, pat)
-	if err != nil {
-		return nil, fmt.Errorf("inserting pat: %w", err)
-	}
+	dbContext.Pats().Insert(pat)
 
 	tokenBytes := make([]byte, 16+len(secret)) // 16 bytes of uuid + length of secret
 

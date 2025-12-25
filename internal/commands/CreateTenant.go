@@ -2,13 +2,12 @@ package commands
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
+	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 )
 
 type CreateTenant struct {
@@ -28,12 +27,7 @@ type CreateTenantResponse struct {
 
 func HandleCreateTenant(ctx context.Context, command CreateTenant) (*CreateTenantResponse, error) {
 	scope := middlewares.GetScope(ctx)
-
-	db := ioc.GetDependency[services.DbService](scope)
-	tx, err := db.GetTransaction()
-	if err != nil {
-		return nil, fmt.Errorf("getting transaction: %w", err)
-	}
+	dbContext := ioc.GetDependency[db.Context](scope)
 
 	tenant := repositories.NewTenant(
 		command.Slug,
@@ -46,10 +40,7 @@ func HandleCreateTenant(ctx context.Context, command CreateTenant) (*CreateTenan
 			command.OidcRoleMapping,
 		),
 	)
-	err = tx.Tenants().Insert(ctx, tenant)
-	if err != nil {
-		return nil, fmt.Errorf("failed to insert tenant: %w", err)
-	}
+	dbContext.Tenants().Insert(tenant)
 
 	return &CreateTenantResponse{
 		Id: tenant.GetId(),

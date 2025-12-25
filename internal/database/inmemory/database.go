@@ -1,6 +1,7 @@
 package inmemory
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -173,6 +174,6 @@ func (d *database) Migrate() error {
 	return nil
 }
 
-func (d *database) Tx() (db.Transaction, error) {
-	return newTransaction(d.memDB.Txn(true)), nil
+func (d *database) NewContext(_ context.Context) (db.Context, error) {
+	return newContext(d.memDB), nil
 }

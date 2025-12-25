@@ -4,23 +4,27 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
-type projectRepository struct {
-	txn *memdb.Txn
+type ProjectRepository struct {
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryProjectRepository(txn *memdb.Txn) repositories.ProjectRepository {
-	return &projectRepository{
-		txn: txn,
+func NewInMemoryProjectRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *ProjectRepository {
+	return &ProjectRepository{
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
-func (r *projectRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.ProjectFilter) ([]*repositories.Project, int) {
+func (r *ProjectRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.ProjectFilter) ([]*repositories.Project, int) {
 	var result []*repositories.Project
 
 	obj := iterator.Next()
@@ -39,7 +43,7 @@ func (r *projectRepository) applyFilter(iterator memdb.ResultIterator, filter *r
 	return result, count
 }
 
-func (r *projectRepository) matches(project *repositories.Project, filter *repositories.ProjectFilter) bool {
+func (r *ProjectRepository) matches(project *repositories.Project, filter *repositories.ProjectFilter) bool {
 	if filter.HasSlug() {
 		if project.GetSlug() != filter.GetSlug() {
 			return false
@@ -61,7 +65,7 @@ func (r *projectRepository) matches(project *repositories.Project, filter *repos
 	return true
 }
 
-func (r *projectRepository) First(_ context.Context, filter *repositories.ProjectFilter) (*repositories.Project, error) {
+func (r *ProjectRepository) First(_ context.Context, filter *repositories.ProjectFilter) (*repositories.Project, error) {
 	iterator, err := r.txn.Get("projects", "id")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get projects: %w", err)
@@ -76,7 +80,7 @@ func (r *projectRepository) First(_ context.Context, filter *repositories.Projec
 	return result[0], nil
 }
 
-func (r *projectRepository) Single(ctx context.Context, filter *repositories.ProjectFilter) (*repositories.Project, error) {
+func (r *ProjectRepository) Single(ctx context.Context, filter *repositories.ProjectFilter) (*repositories.Project, error) {
 	result, err := r.First(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -87,7 +91,7 @@ func (r *projectRepository) Single(ctx context.Context, filter *repositories.Pro
 	return result, nil
 }
 
-func (r *projectRepository) List(_ context.Context, filter *repositories.ProjectFilter) ([]*repositories.Project, int, error) {
+func (r *ProjectRepository) List(_ context.Context, filter *repositories.ProjectFilter) ([]*repositories.Project, int, error) {
 	iterator, err := r.txn.Get("projects", "id")
 	if err != nil {
 		return nil, 0, err
@@ -98,8 +102,12 @@ func (r *projectRepository) List(_ context.Context, filter *repositories.Project
 	return result, count, err
 }
 
-func (r *projectRepository) Insert(_ context.Context, project *repositories.Project) error {
-	err := r.txn.Insert("projects", *project)
+func (r *ProjectRepository) Insert(project *repositories.Project) {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, project))
+}
+
+func (r *ProjectRepository) ExecuteInsert(tx *memdb.Txn, project *repositories.Project) error {
+	err := tx.Insert("projects", *project)
 	if err != nil {
 		return fmt.Errorf("failed to insert project: %w", err)
 	}
@@ -108,8 +116,12 @@ func (r *projectRepository) Insert(_ context.Context, project *repositories.Proj
 	return nil
 }
 
-func (r *projectRepository) Update(_ context.Context, project *repositories.Project) error {
-	err := r.txn.Insert("projects", *project)
+func (r *ProjectRepository) Update(project *repositories.Project) {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, project))
+}
+
+func (r *ProjectRepository) ExecuteUpdate(tx *memdb.Txn, project *repositories.Project) error {
+	err := tx.Insert("projects", *project)
 	if err != nil {
 		return fmt.Errorf("failed to insert project: %w", err)
 	}
@@ -118,16 +130,12 @@ func (r *projectRepository) Update(_ context.Context, project *repositories.Proj
 	return nil
 }
 
-func (r *projectRepository) Delete(_ context.Context, id uuid.UUID) error {
-	entry, err := r.First(context.Background(), repositories.NewProjectFilter().ById(id))
-	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
-	if entry == nil {
-		return nil
-	}
+func (r *ProjectRepository) Delete(project *repositories.Project) {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, project))
+}
 
-	err = r.txn.Delete("projects", entry)
+func (r *ProjectRepository) ExecuteDelete(tx *memdb.Txn, project *repositories.Project) error {
+	err := tx.Delete("projects", project)
 	if err != nil {
 		return fmt.Errorf("failed to delete project: %w", err)
 	}

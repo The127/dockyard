@@ -7,9 +7,9 @@ import (
 
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
+	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 )
 
 type GetTenant struct {
@@ -26,15 +26,10 @@ type GetTenantResponse struct {
 
 func HandleGetTenant(ctx context.Context, query GetTenant) (*GetTenantResponse, error) {
 	scope := middlewares.GetScope(ctx)
-	dbService := ioc.GetDependency[services.DbService](scope)
-
-	tx, err := dbService.GetTransaction()
-	if err != nil {
-		return nil, fmt.Errorf("getting transaction: %w", err)
-	}
+	dbContext := ioc.GetDependency[db.Context](scope)
 
 	tenantFilter := repositories.NewTenantFilter().BySlug(query.Slug)
-	tenant, err := tx.Tenants().Single(ctx, tenantFilter)
+	tenant, err := dbContext.Tenants().Single(ctx, tenantFilter)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenant: %w", err)
 	}

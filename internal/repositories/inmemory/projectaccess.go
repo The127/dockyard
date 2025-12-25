@@ -4,22 +4,26 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 )
 
-type projectAccessRepository struct {
-	txn *memdb.Txn
+type ProjectAccessRepository struct {
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryProjectAccessRepository(txn *memdb.Txn) repositories.ProjectAccessRepository {
-	return &projectAccessRepository{
-		txn: txn,
+func NewInMemoryProjectAccessRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *ProjectAccessRepository {
+	return &ProjectAccessRepository{
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
-func (r *projectAccessRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.ProjectAccessFilter) ([]*repositories.ProjectAccess, int) {
+func (r *ProjectAccessRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.ProjectAccessFilter) ([]*repositories.ProjectAccess, int) {
 	var result []*repositories.ProjectAccess
 
 	obj := iterator.Next()
@@ -38,7 +42,7 @@ func (r *projectAccessRepository) applyFilter(iterator memdb.ResultIterator, fil
 	return result, count
 }
 
-func (r *projectAccessRepository) matches(projectAccess *repositories.ProjectAccess, filter *repositories.ProjectAccessFilter) bool {
+func (r *ProjectAccessRepository) matches(projectAccess *repositories.ProjectAccess, filter *repositories.ProjectAccessFilter) bool {
 	if filter.HasId() {
 		if projectAccess.GetId() != filter.GetId() {
 			return false
@@ -60,7 +64,7 @@ func (r *projectAccessRepository) matches(projectAccess *repositories.ProjectAcc
 	return true
 }
 
-func (r *projectAccessRepository) First(_ context.Context, filter *repositories.ProjectAccessFilter) (*repositories.ProjectAccess, error) {
+func (r *ProjectAccessRepository) First(_ context.Context, filter *repositories.ProjectAccessFilter) (*repositories.ProjectAccess, error) {
 	iterator, err := r.txn.Get("project_access", "id")
 	if err != nil {
 		return nil, err
@@ -75,8 +79,12 @@ func (r *projectAccessRepository) First(_ context.Context, filter *repositories.
 	return result[0], nil
 }
 
-func (r *projectAccessRepository) Insert(_ context.Context, projectAccess *repositories.ProjectAccess) error {
-	err := r.txn.Insert("project_access", *projectAccess)
+func (r *ProjectAccessRepository) Insert(projectAccess *repositories.ProjectAccess) {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, projectAccess))
+}
+
+func (r *ProjectAccessRepository) ExecuteInsert(tx *memdb.Txn, projectAccess *repositories.ProjectAccess) error {
+	err := tx.Insert("project_access", *projectAccess)
 	if err != nil {
 		return fmt.Errorf("failed to insert project access: %w", err)
 	}
@@ -85,8 +93,12 @@ func (r *projectAccessRepository) Insert(_ context.Context, projectAccess *repos
 	return nil
 }
 
-func (r *projectAccessRepository) Update(_ context.Context, projectAccess *repositories.ProjectAccess) error {
-	err := r.txn.Insert("project_access", *projectAccess)
+func (r *ProjectAccessRepository) Update(projectAccess *repositories.ProjectAccess) {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, projectAccess))
+}
+
+func (r *ProjectAccessRepository) ExecuteUpdate(tx *memdb.Txn, projectAccess *repositories.ProjectAccess) error {
+	err := tx.Insert("project_access", *projectAccess)
 	if err != nil {
 		return fmt.Errorf("failed to insert project: %w", err)
 	}
@@ -95,16 +107,12 @@ func (r *projectAccessRepository) Update(_ context.Context, projectAccess *repos
 	return nil
 }
 
-func (r *projectAccessRepository) Delete(_ context.Context, id uuid.UUID) error {
-	entry, err := r.First(context.Background(), repositories.NewProjectAccessFilter().ById(id))
-	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
-	if entry == nil {
-		return nil
-	}
+func (r *ProjectAccessRepository) Delete(projectAccess *repositories.ProjectAccess) {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, projectAccess))
+}
 
-	err = r.txn.Delete("project_access", entry)
+func (r *ProjectAccessRepository) ExecuteDelete(tx *memdb.Txn, projectAccess *repositories.ProjectAccess) error {
+	err := tx.Delete("project_access", projectAccess)
 	if err != nil {
 		return fmt.Errorf("failed to delete project access: %w", err)
 	}

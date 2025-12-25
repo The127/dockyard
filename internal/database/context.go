@@ -1,8 +1,27 @@
 package database
 
-import "github.com/the127/dockyard/internal/repositories"
+import (
+	"context"
 
-type Transaction interface {
+	"github.com/the127/dockyard/internal/repositories"
+)
+
+const (
+	TenantType int = iota
+	ProjectType
+	ProjectAccessType
+	UserType
+	PatType
+	RepositoryType
+	RepositoryAccessType
+	ManifestType
+	TagType
+	BlobType
+	RepositoryBlobType
+	FileType
+)
+
+type Context interface {
 	Tenants() repositories.TenantRepository
 	Projects() repositories.ProjectRepository
 	ProjectAccess() repositories.ProjectAccessRepository
@@ -15,6 +34,6 @@ type Transaction interface {
 	Blobs() repositories.BlobRepository
 	RepositoryBlobs() repositories.RepositoryBlobRepository
 	Files() repositories.FileRepository
-	Commit() error
-	Rollback() error
+
+	SaveChanges(ctx context.Context) error
 }

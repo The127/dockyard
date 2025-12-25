@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
@@ -30,17 +31,21 @@ func (p *postgresPat) Map() *repositories.Pat {
 	)
 }
 
-type patRepository struct {
-	tx *sql.Tx
+type PatRepository struct {
+	db            *sql.DB
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewPostgresPatRepository(tx *sql.Tx) repositories.PatRepository {
-	return &patRepository{
-		tx: tx,
+func NewPostgresPatRepository(db *sql.DB, changeTracker *change.Tracker, entityType int) *PatRepository {
+	return &PatRepository{
+		db:            db,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
-func (r *patRepository) selectQuery(filter *repositories.PatFilter) *sqlbuilder.SelectBuilder {
+func (r *PatRepository) selectQuery(filter *repositories.PatFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
 		"pats.xmin",
 		"pats.id",
@@ -62,13 +67,13 @@ func (r *patRepository) selectQuery(filter *repositories.PatFilter) *sqlbuilder.
 	return s
 }
 
-func (r *patRepository) First(ctx context.Context, filter *repositories.PatFilter) (*repositories.Pat, error) {
+func (r *PatRepository) First(ctx context.Context, filter *repositories.PatFilter) (*repositories.Pat, error) {
 	s := r.selectQuery(filter)
 	s.Limit(1)
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var pat postgresPat
 	err := row.Scan(&pat.xmin, &pat.id, &pat.createdAt, &pat.updatedAt, &pat.userId, &pat.displayName, &pat.hashedSecret)
@@ -82,7 +87,7 @@ func (r *patRepository) First(ctx context.Context, filter *repositories.PatFilte
 	return pat.Map(), nil
 }
 
-func (r *patRepository) Single(ctx context.Context, filter *repositories.PatFilter) (*repositories.Pat, error) {
+func (r *PatRepository) Single(ctx context.Context, filter *repositories.PatFilter) (*repositories.Pat, error) {
 	result, err := r.First(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -93,13 +98,13 @@ func (r *patRepository) Single(ctx context.Context, filter *repositories.PatFilt
 	return result, nil
 }
 
-func (r *patRepository) List(ctx context.Context, filter *repositories.PatFilter) ([]*repositories.Pat, int, error) {
+func (r *PatRepository) List(ctx context.Context, filter *repositories.PatFilter) ([]*repositories.Pat, int, error) {
 	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	rows, err := r.tx.QueryContext(ctx, query, args...)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
 	}
@@ -119,7 +124,11 @@ func (r *patRepository) List(ctx context.Context, filter *repositories.PatFilter
 	return pats, totalCount, nil
 }
 
-func (r *patRepository) Insert(ctx context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) Insert(pat *repositories.Pat) {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, pat))
+}
+
+func (r *PatRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, pat *repositories.Pat) error {
 	s := sqlbuilder.InsertInto("pats").
 		Cols(
 			"id",
@@ -142,7 +151,7 @@ func (r *patRepository) Insert(ctx context.Context, pat *repositories.Pat) error
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -154,7 +163,12 @@ func (r *patRepository) Insert(ctx context.Context, pat *repositories.Pat) error
 	pat.SetVersion(xmin)
 	return nil
 }
-func (r *patRepository) Update(ctx context.Context, pat *repositories.Pat) error {
+
+func (r *PatRepository) Update(pat *repositories.Pat) {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, pat))
+}
+
+func (r *PatRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, pat *repositories.Pat) error {
 	if !pat.HasChanges() {
 		return nil
 	}
@@ -175,7 +189,7 @@ func (r *patRepository) Update(ctx context.Context, pat *repositories.Pat) error
 	s.Returning("xmin")
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -194,13 +208,17 @@ func (r *patRepository) Update(ctx context.Context, pat *repositories.Pat) error
 	return nil
 }
 
-func (r *patRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *PatRepository) Delete(pat *repositories.Pat) {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, pat))
+}
+
+func (r *PatRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, pat *repositories.Pat) error {
 	s := sqlbuilder.DeleteFrom("pats")
-	s.Where(s.Equal("id", id))
+	s.Where(s.Equal("id", pat.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting pat: %w", err)
 	}

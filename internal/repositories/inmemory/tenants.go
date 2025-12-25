@@ -4,23 +4,27 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
-type tenantRepository struct {
-	txn *memdb.Txn
+type TenantRepository struct {
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryTenantRepository(txn *memdb.Txn) repositories.TenantRepository {
-	return &tenantRepository{
-		txn: txn,
+func NewInMemoryTenantRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *TenantRepository {
+	return &TenantRepository{
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
-func (r *tenantRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.TenantFilter) ([]*repositories.Tenant, int) {
+func (r *TenantRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.TenantFilter) ([]*repositories.Tenant, int) {
 	var result []*repositories.Tenant
 
 	obj := iterator.Next()
@@ -39,7 +43,7 @@ func (r *tenantRepository) applyFilter(iterator memdb.ResultIterator, filter *re
 	return result, count
 }
 
-func (r *tenantRepository) matches(tenant *repositories.Tenant, filter *repositories.TenantFilter) bool {
+func (r *TenantRepository) matches(tenant *repositories.Tenant, filter *repositories.TenantFilter) bool {
 	if filter.HasSlug() {
 		if tenant.GetSlug() != filter.GetSlug() {
 			return false
@@ -55,7 +59,7 @@ func (r *tenantRepository) matches(tenant *repositories.Tenant, filter *reposito
 	return true
 }
 
-func (r *tenantRepository) First(_ context.Context, filter *repositories.TenantFilter) (*repositories.Tenant, error) {
+func (r *TenantRepository) First(_ context.Context, filter *repositories.TenantFilter) (*repositories.Tenant, error) {
 	iterator, err := r.txn.Get("tenants", "id")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenants: %w", err)
@@ -70,7 +74,7 @@ func (r *tenantRepository) First(_ context.Context, filter *repositories.TenantF
 	return result[0], nil
 }
 
-func (r *tenantRepository) Single(_ context.Context, filter *repositories.TenantFilter) (*repositories.Tenant, error) {
+func (r *TenantRepository) Single(_ context.Context, filter *repositories.TenantFilter) (*repositories.Tenant, error) {
 	result, err := r.First(context.Background(), filter)
 	if err != nil {
 		return nil, err
@@ -81,7 +85,7 @@ func (r *tenantRepository) Single(_ context.Context, filter *repositories.Tenant
 	return result, nil
 }
 
-func (r *tenantRepository) List(_ context.Context, filter *repositories.TenantFilter) ([]*repositories.Tenant, int, error) {
+func (r *TenantRepository) List(_ context.Context, filter *repositories.TenantFilter) ([]*repositories.Tenant, int, error) {
 	iterator, err := r.txn.Get("tenants", "id")
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get tenants: %w", err)
@@ -92,7 +96,25 @@ func (r *tenantRepository) List(_ context.Context, filter *repositories.TenantFi
 	return result, count, err
 }
 
-func (r *tenantRepository) Insert(_ context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) Insert(tenant *repositories.Tenant) {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, tenant))
+}
+
+func (r *TenantRepository) ExecuteInsert(tx *memdb.Txn, tenant *repositories.Tenant) error {
+	err := tx.Insert("tenants", *tenant)
+	if err != nil {
+		return fmt.Errorf("failed to insert tenant: %w", err)
+	}
+
+	tenant.ClearChanges()
+	return nil
+}
+
+func (r *TenantRepository) Update(tenant *repositories.Tenant) {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, tenant))
+}
+
+func (r *TenantRepository) ExecuteUpdate(tx *memdb.Txn, tenant *repositories.Tenant) error {
 	err := r.txn.Insert("tenants", *tenant)
 	if err != nil {
 		return fmt.Errorf("failed to insert tenant: %w", err)
@@ -102,24 +124,15 @@ func (r *tenantRepository) Insert(_ context.Context, tenant *repositories.Tenant
 	return nil
 }
 
-func (r *tenantRepository) Update(_ context.Context, tenant *repositories.Tenant) error {
-	err := r.txn.Insert("tenants", *tenant)
-	if err != nil {
-		return fmt.Errorf("failed to insert tenant: %w", err)
-	}
-
-	tenant.ClearChanges()
-	return nil
+func (r *TenantRepository) Delete(tenant *repositories.Tenant) {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, tenant))
 }
 
-func (r *tenantRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	entry, err := r.First(ctx, repositories.NewTenantFilter().ById(id))
+func (r *TenantRepository) ExecuteDelete(tx *memdb.Txn, tenant *repositories.Tenant) error {
+	err := r.txn.Delete("tenants", tenant)
 	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
-	if entry == nil {
-		return nil
+		return fmt.Errorf("failed to delete tenant: %w", err)
 	}
 
-	return r.txn.Delete("tenants", entry)
+	return nil
 }

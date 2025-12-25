@@ -4,22 +4,26 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 )
 
-type repositoryAccessRepository struct {
-	txn *memdb.Txn
+type RepositoryAccessRepository struct {
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryRepositoryAccessRepository(txn *memdb.Txn) repositories.RepositoryAccessRepository {
-	return &repositoryAccessRepository{
-		txn: txn,
+func NewInMemoryRepositoryAccessRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *RepositoryAccessRepository {
+	return &RepositoryAccessRepository{
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
-func (r *repositoryAccessRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.RepositoryAccessFilter) ([]*repositories.RepositoryAccess, int) {
+func (r *RepositoryAccessRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.RepositoryAccessFilter) ([]*repositories.RepositoryAccess, int) {
 	var result []*repositories.RepositoryAccess
 
 	obj := iterator.Next()
@@ -38,7 +42,7 @@ func (r *repositoryAccessRepository) applyFilter(iterator memdb.ResultIterator, 
 	return result, count
 }
 
-func (r *repositoryAccessRepository) matches(repositoryAccess *repositories.RepositoryAccess, filter *repositories.RepositoryAccessFilter) bool {
+func (r *RepositoryAccessRepository) matches(repositoryAccess *repositories.RepositoryAccess, filter *repositories.RepositoryAccessFilter) bool {
 	if filter.HasId() {
 		if repositoryAccess.GetId() != filter.GetId() {
 			return false
@@ -60,7 +64,7 @@ func (r *repositoryAccessRepository) matches(repositoryAccess *repositories.Repo
 	return true
 }
 
-func (r *repositoryAccessRepository) First(_ context.Context, filter *repositories.RepositoryAccessFilter) (*repositories.RepositoryAccess, error) {
+func (r *RepositoryAccessRepository) First(_ context.Context, filter *repositories.RepositoryAccessFilter) (*repositories.RepositoryAccess, error) {
 	iterator, err := r.txn.Get("repository_access", "id")
 	if err != nil {
 		return nil, err
@@ -75,8 +79,12 @@ func (r *repositoryAccessRepository) First(_ context.Context, filter *repositori
 	return result[0], nil
 }
 
-func (r *repositoryAccessRepository) Insert(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
-	err := r.txn.Insert("repository_access", *repositoryAccess)
+func (r *RepositoryAccessRepository) Insert(repositoryAccess *repositories.RepositoryAccess) {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, repositoryAccess))
+}
+
+func (r *RepositoryAccessRepository) ExecuteInsert(tx *memdb.Txn, repositoryAccess *repositories.RepositoryAccess) error {
+	err := tx.Insert("repository_access", *repositoryAccess)
 	if err != nil {
 		return fmt.Errorf("failed to insert repository access: %w", err)
 	}
@@ -85,8 +93,12 @@ func (r *repositoryAccessRepository) Insert(_ context.Context, repositoryAccess 
 	return nil
 }
 
-func (r *repositoryAccessRepository) Update(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
-	err := r.txn.Insert("repository_access", *repositoryAccess)
+func (r *RepositoryAccessRepository) Update(repositoryAccess *repositories.RepositoryAccess) {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, repositoryAccess))
+}
+
+func (r *RepositoryAccessRepository) ExecuteUpdate(tx *memdb.Txn, repositoryAccess *repositories.RepositoryAccess) error {
+	err := tx.Insert("repository_access", *repositoryAccess)
 	if err != nil {
 		return fmt.Errorf("failed to insert project: %w", err)
 	}
@@ -95,17 +107,12 @@ func (r *repositoryAccessRepository) Update(_ context.Context, repositoryAccess 
 	return nil
 }
 
-func (r *repositoryAccessRepository) Delete(_ context.Context, id uuid.UUID) error {
-	entry, err := r.First(context.Background(), repositories.NewRepositoryAccessFilter().ById(id))
-	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
+func (r *RepositoryAccessRepository) Delete(repositoryAccess *repositories.RepositoryAccess) {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, repositoryAccess))
+}
 
-	if entry == nil {
-		return nil
-	}
-
-	err = r.txn.Delete("repository_access", entry)
+func (r *RepositoryAccessRepository) ExecuteDelete(tx *memdb.Txn, repositoryAccess *repositories.RepositoryAccess) error {
+	err := tx.Delete("repository_access", repositoryAccess)
 	if err != nil {
 		return fmt.Errorf("failed to delete repository access: %w", err)
 	}

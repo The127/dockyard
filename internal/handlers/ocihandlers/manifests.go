@@ -17,15 +17,14 @@ import (
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/middlewares/ociAuthentication"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 	"github.com/the127/dockyard/internal/services/blobStorage"
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
 
-func getManifestByReference(ctx context.Context, tx database.Transaction, repositoryId uuid.UUID, reference string) (*repositories.Manifest, *repositories.Blob, error) { // nolint:unparam
+func getManifestByReference(ctx context.Context, dbContext database.Context, repositoryId uuid.UUID, reference string) (*repositories.Manifest, *repositories.Blob, error) { // nolint:unparam
 	var manifestFilter *repositories.ManifestFilter
 	if !strings.HasPrefix(reference, "sha256:") {
-		tag, err := tx.Tags().First(ctx, repositories.NewTagFilter().ByRepositoryId(repositoryId).ByName(reference))
+		tag, err := dbContext.Tags().First(ctx, repositories.NewTagFilter().ByRepositoryId(repositoryId).ByName(reference))
 		if err != nil {
 			return nil, nil, err
 		}
@@ -40,7 +39,7 @@ func getManifestByReference(ctx context.Context, tx database.Transaction, reposi
 		manifestFilter = repositories.NewManifestFilter().ByRepositoryId(repositoryId).ByDigest(reference)
 	}
 
-	manifest, err := tx.Manifests().First(ctx, manifestFilter)
+	manifest, err := dbContext.Manifests().First(ctx, manifestFilter)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -50,7 +49,7 @@ func getManifestByReference(ctx context.Context, tx database.Transaction, reposi
 		return nil, nil, err
 	}
 
-	blob, err := tx.Blobs().First(ctx, repositories.NewBlobFilter().ById(manifest.GetBlobId()))
+	blob, err := dbContext.Blobs().First(ctx, repositories.NewBlobFilter().ById(manifest.GetBlobId()))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -78,20 +77,20 @@ func ManifestsDownload(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	reference := vars["reference"]
 
-	dbService := ioc.GetDependency[services.DbService](scope)
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[database.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
-	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
+	_, _, repository, err := getRepositoryByIdentifier(ctx, dbContext, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
-	_, blob, err := getManifestByReference(ctx, tx, repository.GetId(), reference)
+	_, blob, err := getManifestByReference(ctx, dbContext, repository.GetId(), reference)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -122,20 +121,20 @@ func ManifestsExists(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	reference := vars["reference"]
 
-	dbService := ioc.GetDependency[services.DbService](scope)
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[database.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
-	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
+	_, _, repository, err := getRepositoryByIdentifier(ctx, dbContext, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
-	_, blob, err := getManifestByReference(ctx, tx, repository.GetId(), reference)
+	_, blob, err := getManifestByReference(ctx, dbContext, repository.GetId(), reference)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -158,14 +157,14 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 
 	scope := middlewares.GetScope(ctx)
 
-	dbService := ioc.GetDependency[services.DbService](scope)
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[database.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
-	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
+	_, _, repository, err := getRepositoryByIdentifier(ctx, dbContext, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -192,25 +191,18 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	blob, err := tx.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(uploadResponse.Digest))
+	blob, err := dbContext.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(uploadResponse.Digest))
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 	if blob == nil {
 		blob = repositories.NewBlob(uploadResponse.Digest, int64(len(bodyBytes)))
-		if err := tx.Blobs().Insert(ctx, blob); err != nil {
-			ociError.HandleHttpError(w, r, err)
-			return
-		}
+		dbContext.Blobs().Insert(blob)
 	}
 
 	manifest := repositories.NewManifest(repository.GetId(), blob.GetId(), uploadResponse.Digest)
-	err = tx.Manifests().Insert(ctx, manifest)
-	if err != nil {
-		ociError.HandleHttpError(w, r, err)
-		return
-	}
+	dbContext.Manifests().Insert(manifest)
 
 	vars := mux.Vars(r)
 	reference := vars["reference"]
@@ -222,11 +214,7 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// if it's a tag, insert it into the database
-		err := tx.Tags().Insert(ctx, repositories.NewTag(repository.GetId(), manifest.GetId(), reference))
-		if err != nil {
-			ociError.HandleHttpError(w, r, err)
-			return
-		}
+		dbContext.Tags().Insert(repositories.NewTag(repository.GetId(), manifest.GetId(), reference))
 	}
 
 	location := fmt.Sprintf("/v2/%s/%s/manifests/%s", repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, uploadResponse.Digest)

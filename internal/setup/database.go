@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/The127/ioc"
@@ -8,17 +9,32 @@ import (
 	"github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/database/inmemory"
 	"github.com/the127/dockyard/internal/database/postgres"
-	"github.com/the127/dockyard/internal/services"
+	"github.com/the127/dockyard/internal/logging"
 )
 
 func Database(dc *ioc.DependencyCollection, c config.DatabaseConfig) database.Database {
 	db := connectToDatabase(c)
 
-	ioc.RegisterScoped(dc, func(_ *ioc.DependencyProvider) services.DbService {
-		return services.NewDbService(db)
+	ioc.RegisterSingleton(dc, func(_ *ioc.DependencyProvider) database.Factory {
+		return database.NewDbFactory(db)
 	})
-	ioc.RegisterCloseHandler(dc, func(dbService services.DbService) error {
-		return dbService.Close()
+
+	ioc.RegisterScoped(dc, func(dp *ioc.DependencyProvider) database.Context {
+		dbFactory := ioc.GetDependency[database.Factory](dp)
+		dbContext, err := dbFactory.NewDbContext(context.TODO())
+		if err != nil {
+			logging.Logger.Panicf("failed to create database context: %s", err)
+		}
+
+		return dbContext
+	})
+	ioc.RegisterCloseHandler(dc, func(dbContext database.Context) error {
+		err := dbContext.SaveChanges(context.TODO())
+		if err != nil {
+			return fmt.Errorf("failed to save changes: %w", err)
+		}
+
+		return nil
 	})
 
 	return db

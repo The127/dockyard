@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/utils/pointer"
 )
 
@@ -22,7 +23,7 @@ const (
 
 type ProjectAccess struct {
 	BaseModel
-	Changes[ProjectAccessChange]
+	change.List[ProjectAccessChange]
 
 	projectId uuid.UUID
 	userId    uuid.UUID
@@ -33,7 +34,7 @@ type ProjectAccess struct {
 func NewProjectAccess(projectId uuid.UUID, userId uuid.UUID, role ProjectAccessRole) *ProjectAccess {
 	return &ProjectAccess{
 		BaseModel: NewBaseModel(),
-		Changes:   NewChanges[ProjectAccessChange](),
+		List:      change.NewChanges[ProjectAccessChange](),
 		projectId: projectId,
 		userId:    userId,
 		role:      role,
@@ -43,7 +44,7 @@ func NewProjectAccess(projectId uuid.UUID, userId uuid.UUID, role ProjectAccessR
 func NewProjectAccessFromDB(projectId uuid.UUID, userId uuid.UUID, role ProjectAccessRole, base BaseModel) *ProjectAccess {
 	return &ProjectAccess{
 		BaseModel: base,
-		Changes:   NewChanges[ProjectAccessChange](),
+		List:      change.NewChanges[ProjectAccessChange](),
 		projectId: projectId,
 		userId:    userId,
 		role:      role,
@@ -68,7 +69,7 @@ func (p *ProjectAccess) SetRole(role ProjectAccessRole) {
 	}
 
 	p.role = role
-	p.trackChange(ProjectAccessChangeRole)
+	p.TrackChange(ProjectAccessChangeRole)
 }
 
 type ProjectAccessFilter struct {
@@ -130,7 +131,7 @@ func (f *ProjectAccessFilter) GetUserId() uuid.UUID {
 
 type ProjectAccessRepository interface {
 	First(ctx context.Context, filter *ProjectAccessFilter) (*ProjectAccess, error)
-	Insert(ctx context.Context, entity *ProjectAccess) error
-	Update(ctx context.Context, entity *ProjectAccess) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Insert(entity *ProjectAccess)
+	Update(entity *ProjectAccess)
+	Delete(entity *ProjectAccess)
 }

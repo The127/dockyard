@@ -4,23 +4,27 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
-type repositoryBlobRepository struct {
-	txn *memdb.Txn
+type RepositoryBlobRepository struct {
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryRepositoryBlobRepository(txn *memdb.Txn) repositories.RepositoryBlobRepository {
-	return &repositoryBlobRepository{
-		txn: txn,
+func NewInMemoryRepositoryBlobRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *RepositoryBlobRepository {
+	return &RepositoryBlobRepository{
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
-func (r *repositoryBlobRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.RepositoryBlobFilter) ([]*repositories.RepositoryBlob, int) {
+func (r *RepositoryBlobRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.RepositoryBlobFilter) ([]*repositories.RepositoryBlob, int) {
 	var result []*repositories.RepositoryBlob
 
 	obj := iterator.Next()
@@ -39,7 +43,7 @@ func (r *repositoryBlobRepository) applyFilter(iterator memdb.ResultIterator, fi
 	return result, count
 }
 
-func (r *repositoryBlobRepository) matches(repositoryBlob *repositories.RepositoryBlob, filter *repositories.RepositoryBlobFilter) bool {
+func (r *RepositoryBlobRepository) matches(repositoryBlob *repositories.RepositoryBlob, filter *repositories.RepositoryBlobFilter) bool {
 	if filter.HasRepositoryId() {
 		if repositoryBlob.GetRepositoryId() != filter.GetRepositoryId() {
 			return false
@@ -61,7 +65,7 @@ func (r *repositoryBlobRepository) matches(repositoryBlob *repositories.Reposito
 	return true
 }
 
-func (r *repositoryBlobRepository) First(_ context.Context, filter *repositories.RepositoryBlobFilter) (*repositories.RepositoryBlob, error) {
+func (r *RepositoryBlobRepository) First(_ context.Context, filter *repositories.RepositoryBlobFilter) (*repositories.RepositoryBlob, error) {
 	iterator, err := r.txn.Get("repository_blobs", "id")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get repository blobs: %w", err)
@@ -76,7 +80,7 @@ func (r *repositoryBlobRepository) First(_ context.Context, filter *repositories
 	return result[0], nil
 }
 
-func (r *repositoryBlobRepository) Single(_ context.Context, filter *repositories.RepositoryBlobFilter) (*repositories.RepositoryBlob, error) {
+func (r *RepositoryBlobRepository) Single(_ context.Context, filter *repositories.RepositoryBlobFilter) (*repositories.RepositoryBlob, error) {
 	result, err := r.First(context.Background(), filter)
 	if err != nil {
 		return nil, err
@@ -87,7 +91,7 @@ func (r *repositoryBlobRepository) Single(_ context.Context, filter *repositorie
 	return result, nil
 }
 
-func (r *repositoryBlobRepository) List(_ context.Context, filter *repositories.RepositoryBlobFilter) ([]*repositories.RepositoryBlob, int, error) {
+func (r *RepositoryBlobRepository) List(_ context.Context, filter *repositories.RepositoryBlobFilter) ([]*repositories.RepositoryBlob, int, error) {
 	iterator, err := r.txn.Get("repository_blobs", "id")
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get repository blobs: %w", err)
@@ -98,8 +102,12 @@ func (r *repositoryBlobRepository) List(_ context.Context, filter *repositories.
 	return result, count, nil
 }
 
-func (r *repositoryBlobRepository) Insert(_ context.Context, repositoryBlob *repositories.RepositoryBlob) error {
-	err := r.txn.Insert("repository_blobs", *repositoryBlob)
+func (r *RepositoryBlobRepository) Insert(repositoryBlob *repositories.RepositoryBlob) {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, repositoryBlob))
+}
+
+func (r *RepositoryBlobRepository) ExecuteInsert(tx *memdb.Txn, repositoryBlob *repositories.RepositoryBlob) error {
+	err := tx.Insert("repository_blobs", *repositoryBlob)
 	if err != nil {
 		return fmt.Errorf("failed to insert repository blob: %w", err)
 	}
@@ -107,16 +115,12 @@ func (r *repositoryBlobRepository) Insert(_ context.Context, repositoryBlob *rep
 	return nil
 }
 
-func (r *repositoryBlobRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	entry, err := r.First(ctx, repositories.NewRepositoryBlobFilter().ById(id))
-	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
-	if entry == nil {
-		return nil
-	}
+func (r *RepositoryBlobRepository) Delete(repositoryBlob *repositories.RepositoryBlob) {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, repositoryBlob))
+}
 
-	err = r.txn.Delete("repository_blobs", entry)
+func (r *RepositoryBlobRepository) ExecuteDelete(tx *memdb.Txn, repositoryBlob *repositories.RepositoryBlob) error {
+	err := tx.Delete("repository_blobs", repositoryBlob)
 	if err != nil {
 		return fmt.Errorf("failed to delete repository blob: %w", err)
 	}

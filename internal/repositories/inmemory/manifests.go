@@ -4,23 +4,27 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
-type manifestRepository struct {
-	txn *memdb.Txn
+type ManifestRepository struct {
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryManifestRepository(txn *memdb.Txn) repositories.ManifestRepository {
-	return &manifestRepository{
-		txn: txn,
+func NewInMemoryManifestRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *ManifestRepository {
+	return &ManifestRepository{
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
-func (r *manifestRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.ManifestFilter) ([]*repositories.Manifest, int) {
+func (r *ManifestRepository) applyFilter(iterator memdb.ResultIterator, filter *repositories.ManifestFilter) ([]*repositories.Manifest, int) {
 	var result []*repositories.Manifest
 
 	obj := iterator.Next()
@@ -39,7 +43,7 @@ func (r *manifestRepository) applyFilter(iterator memdb.ResultIterator, filter *
 	return result, count
 }
 
-func (r *manifestRepository) matches(manifest *repositories.Manifest, filter *repositories.ManifestFilter) bool {
+func (r *ManifestRepository) matches(manifest *repositories.Manifest, filter *repositories.ManifestFilter) bool {
 	if filter.HasId() {
 		if manifest.GetId() != filter.GetId() {
 			return false
@@ -67,7 +71,7 @@ func (r *manifestRepository) matches(manifest *repositories.Manifest, filter *re
 	return true
 }
 
-func (r *manifestRepository) First(_ context.Context, filter *repositories.ManifestFilter) (*repositories.Manifest, error) {
+func (r *ManifestRepository) First(_ context.Context, filter *repositories.ManifestFilter) (*repositories.Manifest, error) {
 	iterator, err := r.txn.Get("manifests", "id")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get manifests: %w", err)
@@ -82,7 +86,7 @@ func (r *manifestRepository) First(_ context.Context, filter *repositories.Manif
 	return result[0], nil
 }
 
-func (r *manifestRepository) Single(_ context.Context, filter *repositories.ManifestFilter) (*repositories.Manifest, error) {
+func (r *ManifestRepository) Single(_ context.Context, filter *repositories.ManifestFilter) (*repositories.Manifest, error) {
 	result, err := r.First(context.Background(), filter)
 	if err != nil {
 		return nil, err
@@ -93,7 +97,7 @@ func (r *manifestRepository) Single(_ context.Context, filter *repositories.Mani
 	return result, nil
 }
 
-func (r *manifestRepository) List(_ context.Context, filter *repositories.ManifestFilter) ([]*repositories.Manifest, int, error) {
+func (r *ManifestRepository) List(_ context.Context, filter *repositories.ManifestFilter) ([]*repositories.Manifest, int, error) {
 	iterator, err := r.txn.Get("manifests", "id")
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to get manifests: %w", err)
@@ -104,8 +108,12 @@ func (r *manifestRepository) List(_ context.Context, filter *repositories.Manife
 	return result, count, nil
 }
 
-func (r *manifestRepository) Insert(_ context.Context, manifest *repositories.Manifest) error {
-	err := r.txn.Insert("manifests", *manifest)
+func (r *ManifestRepository) Insert(manifest *repositories.Manifest) {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, manifest))
+}
+
+func (r *ManifestRepository) ExecuteInsert(tx *memdb.Txn, manifest *repositories.Manifest) error {
+	err := tx.Insert("manifests", *manifest)
 	if err != nil {
 		return fmt.Errorf("failed to insert manifest: %w", err)
 	}
@@ -113,8 +121,12 @@ func (r *manifestRepository) Insert(_ context.Context, manifest *repositories.Ma
 	return nil
 }
 
-func (r *manifestRepository) Update(_ context.Context, manifest *repositories.Manifest) error {
-	err := r.txn.Insert("manifests", *manifest)
+func (r *ManifestRepository) Update(manifest *repositories.Manifest) {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, manifest))
+}
+
+func (r *ManifestRepository) ExecuteUpdate(tx *memdb.Txn, manifest *repositories.Manifest) error {
+	err := tx.Insert("manifests", *manifest)
 	if err != nil {
 		return fmt.Errorf("failed to update manifest: %w", err)
 	}
@@ -122,16 +134,12 @@ func (r *manifestRepository) Update(_ context.Context, manifest *repositories.Ma
 	return nil
 }
 
-func (r *manifestRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	entry, err := r.First(ctx, repositories.NewManifestFilter().ById(id))
-	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
-	if entry == nil {
-		return nil
-	}
+func (r *ManifestRepository) Delete(manifest *repositories.Manifest) {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, manifest))
+}
 
-	err = r.txn.Delete("manifests", entry)
+func (r *ManifestRepository) ExecuteDelete(tx *memdb.Txn, manifest *repositories.Manifest) error {
+	err := tx.Delete("manifests", manifest)
 	if err != nil {
 		return fmt.Errorf("failed to delete manifest: %w", err)
 	}

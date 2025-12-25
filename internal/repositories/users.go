@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/utils/pointer"
 )
 
@@ -16,7 +17,7 @@ const (
 
 type User struct {
 	BaseModel
-	Changes[UserChange]
+	change.List[UserChange]
 
 	tenantId uuid.UUID
 	subject  string
@@ -28,7 +29,7 @@ type User struct {
 func NewUser(tenantId uuid.UUID, subject string) *User {
 	return &User{
 		BaseModel:   NewBaseModel(),
-		Changes:     NewChanges[UserChange](),
+		List:        change.NewChanges[UserChange](),
 		tenantId:    tenantId,
 		subject:     subject,
 		displayName: nil,
@@ -39,7 +40,7 @@ func NewUser(tenantId uuid.UUID, subject string) *User {
 func NewUserFromDB(tenantId uuid.UUID, subject string, displayName *string, email *string, base BaseModel) *User {
 	return &User{
 		BaseModel:   base,
-		Changes:     NewChanges[UserChange](),
+		List:        change.NewChanges[UserChange](),
 		tenantId:    tenantId,
 		subject:     subject,
 		displayName: displayName,
@@ -65,7 +66,7 @@ func (u *User) SetDisplayName(displayName *string) {
 	}
 
 	u.displayName = displayName
-	u.trackChange(UserChangeDisplayName)
+	u.TrackChange(UserChangeDisplayName)
 }
 
 func (u *User) GetEmail() *string {
@@ -78,7 +79,7 @@ func (u *User) SetEmail(email *string) {
 	}
 
 	u.email = email
-	u.trackChange(UserChangeEmail)
+	u.TrackChange(UserChangeEmail)
 }
 
 type UserFilter struct {
@@ -142,7 +143,7 @@ type UserRepository interface {
 	Single(ctx context.Context, filter *UserFilter) (*User, error)
 	First(ctx context.Context, filter *UserFilter) (*User, error)
 	List(ctx context.Context, filter *UserFilter) ([]*User, int, error)
-	Insert(ctx context.Context, user *User) error
-	Update(ctx context.Context, user *User) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Insert(user *User)
+	Update(user *User)
+	Delete(user *User)
 }

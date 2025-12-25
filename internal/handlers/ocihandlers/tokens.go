@@ -22,7 +22,6 @@ import (
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/middlewares/ociAuthentication"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
 
@@ -45,15 +44,15 @@ func Tokens(w http.ResponseWriter, r *http.Request) {
 
 	ctx := r.Context()
 	scope := middlewares.GetScope(ctx)
-	dbService := ioc.GetDependency[services.DbService](scope)
 
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[database.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
-	tenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(tenantSlug))
+	tenant, err := dbContext.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(tenantSlug))
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -74,7 +73,7 @@ func Tokens(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	restrictedScope, err := restrictScope(ctx, tx, userId, requestedScope)
+	restrictedScope, err := restrictScope(ctx, dbContext, userId, requestedScope)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -130,7 +129,7 @@ func Tokens(w http.ResponseWriter, r *http.Request) {
 
 func checkAccessForUserAndRepository(
 	ctx context.Context,
-	tx database.Transaction,
+	dbContext database.Context,
 	userId uuid.UUID,
 	repository *repositories.Repository,
 	accessType ociAuthentication.Access,
@@ -150,7 +149,7 @@ func checkAccessForUserAndRepository(
 	repositoryAccessFilter = repositories.NewRepositoryAccessFilter().
 		ByRepositoryId(repository.GetId()).
 		ByUserId(userId)
-	repositoryAccess, err = tx.RepositoryAccess().First(ctx, repositoryAccessFilter)
+	repositoryAccess, err = dbContext.RepositoryAccess().First(ctx, repositoryAccessFilter)
 	if err != nil {
 		return false, fmt.Errorf("getting repository access: %w", err)
 	}
@@ -170,12 +169,12 @@ func checkAccessForUserAndRepository(
 	return false, nil
 }
 
-func restrictScope(ctx context.Context, tx database.Transaction, userId uuid.UUID, scope *ociScope) (*ociScope, error) {
+func restrictScope(ctx context.Context, dbContext database.Context, userId uuid.UUID, scope *ociScope) (*ociScope, error) {
 	if scope == nil {
 		return nil, nil
 	}
 
-	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, scope.repository)
+	_, _, repository, err := getRepositoryByIdentifier(ctx, dbContext, scope.repository)
 
 	if err != nil {
 		var ociErr *ociError.OciError
@@ -189,7 +188,7 @@ func restrictScope(ctx context.Context, tx database.Transaction, userId uuid.UUI
 	allowedAccesses := make([]ociAuthentication.Access, 0, len(scope.access))
 
 	for _, access := range scope.access {
-		ok, err := checkAccessForUserAndRepository(ctx, tx, userId, repository, access)
+		ok, err := checkAccessForUserAndRepository(ctx, dbContext, userId, repository, access)
 		if err != nil {
 			return nil, err
 		}
@@ -283,9 +282,9 @@ func getUserId(r *http.Request, tenant *repositories.Tenant) (uuid.UUID, error) 
 
 	ctx := r.Context()
 	scope := middlewares.GetScope(ctx)
-	dbService := ioc.GetDependency[services.DbService](scope)
 
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[database.Factory](scope)
+	tx, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("getting transaction: %w", err)
 	}

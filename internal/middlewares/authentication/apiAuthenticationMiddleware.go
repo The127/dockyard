@@ -8,9 +8,9 @@ import (
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 	"github.com/the127/dockyard/internal/utils/apiError"
 
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -54,13 +54,13 @@ func getApiCurrentUser(r *http.Request, tenantSlug string) (*CurrentUser, error)
 	ctx := r.Context()
 	scope := middlewares.GetScope(ctx)
 
-	dbService := ioc.GetDependency[services.DbService](scope)
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[db.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
 
-	tenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(tenantSlug))
+	tenant, err := dbContext.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(tenantSlug))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenant: %w", err)
 	}
@@ -137,7 +137,7 @@ func getApiCurrentUser(r *http.Request, tenantSlug string) (*CurrentUser, error)
 	}
 
 	// get or create the user
-	user, err := tx.Users().First(ctx, repositories.NewUserFilter().BySubject(idToken.Subject))
+	user, err := dbContext.Users().First(ctx, repositories.NewUserFilter().BySubject(idToken.Subject))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
@@ -155,9 +155,11 @@ func getApiCurrentUser(r *http.Request, tenantSlug string) (*CurrentUser, error)
 			user.SetDisplayName(&nameClaim)
 		}
 
-		err = tx.Users().Insert(ctx, user)
+		dbContext.Users().Insert(user)
+
+		err = dbContext.SaveChanges(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to insert user: %w", err)
+			return nil, fmt.Errorf("failed to save changes: %w", err)
 		}
 	}
 

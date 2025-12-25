@@ -4,6 +4,7 @@ import (
 	"context"
 	"maps"
 
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/utils/pointer"
 
 	"github.com/google/uuid"
@@ -22,7 +23,7 @@ const (
 
 type Tenant struct {
 	BaseModel
-	Changes[TenantChange]
+	change.List[TenantChange]
 
 	slug        string
 	displayName string
@@ -61,7 +62,7 @@ func NewTenantOidcConfig(
 func NewTenant(slug string, displayName string, oidcConfig TenantOidcConfig) *Tenant {
 	return &Tenant{
 		BaseModel:           NewBaseModel(),
-		Changes:             NewChanges[TenantChange](),
+		List:                change.NewChanges[TenantChange](),
 		slug:                slug,
 		displayName:         displayName,
 		oidcClient:          oidcConfig.Client,
@@ -75,7 +76,7 @@ func NewTenant(slug string, displayName string, oidcConfig TenantOidcConfig) *Te
 func NewTenantFromDB(slug string, displayName string, oidcConfig TenantOidcConfig, base BaseModel) *Tenant {
 	return &Tenant{
 		BaseModel:           base,
-		Changes:             NewChanges[TenantChange](),
+		List:                change.NewChanges[TenantChange](),
 		slug:                slug,
 		displayName:         displayName,
 		oidcClient:          oidcConfig.Client,
@@ -100,7 +101,7 @@ func (t *Tenant) SetDisplayName(displayName string) {
 	}
 
 	t.displayName = displayName
-	t.trackChange(TenantChangeDisplayName)
+	t.TrackChange(TenantChangeDisplayName)
 }
 
 func (t *Tenant) GetOidcClient() string {
@@ -113,7 +114,7 @@ func (t *Tenant) SetOidcClient(oidcClient string) {
 	}
 
 	t.oidcClient = oidcClient
-	t.trackChange(TenantChangeOidcClient)
+	t.TrackChange(TenantChangeOidcClient)
 }
 
 func (t *Tenant) GetOidcIssuer() string {
@@ -126,7 +127,7 @@ func (t *Tenant) SetOidcIssuer(oidcIssuer string) {
 	}
 
 	t.oidcIssuer = oidcIssuer
-	t.trackChange(TenantChangeOidcIssuer)
+	t.TrackChange(TenantChangeOidcIssuer)
 }
 
 func (t *Tenant) GetOidcRoleClaim() string {
@@ -139,7 +140,7 @@ func (t *Tenant) SetOidcRoleClaim(oidcRoleClaim string) {
 	}
 
 	t.oidcRoleClaim = oidcRoleClaim
-	t.trackChange(TenantChangeOidcRoleClaim)
+	t.TrackChange(TenantChangeOidcRoleClaim)
 }
 
 func (t *Tenant) GetOidcRoleClaimFormat() string {
@@ -152,7 +153,7 @@ func (t *Tenant) SetOidcRoleClaimFormat(oidcRoleClaimFormat string) {
 	}
 
 	t.oidcRoleClaimFormat = oidcRoleClaimFormat
-	t.trackChange(TenantChangeOidcRoleClaimFormat)
+	t.TrackChange(TenantChangeOidcRoleClaimFormat)
 }
 
 func (t *Tenant) GetOidcRoleMapping() map[string]string {
@@ -165,7 +166,7 @@ func (t *Tenant) SetOidcRoleMapping(oidcRoleMapping map[string]string) {
 	}
 
 	t.oidcRoleMapping = oidcRoleMapping
-	t.trackChange(TenantChangeOidcRoleMapping)
+	t.TrackChange(TenantChangeOidcRoleMapping)
 }
 
 type TenantFilter struct {
@@ -214,7 +215,7 @@ type TenantRepository interface {
 	Single(ctx context.Context, filter *TenantFilter) (*Tenant, error)
 	First(ctx context.Context, filter *TenantFilter) (*Tenant, error)
 	List(ctx context.Context, filter *TenantFilter) ([]*Tenant, int, error)
-	Insert(ctx context.Context, tenant *Tenant) error
-	Update(ctx context.Context, tenant *Tenant) error
-	Delete(ctx context.Context, id uuid.UUID) error
+	Insert(tenant *Tenant)
+	Update(tenant *Tenant)
+	Delete(tenant *Tenant)
 }

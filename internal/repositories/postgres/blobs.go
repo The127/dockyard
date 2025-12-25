@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/google/uuid"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
@@ -29,17 +29,21 @@ func (b *postgresBlob) Map() *repositories.Blob {
 	)
 }
 
-type blobRepository struct {
-	tx *sql.Tx
+type BlobRepository struct {
+	db            *sql.DB
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewPostgresBlobRepository(tx *sql.Tx) repositories.BlobRepository {
-	return &blobRepository{
-		tx: tx,
+func NewPostgresBlobRepository(db *sql.DB, changeTracker *change.Tracker, entityType int) *BlobRepository {
+	return &BlobRepository{
+		db:            db,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
-func (r *blobRepository) selectQuery(filter *repositories.BlobFilter) *sqlbuilder.SelectBuilder {
+func (r *BlobRepository) selectQuery(filter *repositories.BlobFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
 		"blobs.id",
 		"blobs.created_at",
@@ -60,13 +64,13 @@ func (r *blobRepository) selectQuery(filter *repositories.BlobFilter) *sqlbuilde
 	return s
 }
 
-func (r *blobRepository) First(ctx context.Context, filter *repositories.BlobFilter) (*repositories.Blob, error) {
+func (r *BlobRepository) First(ctx context.Context, filter *repositories.BlobFilter) (*repositories.Blob, error) {
 	s := r.selectQuery(filter)
 	s.Limit(1)
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var blob postgresBlob
 	err := row.Scan(&blob.id, &blob.createdAt, &blob.updatedAt, &blob.xmin, &blob.digest, &blob.size)
@@ -80,7 +84,7 @@ func (r *blobRepository) First(ctx context.Context, filter *repositories.BlobFil
 	return blob.Map(), nil
 }
 
-func (r *blobRepository) Single(ctx context.Context, filter *repositories.BlobFilter) (*repositories.Blob, error) {
+func (r *BlobRepository) Single(ctx context.Context, filter *repositories.BlobFilter) (*repositories.Blob, error) {
 	result, err := r.First(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -91,13 +95,13 @@ func (r *blobRepository) Single(ctx context.Context, filter *repositories.BlobFi
 	return result, nil
 }
 
-func (r *blobRepository) List(ctx context.Context, filter *repositories.BlobFilter) ([]*repositories.Blob, int, error) {
+func (r *BlobRepository) List(ctx context.Context, filter *repositories.BlobFilter) ([]*repositories.Blob, int, error) {
 	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	rows, err := r.tx.QueryContext(ctx, query, args...)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
 	}
@@ -117,7 +121,11 @@ func (r *blobRepository) List(ctx context.Context, filter *repositories.BlobFilt
 	return blobs, totalCount, nil
 }
 
-func (r *blobRepository) Insert(ctx context.Context, blob *repositories.Blob) error {
+func (r *BlobRepository) Insert(blob *repositories.Blob) {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, blob))
+}
+
+func (r *BlobRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, blob *repositories.Blob) error {
 	s := sqlbuilder.InsertInto("blobs").
 		Cols(
 			"id",
@@ -138,7 +146,7 @@ func (r *blobRepository) Insert(ctx context.Context, blob *repositories.Blob) er
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -151,13 +159,17 @@ func (r *blobRepository) Insert(ctx context.Context, blob *repositories.Blob) er
 	return nil
 }
 
-func (r *blobRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *BlobRepository) Delete(blob *repositories.Blob) {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, blob))
+}
+
+func (r *BlobRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, blob *repositories.Blob) error {
 	s := sqlbuilder.DeleteFrom("blob")
-	s.Where(s.Equal("id", id))
+	s.Where(s.Equal("id", blob.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting blob: %w", err)
 	}
