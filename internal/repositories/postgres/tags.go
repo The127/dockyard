@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
@@ -46,12 +47,16 @@ func (t *postgresTag) Map() *repositories.Tag {
 }
 
 type tagRepository struct {
-	tx *sql.Tx
+	tx            *sql.Tx
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewPostgresTagRepository(tx *sql.Tx) repositories.TagRepository {
+func NewPostgresTagRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *tagRepository {
 	return &tagRepository{
-		tx: tx,
+		tx:            tx,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -166,6 +171,11 @@ func (r *tagRepository) List(ctx context.Context, filter *repositories.TagFilter
 }
 
 func (r *tagRepository) Insert(ctx context.Context, tag *repositories.Tag) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, tag))
+	return nil
+}
+
+func (r *tagRepository) ExecuteInsert(ctx context.Context, tag *repositories.Tag) error {
 	s := sqlbuilder.InsertInto("tags").
 		Cols(
 			"id",
@@ -201,9 +211,14 @@ func (r *tagRepository) Insert(ctx context.Context, tag *repositories.Tag) error
 	return nil
 }
 
-func (r *tagRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *tagRepository) Delete(ctx context.Context, tag *repositories.Tag) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, tag))
+	return nil
+}
+
+func (r *tagRepository) ExecuteDelete(ctx context.Context, tag *repositories.Tag) error {
 	s := sqlbuilder.DeleteFrom("tags")
-	s.Where(s.Equal("id", id))
+	s.Where(s.Equal("id", tag.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)

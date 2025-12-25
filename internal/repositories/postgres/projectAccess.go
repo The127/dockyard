@@ -114,6 +114,11 @@ func (r *projectAccessRepository) List(ctx context.Context, filter *repositories
 }
 
 func (r *projectAccessRepository) Insert(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, projectAccess))
+	return nil
+}
+
+func (r *projectAccessRepository) ExecuteInsert(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
 	s := sqlbuilder.InsertInto("project_accesses").
 		Cols(
 			"id",
@@ -151,6 +156,11 @@ func (r *projectAccessRepository) Insert(ctx context.Context, projectAccess *rep
 }
 
 func (r *projectAccessRepository) Update(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, projectAccess))
+	return nil
+}
+
+func (r *projectAccessRepository) ExecuteUpdate(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
 	if !projectAccess.HasChanges() {
 		return nil
 	}
@@ -190,9 +200,14 @@ func (r *projectAccessRepository) Update(ctx context.Context, projectAccess *rep
 	return nil
 }
 
-func (r *projectAccessRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *projectAccessRepository) Delete(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, projectAccess))
+	return nil
+}
+
+func (r *projectAccessRepository) ExecuteDelete(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
 	s := sqlbuilder.DeleteFrom("project_accesses")
-	s.Where(s.Equal("id", id))
+	s.Where(s.Equal("id", projectAccess.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)

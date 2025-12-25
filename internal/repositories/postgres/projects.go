@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
@@ -33,12 +34,16 @@ func (p *postgresProject) Map() *repositories.Project {
 }
 
 type projectRepository struct {
-	tx *sql.Tx
+	tx            *sql.Tx
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewPostgresProjectRepository(tx *sql.Tx) repositories.ProjectRepository {
+func NewPostgresProjectRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *projectRepository {
 	return &projectRepository{
-		tx: tx,
+		tx:            tx,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -127,6 +132,11 @@ func (r *projectRepository) List(ctx context.Context, filter *repositories.Proje
 }
 
 func (r *projectRepository) Insert(ctx context.Context, project *repositories.Project) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, project))
+	return nil
+}
+
+func (r *projectRepository) ExecuteInsert(ctx context.Context, project *repositories.Project) error {
 	s := sqlbuilder.InsertInto("projects").
 		Cols(
 			"id",
@@ -166,6 +176,11 @@ func (r *projectRepository) Insert(ctx context.Context, project *repositories.Pr
 }
 
 func (r *projectRepository) Update(ctx context.Context, project *repositories.Project) error {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, project))
+	return nil
+}
+
+func (r *projectRepository) ExecuteUpdate(ctx context.Context, project *repositories.Project) error {
 	if !project.HasChanges() {
 		return nil
 	}
@@ -207,9 +222,14 @@ func (r *projectRepository) Update(ctx context.Context, project *repositories.Pr
 	return nil
 }
 
-func (r *projectRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *projectRepository) Delete(ctx context.Context, project *repositories.Project) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, project))
+	return nil
+}
+
+func (r *projectRepository) ExecuteDelete(ctx context.Context, project *repositories.Project) error {
 	s := sqlbuilder.DeleteFrom("projects")
-	s.Where(s.Equal("id", id))
+	s.Where(s.Equal("id", project.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)

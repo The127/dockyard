@@ -6,9 +6,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
 	"github.com/lib/pq/hstore"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
@@ -69,12 +69,16 @@ func newPostgresTenant(tenant *repositories.Tenant) *postgresTenant {
 }
 
 type tenantRepository struct {
-	tx *sql.Tx
+	tx            *sql.Tx
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewPostgresTenantRepository(tx *sql.Tx) repositories.TenantRepository {
+func NewPostgresTenantRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *tenantRepository {
 	return &tenantRepository{
-		tx: tx,
+		tx:            tx,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -162,6 +166,11 @@ func (r *tenantRepository) List(ctx context.Context, filter *repositories.Tenant
 }
 
 func (r *tenantRepository) Insert(ctx context.Context, tenant *repositories.Tenant) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, tenant))
+	return nil
+}
+
+func (r *tenantRepository) ExecuteInsert(ctx context.Context, tenant *repositories.Tenant) error {
 	pgTenant := newPostgresTenant(tenant)
 
 	s := sqlbuilder.InsertInto("tenants").
@@ -209,6 +218,11 @@ func (r *tenantRepository) Insert(ctx context.Context, tenant *repositories.Tena
 }
 
 func (r *tenantRepository) Update(ctx context.Context, tenant *repositories.Tenant) error {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, tenant))
+	return nil
+}
+
+func (r *tenantRepository) ExecuteUpdate(ctx context.Context, tenant *repositories.Tenant) error {
 	if !tenant.HasChanges() {
 		return nil
 	}
@@ -261,9 +275,14 @@ func (r *tenantRepository) Update(ctx context.Context, tenant *repositories.Tena
 	return nil
 }
 
-func (r *tenantRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *tenantRepository) Delete(ctx context.Context, tenant *repositories.Tenant) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, tenant))
+	return nil
+}
+
+func (r *tenantRepository) ExecuteDelete(ctx context.Context, tenant *repositories.Tenant) error {
 	s := sqlbuilder.DeleteFrom("tenants")
-	s.Where(s.Equal("id", id))
+	s.Where(s.Equal("id", tenant.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)

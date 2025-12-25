@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/google/uuid"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
@@ -30,12 +30,16 @@ func (b *postgresBlob) Map() *repositories.Blob {
 }
 
 type blobRepository struct {
-	tx *sql.Tx
+	tx            *sql.Tx
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewPostgresBlobRepository(tx *sql.Tx) repositories.BlobRepository {
+func NewPostgresBlobRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *blobRepository {
 	return &blobRepository{
-		tx: tx,
+		tx:            tx,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -118,6 +122,11 @@ func (r *blobRepository) List(ctx context.Context, filter *repositories.BlobFilt
 }
 
 func (r *blobRepository) Insert(ctx context.Context, blob *repositories.Blob) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, blob))
+	return nil
+}
+
+func (r *blobRepository) ExecuteInsert(ctx context.Context, blob *repositories.Blob) error {
 	s := sqlbuilder.InsertInto("blobs").
 		Cols(
 			"id",
@@ -151,9 +160,14 @@ func (r *blobRepository) Insert(ctx context.Context, blob *repositories.Blob) er
 	return nil
 }
 
-func (r *blobRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *blobRepository) Delete(ctx context.Context, blob *repositories.Blob) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, blob))
+	return nil
+}
+
+func (r *blobRepository) ExecuteDelete(ctx context.Context, blob *repositories.Blob) error {
 	s := sqlbuilder.DeleteFrom("blob")
-	s.Where(s.Equal("id", id))
+	s.Where(s.Equal("id", blob.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)

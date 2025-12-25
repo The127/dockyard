@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
@@ -31,12 +32,16 @@ func (p *postgresPat) Map() *repositories.Pat {
 }
 
 type patRepository struct {
-	tx *sql.Tx
+	tx            *sql.Tx
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewPostgresPatRepository(tx *sql.Tx) repositories.PatRepository {
+func NewPostgresPatRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *patRepository {
 	return &patRepository{
-		tx: tx,
+		tx:            tx,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -120,6 +125,11 @@ func (r *patRepository) List(ctx context.Context, filter *repositories.PatFilter
 }
 
 func (r *patRepository) Insert(ctx context.Context, pat *repositories.Pat) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, pat))
+	return nil
+}
+
+func (r *patRepository) ExecuteInsert(ctx context.Context, pat *repositories.Pat) error {
 	s := sqlbuilder.InsertInto("pats").
 		Cols(
 			"id",
@@ -154,7 +164,13 @@ func (r *patRepository) Insert(ctx context.Context, pat *repositories.Pat) error
 	pat.SetVersion(xmin)
 	return nil
 }
+
 func (r *patRepository) Update(ctx context.Context, pat *repositories.Pat) error {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, pat))
+	return nil
+}
+
+func (r *patRepository) ExecuteUpdate(ctx context.Context, pat *repositories.Pat) error {
 	if !pat.HasChanges() {
 		return nil
 	}
@@ -194,9 +210,14 @@ func (r *patRepository) Update(ctx context.Context, pat *repositories.Pat) error
 	return nil
 }
 
-func (r *patRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *patRepository) Delete(ctx context.Context, pat *repositories.Pat) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, pat))
+	return nil
+}
+
+func (r *patRepository) ExecuteDelete(ctx context.Context, pat *repositories.Pat) error {
 	s := sqlbuilder.DeleteFrom("pats")
-	s.Where(s.Equal("id", id))
+	s.Where(s.Equal("id", pat.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)

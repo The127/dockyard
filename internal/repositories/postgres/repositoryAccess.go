@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
@@ -31,12 +32,16 @@ func (ra *postgresRepositoryAccess) Map() *repositories.RepositoryAccess {
 }
 
 type repositoryAccessRepository struct {
-	tx *sql.Tx
+	tx            *sql.Tx
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewPostgresRepositoryAccessRepository(tx *sql.Tx) repositories.RepositoryAccessRepository {
+func NewPostgresRepositoryAccessRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *repositoryAccessRepository {
 	return &repositoryAccessRepository{
-		tx: tx,
+		tx:            tx,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -109,6 +114,11 @@ func (r *repositoryAccessRepository) List(ctx context.Context, filter *repositor
 }
 
 func (r *repositoryAccessRepository) Insert(ctx context.Context, repositoryAccess *repositories.RepositoryAccess) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, repositoryAccess))
+	return nil
+}
+
+func (r *repositoryAccessRepository) ExecuteInsert(ctx context.Context, repositoryAccess *repositories.RepositoryAccess) error {
 	s := sqlbuilder.InsertInto("repository_accesses").
 		Cols(
 			"id",
@@ -146,6 +156,11 @@ func (r *repositoryAccessRepository) Insert(ctx context.Context, repositoryAcces
 }
 
 func (r *repositoryAccessRepository) Update(ctx context.Context, repositoryAccess *repositories.RepositoryAccess) error {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, repositoryAccess))
+	return nil
+}
+
+func (r *repositoryAccessRepository) ExecuteUpdate(ctx context.Context, repositoryAccess *repositories.RepositoryAccess) error {
 	if !repositoryAccess.HasChanges() {
 		return nil
 	}
@@ -185,9 +200,14 @@ func (r *repositoryAccessRepository) Update(ctx context.Context, repositoryAcces
 	return nil
 }
 
-func (r *repositoryAccessRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *repositoryAccessRepository) Delete(ctx context.Context, repositoryAccess *repositories.RepositoryAccess) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, repositoryAccess))
+	return nil
+}
+
+func (r *repositoryAccessRepository) ExecuteDelete(ctx context.Context, repositoryAccess *repositories.RepositoryAccess) error {
 	s := sqlbuilder.DeleteFrom("repository_accesses")
-	s.Where(s.Equal("id", id))
+	s.Where(s.Equal("id", repositoryAccess.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)

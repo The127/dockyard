@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
@@ -34,12 +35,16 @@ func (m *postgresManifest) Map() *repositories.Manifest {
 }
 
 type manifestRepository struct {
-	tx *sql.Tx
+	tx            *sql.Tx
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewPostgresManifestRepository(tx *sql.Tx) repositories.ManifestRepository {
+func NewPostgresManifestRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *manifestRepository {
 	return &manifestRepository{
-		tx: tx,
+		tx:            tx,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -131,6 +136,11 @@ func (r *manifestRepository) List(ctx context.Context, filter *repositories.Mani
 }
 
 func (r *manifestRepository) Insert(ctx context.Context, manifest *repositories.Manifest) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, manifest))
+	return nil
+}
+
+func (r *manifestRepository) ExecuteInsert(ctx context.Context, manifest *repositories.Manifest) error {
 	s := sqlbuilder.InsertInto("manifests").
 		Cols(
 			"id",
@@ -166,9 +176,14 @@ func (r *manifestRepository) Insert(ctx context.Context, manifest *repositories.
 	return nil
 }
 
-func (r *manifestRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *manifestRepository) Delete(ctx context.Context, manifest *repositories.Manifest) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, manifest))
+	return nil
+}
+
+func (r *manifestRepository) ExecuteDelete(ctx context.Context, manifest *repositories.Manifest) error {
 	s := sqlbuilder.DeleteFrom("manifest")
-	s.Where(s.Equal("id", id))
+	s.Where(s.Equal("id", manifest.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)

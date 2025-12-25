@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
@@ -33,12 +34,16 @@ func (u *postgresUser) Map() *repositories.User {
 }
 
 type userRepository struct {
-	tx *sql.Tx
+	tx            *sql.Tx
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewPostgresUserRepository(tx *sql.Tx) repositories.UserRepository {
+func NewPostgresUserRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *userRepository {
 	return &userRepository{
-		tx: tx,
+		tx:            tx,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -129,6 +134,11 @@ func (r *userRepository) List(ctx context.Context, filter *repositories.UserFilt
 }
 
 func (r *userRepository) Insert(ctx context.Context, user *repositories.User) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, user))
+	return nil
+}
+
+func (r *userRepository) ExecuteInsert(ctx context.Context, user *repositories.User) error {
 	s := sqlbuilder.InsertInto("users").
 		Cols(
 			"id",
@@ -168,6 +178,11 @@ func (r *userRepository) Insert(ctx context.Context, user *repositories.User) er
 }
 
 func (r *userRepository) Update(ctx context.Context, user *repositories.User) error {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, user))
+	return nil
+}
+
+func (r *userRepository) ExecuteUpdate(ctx context.Context, user *repositories.User) error {
 	if !user.HasChanges() {
 		return nil
 	}
@@ -209,9 +224,14 @@ func (r *userRepository) Update(ctx context.Context, user *repositories.User) er
 	return nil
 }
 
-func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *userRepository) Delete(ctx context.Context, user *repositories.User) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, user))
+	return nil
+}
+
+func (r *userRepository) ExecuteDelete(ctx context.Context, user *repositories.User) error {
 	s := sqlbuilder.DeleteFrom("users")
-	s.Where(s.Equal("id", id))
+	s.Where(s.Equal("id", user.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)

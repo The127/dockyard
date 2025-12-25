@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
@@ -29,12 +30,16 @@ func (rb *postgresRepositoryBlob) Map() *repositories.RepositoryBlob {
 }
 
 type repositoryBlobRepository struct {
-	tx *sql.Tx
+	tx            *sql.Tx
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewPostgresRepositoryBlobRepository(tx *sql.Tx) repositories.RepositoryBlobRepository {
+func NewPostgresRepositoryBlobRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *repositoryBlobRepository {
 	return &repositoryBlobRepository{
-		tx: tx,
+		tx:            tx,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -121,6 +126,11 @@ func (r *repositoryBlobRepository) List(ctx context.Context, filter *repositorie
 }
 
 func (r *repositoryBlobRepository) Insert(ctx context.Context, repositoryBlob *repositories.RepositoryBlob) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, repositoryBlob))
+	return nil
+}
+
+func (r *repositoryBlobRepository) ExecuteInsert(ctx context.Context, repositoryBlob *repositories.RepositoryBlob) error {
 	s := sqlbuilder.InsertInto("repository_blobs").
 		Cols(
 			"id",
@@ -154,9 +164,14 @@ func (r *repositoryBlobRepository) Insert(ctx context.Context, repositoryBlob *r
 	return nil
 }
 
-func (r *repositoryBlobRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *repositoryBlobRepository) Delete(ctx context.Context, repositoryBlob *repositories.RepositoryBlob) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, repositoryBlob))
+	return nil
+}
+
+func (r *repositoryBlobRepository) ExecuteDelete(ctx context.Context, repositoryBlob *repositories.RepositoryBlob) error {
 	s := sqlbuilder.DeleteFrom("repository_blobs")
-	s.Where(s.Equal("id", id))
+	s.Where(s.Equal("id", repositoryBlob.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)

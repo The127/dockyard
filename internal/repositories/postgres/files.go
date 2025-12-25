@@ -6,8 +6,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
@@ -33,12 +33,16 @@ func (f *postgresFile) Map() *repositories.File {
 }
 
 type fileRepository struct {
-	tx *sql.Tx
+	tx            *sql.Tx
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewPostgresFileRepository(tx *sql.Tx) repositories.FileRepository {
+func NewPostgresFileRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *fileRepository {
 	return &fileRepository{
-		tx: tx,
+		tx:            tx,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -123,6 +127,11 @@ func (r *fileRepository) List(ctx context.Context, filter *repositories.FileFilt
 }
 
 func (r *fileRepository) Insert(ctx context.Context, file *repositories.File) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, file))
+	return nil
+}
+
+func (r *fileRepository) ExecuteInsert(ctx context.Context, file *repositories.File) error {
 	s := sqlbuilder.InsertInto("files").
 		Cols(
 			"id",
@@ -160,9 +169,14 @@ func (r *fileRepository) Insert(ctx context.Context, file *repositories.File) er
 	return nil
 }
 
-func (r *fileRepository) Delete(ctx context.Context, id uuid.UUID) error {
+func (r *fileRepository) Delete(ctx context.Context, file *repositories.File) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, file))
+	return nil
+}
+
+func (r *fileRepository) ExecuteDelete(ctx context.Context, file *repositories.File) error {
 	s := sqlbuilder.DeleteFrom("files")
-	s.Where(s.Equal("id", id))
+	s.Where(s.Equal("id", file.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
