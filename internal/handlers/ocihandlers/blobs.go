@@ -347,18 +347,10 @@ func FinishUpload(w http.ResponseWriter, r *http.Request) {
 	}
 	if blob == nil {
 		blob = repositories.NewBlob(completeResponse.ComputedDigest, completeResponse.Size)
-		err = dbContext.Blobs().Insert(ctx, blob)
-		if err != nil {
-			ociError.HandleHttpError(w, r, err)
-			return
-		}
+		dbContext.Blobs().Insert(blob)
 	}
 
-	err = dbContext.RepositoryBlobs().Insert(ctx, repositories.NewRepositoryBlob(completeResponse.RepositoryId, blob.GetId()))
-	if err != nil {
-		ociError.HandleHttpError(w, r, err)
-		return
-	}
+	dbContext.RepositoryBlobs().Insert(repositories.NewRepositoryBlob(completeResponse.RepositoryId, blob.GetId()))
 
 	err = dbContext.SaveChanges(ctx)
 	if err != nil {

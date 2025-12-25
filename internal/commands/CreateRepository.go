@@ -55,16 +55,10 @@ func HandleCreateRepository(ctx context.Context, command CreateRepository) (*Cre
 	repository.SetIsPublic(command.IsPublic)
 
 	repositoryRepository := dbContext.Repositories()
-	err = repositoryRepository.Insert(ctx, repository)
-	if err != nil {
-		return nil, fmt.Errorf("failed to insert repository: %w", err)
-	}
+	repositoryRepository.Insert(repository)
 
 	repositoryAccess := repositories.NewRepositoryAccess(repository.GetId(), command.UserId, repositories.RepositoryAccessRoleAdmin)
-	err = dbContext.RepositoryAccess().Insert(ctx, repositoryAccess)
-	if err != nil {
-		return nil, fmt.Errorf("failed to insert repository access: %w", err)
-	}
+	dbContext.RepositoryAccess().Insert(repositoryAccess)
 
 	return &CreateRepositoryResponse{
 		Id: repository.GetId(),

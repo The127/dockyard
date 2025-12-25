@@ -42,10 +42,7 @@ func HandlePatchRepository(ctx context.Context, command PatchRepository) (*Patch
 		repository.SetIsPublic(*command.IsPublic)
 	}
 
-	err = dbContext.Repositories().Update(ctx, repository)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update repository: %w", err)
-	}
+	dbContext.Repositories().Update(repository)
 
 	return nil, nil
 }

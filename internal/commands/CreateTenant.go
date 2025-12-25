@@ -46,10 +46,7 @@ func HandleCreateTenant(ctx context.Context, command CreateTenant) (*CreateTenan
 			command.OidcRoleMapping,
 		),
 	)
-	err = dbContext.Tenants().Insert(ctx, tenant)
-	if err != nil {
-		return nil, fmt.Errorf("failed to insert tenant: %w", err)
-	}
+	dbContext.Tenants().Insert(tenant)
 
 	return &CreateTenantResponse{
 		Id: tenant.GetId(),

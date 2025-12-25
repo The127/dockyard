@@ -45,16 +45,10 @@ func HandleCreateProject(ctx context.Context, command CreateProject) (*CreatePro
 	project.SetDescription(command.Description)
 
 	projectRepository := dbContext.Projects()
-	err = projectRepository.Insert(ctx, project)
-	if err != nil {
-		return nil, fmt.Errorf("failed to insert project: %w", err)
-	}
+	projectRepository.Insert(project)
 
 	projectAccess := repositories.NewProjectAccess(project.GetId(), command.UserId, repositories.ProjectAccessRoleAdmin)
-	err = dbContext.ProjectAccess().Insert(ctx, projectAccess)
-	if err != nil {
-		return nil, fmt.Errorf("failed to insert project access: %w", err)
-	}
+	dbContext.ProjectAccess().Insert(projectAccess)
 
 	return &CreateProjectResponse{
 		Id: project.GetId(),

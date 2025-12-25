@@ -198,18 +198,11 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 	}
 	if blob == nil {
 		blob = repositories.NewBlob(uploadResponse.Digest, int64(len(bodyBytes)))
-		if err := dbContext.Blobs().Insert(ctx, blob); err != nil {
-			ociError.HandleHttpError(w, r, err)
-			return
-		}
+		dbContext.Blobs().Insert(blob)
 	}
 
 	manifest := repositories.NewManifest(repository.GetId(), blob.GetId(), uploadResponse.Digest)
-	err = dbContext.Manifests().Insert(ctx, manifest)
-	if err != nil {
-		ociError.HandleHttpError(w, r, err)
-		return
-	}
+	dbContext.Manifests().Insert(manifest)
 
 	vars := mux.Vars(r)
 	reference := vars["reference"]
@@ -221,11 +214,7 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 		}
 	} else {
 		// if it's a tag, insert it into the database
-		err := dbContext.Tags().Insert(ctx, repositories.NewTag(repository.GetId(), manifest.GetId(), reference))
-		if err != nil {
-			ociError.HandleHttpError(w, r, err)
-			return
-		}
+		dbContext.Tags().Insert(repositories.NewTag(repository.GetId(), manifest.GetId(), reference))
 	}
 
 	location := fmt.Sprintf("/v2/%s/%s/manifests/%s", repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, uploadResponse.Digest)

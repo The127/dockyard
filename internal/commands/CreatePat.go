@@ -39,10 +39,7 @@ func HandleCreatePat(ctx context.Context, command CreatePat) (*CreatePatResponse
 	}
 
 	pat, secret := repositories.NewPat(command.UserId, displayName)
-	err = dbContext.Pats().Insert(ctx, pat)
-	if err != nil {
-		return nil, fmt.Errorf("inserting pat: %w", err)
-	}
+	dbContext.Pats().Insert(pat)
 
 	tokenBytes := make([]byte, 16+len(secret)) // 16 bytes of uuid + length of secret
 

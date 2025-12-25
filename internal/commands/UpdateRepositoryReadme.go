@@ -49,17 +49,11 @@ func HandleUpdateRepositoryReadme(ctx context.Context, command UpdateRepositoryR
 	digest := fmt.Sprintf("sha256:%x", digestBytes[:])
 
 	newReadme := repositories.NewFile(digest, "text/markdown", command.Content)
-	err = dbContext.Files().Insert(ctx, newReadme)
-	if err != nil {
-		return nil, fmt.Errorf("failed to insert readme file: %w", err)
-	}
+	dbContext.Files().Insert(newReadme)
 
 	oldReadmeId := repository.GetReadmeFileId()
 	repository.SetReadmeFileId(pointer.To(newReadme.GetId()))
-	err = dbContext.Repositories().Update(ctx, repository)
-	if err != nil {
-		return nil, fmt.Errorf("failed to update repository: %w", err)
-	}
+	dbContext.Repositories().Update(repository)
 
 	if oldReadmeId != nil {
 		oldFile, err := dbContext.Files().First(ctx, repositories.NewFileFilter().ById(*oldReadmeId))
@@ -67,10 +61,7 @@ func HandleUpdateRepositoryReadme(ctx context.Context, command UpdateRepositoryR
 			return nil, fmt.Errorf("failed to get readme file: %w", err)
 		}
 
-		err = dbContext.Files().Delete(ctx, oldFile)
-		if err != nil {
-			return nil, fmt.Errorf("failed to delete readme file: %w", err)
-		}
+		dbContext.Files().Delete(oldFile)
 	}
 
 	return &UpdateRepositoryReadmeResponse{}, nil
