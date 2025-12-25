@@ -155,9 +155,11 @@ func getApiCurrentUser(r *http.Request, tenantSlug string) (*CurrentUser, error)
 			user.SetDisplayName(&nameClaim)
 		}
 
-		err = dbContext.Users().Insert(ctx, user)
+		dbContext.Users().Insert(user)
+
+		err = dbContext.SaveChanges(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to insert user: %w", err)
+			return nil, fmt.Errorf("failed to save changes: %w", err)
 		}
 	}
 
