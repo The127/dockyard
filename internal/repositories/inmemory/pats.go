@@ -4,19 +4,23 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
 type patRepository struct {
-	txn *memdb.Txn
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryPatRepository(txn *memdb.Txn) repositories.PatRepository {
+func NewInMemoryPatRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *patRepository {
 	return &patRepository{
-		txn: txn,
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -83,26 +87,6 @@ func (r *patRepository) Single(_ context.Context, filter *repositories.PatFilter
 	return result, nil
 }
 
-func (r *patRepository) Insert(_ context.Context, pat *repositories.Pat) error {
-	err := r.txn.Insert("pats", *pat)
-	if err != nil {
-		return fmt.Errorf("failed to insert pat: %w", err)
-	}
-
-	pat.ClearChanges()
-	return nil
-}
-
-func (r *patRepository) Update(_ context.Context, pat *repositories.Pat) error {
-	err := r.txn.Insert("pats", *pat)
-	if err != nil {
-		return fmt.Errorf("failed to update pat: %w", err)
-	}
-
-	pat.ClearChanges()
-	return nil
-}
-
 func (r *patRepository) List(_ context.Context, filter *repositories.PatFilter) ([]*repositories.Pat, int, error) {
 	iterator, err := r.txn.Get("pats", "id")
 	if err != nil {
@@ -114,16 +98,43 @@ func (r *patRepository) List(_ context.Context, filter *repositories.PatFilter) 
 	return pats, count, nil
 }
 
-func (r *patRepository) Delete(_ context.Context, id uuid.UUID) error {
-	entry, err := r.First(context.Background(), repositories.NewPatFilter().ById(id))
+func (r *patRepository) Insert(_ context.Context, pat *repositories.Pat) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, pat))
+	return nil
+}
+
+func (r *patRepository) ExecuteInsert(_ context.Context, pat *repositories.Pat) error {
+	err := r.txn.Insert("pats", *pat)
 	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
-	if entry == nil {
-		return nil
+		return fmt.Errorf("failed to insert pat: %w", err)
 	}
 
-	err = r.txn.Delete("pats", entry)
+	pat.ClearChanges()
+	return nil
+}
+
+func (r *patRepository) Update(_ context.Context, pat *repositories.Pat) error {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, pat))
+	return nil
+}
+
+func (r *patRepository) ExecuteUpdate(_ context.Context, pat *repositories.Pat) error {
+	err := r.txn.Insert("pats", *pat)
+	if err != nil {
+		return fmt.Errorf("failed to update pat: %w", err)
+	}
+
+	pat.ClearChanges()
+	return nil
+}
+
+func (r *patRepository) Delete(_ context.Context, pat *repositories.Pat) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, pat))
+	return nil
+}
+
+func (r *patRepository) ExecuteDelete(_ context.Context, pat *repositories.Pat) error {
+	err := r.txn.Delete("pats", pat)
 	if err != nil {
 		return fmt.Errorf("failed to delete pat: %w", err)
 	}

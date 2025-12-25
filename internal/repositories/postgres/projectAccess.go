@@ -8,6 +8,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/huandu/go-sqlbuilder"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils"
@@ -31,12 +32,16 @@ func (pa *postgresProjectAccess) Map() *repositories.ProjectAccess {
 }
 
 type projectAccessRepository struct {
-	tx *sql.Tx
+	tx            *sql.Tx
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewPostgresProjectAccessRepository(tx *sql.Tx) repositories.ProjectAccessRepository {
+func NewPostgresProjectAccessRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *projectAccessRepository {
 	return &projectAccessRepository{
-		tx: tx,
+		tx:            tx,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 

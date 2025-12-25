@@ -4,18 +4,22 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 )
 
 type repositoryAccessRepository struct {
-	txn *memdb.Txn
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryRepositoryAccessRepository(txn *memdb.Txn) repositories.RepositoryAccessRepository {
+func NewInMemoryRepositoryAccessRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *repositoryAccessRepository {
 	return &repositoryAccessRepository{
-		txn: txn,
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -76,6 +80,11 @@ func (r *repositoryAccessRepository) First(_ context.Context, filter *repositori
 }
 
 func (r *repositoryAccessRepository) Insert(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, repositoryAccess))
+	return nil
+}
+
+func (r *repositoryAccessRepository) ExecuteInsert(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
 	err := r.txn.Insert("repository_access", *repositoryAccess)
 	if err != nil {
 		return fmt.Errorf("failed to insert repository access: %w", err)
@@ -86,6 +95,11 @@ func (r *repositoryAccessRepository) Insert(_ context.Context, repositoryAccess 
 }
 
 func (r *repositoryAccessRepository) Update(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, repositoryAccess))
+	return nil
+}
+
+func (r *repositoryAccessRepository) ExecuteUpdate(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
 	err := r.txn.Insert("repository_access", *repositoryAccess)
 	if err != nil {
 		return fmt.Errorf("failed to insert project: %w", err)
@@ -95,17 +109,13 @@ func (r *repositoryAccessRepository) Update(_ context.Context, repositoryAccess 
 	return nil
 }
 
-func (r *repositoryAccessRepository) Delete(_ context.Context, id uuid.UUID) error {
-	entry, err := r.First(context.Background(), repositories.NewRepositoryAccessFilter().ById(id))
-	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
+func (r *repositoryAccessRepository) Delete(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, repositoryAccess))
+	return nil
+}
 
-	if entry == nil {
-		return nil
-	}
-
-	err = r.txn.Delete("repository_access", entry)
+func (r *repositoryAccessRepository) ExecuteDelete(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
+	err := r.txn.Delete("repository_access", repositoryAccess)
 	if err != nil {
 		return fmt.Errorf("failed to delete repository access: %w", err)
 	}

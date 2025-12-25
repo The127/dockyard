@@ -4,19 +4,23 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
 type fileRepository struct {
-	txn *memdb.Txn
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryFileRepository(txn *memdb.Txn) repositories.FileRepository {
+func NewInMemoryFileRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *fileRepository {
 	return &fileRepository{
-		txn: txn,
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -93,6 +97,11 @@ func (r *fileRepository) List(_ context.Context, filter *repositories.FileFilter
 }
 
 func (r *fileRepository) Insert(_ context.Context, file *repositories.File) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, file))
+	return nil
+}
+
+func (r *fileRepository) ExecuteInsert(_ context.Context, file *repositories.File) error {
 	err := r.txn.Insert("files", *file)
 	if err != nil {
 		return fmt.Errorf("failed to insert file: %w", err)
@@ -101,16 +110,13 @@ func (r *fileRepository) Insert(_ context.Context, file *repositories.File) erro
 	return nil
 }
 
-func (r *fileRepository) Delete(_ context.Context, id uuid.UUID) error {
-	entry, err := r.First(context.Background(), repositories.NewFileFilter().ById(id))
-	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
-	if entry == nil {
-		return nil
-	}
+func (r *fileRepository) Delete(_ context.Context, file *repositories.File) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, file))
+	return nil
+}
 
-	err = r.txn.Delete("files", entry)
+func (r *fileRepository) ExecuteDelete(_ context.Context, file *repositories.File) error {
+	err := r.txn.Delete("files", file)
 	if err != nil {
 		return fmt.Errorf("failed to delete file: %w", err)
 	}

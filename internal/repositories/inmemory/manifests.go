@@ -4,19 +4,23 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
 type manifestRepository struct {
-	txn *memdb.Txn
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryManifestRepository(txn *memdb.Txn) repositories.ManifestRepository {
+func NewInMemoryManifestRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *manifestRepository {
 	return &manifestRepository{
-		txn: txn,
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -105,6 +109,11 @@ func (r *manifestRepository) List(_ context.Context, filter *repositories.Manife
 }
 
 func (r *manifestRepository) Insert(_ context.Context, manifest *repositories.Manifest) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, manifest))
+	return nil
+}
+
+func (r *manifestRepository) ExecuteInsert(_ context.Context, manifest *repositories.Manifest) error {
 	err := r.txn.Insert("manifests", *manifest)
 	if err != nil {
 		return fmt.Errorf("failed to insert manifest: %w", err)
@@ -114,6 +123,11 @@ func (r *manifestRepository) Insert(_ context.Context, manifest *repositories.Ma
 }
 
 func (r *manifestRepository) Update(_ context.Context, manifest *repositories.Manifest) error {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, manifest))
+	return nil
+}
+
+func (r *manifestRepository) ExecuteUpdate(_ context.Context, manifest *repositories.Manifest) error {
 	err := r.txn.Insert("manifests", *manifest)
 	if err != nil {
 		return fmt.Errorf("failed to update manifest: %w", err)
@@ -122,16 +136,13 @@ func (r *manifestRepository) Update(_ context.Context, manifest *repositories.Ma
 	return nil
 }
 
-func (r *manifestRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	entry, err := r.First(ctx, repositories.NewManifestFilter().ById(id))
-	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
-	if entry == nil {
-		return nil
-	}
+func (r *manifestRepository) Delete(_ context.Context, manifest *repositories.Manifest) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, manifest))
+	return nil
+}
 
-	err = r.txn.Delete("manifests", entry)
+func (r *manifestRepository) ExecuteDelete(_ context.Context, manifest *repositories.Manifest) error {
+	err := r.txn.Delete("manifests", manifest)
 	if err != nil {
 		return fmt.Errorf("failed to delete manifest: %w", err)
 	}

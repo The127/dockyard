@@ -4,19 +4,23 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
 type tenantRepository struct {
-	txn *memdb.Txn
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryTenantRepository(txn *memdb.Txn) repositories.TenantRepository {
+func NewInMemoryTenantRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *tenantRepository {
 	return &tenantRepository{
-		txn: txn,
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -93,6 +97,11 @@ func (r *tenantRepository) List(_ context.Context, filter *repositories.TenantFi
 }
 
 func (r *tenantRepository) Insert(_ context.Context, tenant *repositories.Tenant) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, tenant))
+	return nil
+}
+
+func (r *tenantRepository) ExecuteInsert(_ context.Context, tenant *repositories.Tenant) error {
 	err := r.txn.Insert("tenants", *tenant)
 	if err != nil {
 		return fmt.Errorf("failed to insert tenant: %w", err)
@@ -103,6 +112,11 @@ func (r *tenantRepository) Insert(_ context.Context, tenant *repositories.Tenant
 }
 
 func (r *tenantRepository) Update(_ context.Context, tenant *repositories.Tenant) error {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, tenant))
+	return nil
+}
+
+func (r *tenantRepository) ExecuteUpdate(_ context.Context, tenant *repositories.Tenant) error {
 	err := r.txn.Insert("tenants", *tenant)
 	if err != nil {
 		return fmt.Errorf("failed to insert tenant: %w", err)
@@ -112,14 +126,16 @@ func (r *tenantRepository) Update(_ context.Context, tenant *repositories.Tenant
 	return nil
 }
 
-func (r *tenantRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	entry, err := r.First(ctx, repositories.NewTenantFilter().ById(id))
+func (r *tenantRepository) Delete(ctx context.Context, tenant *repositories.Tenant) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, tenant))
+	return nil
+}
+
+func (r *tenantRepository) ExecuteDelete(ctx context.Context, tenant *repositories.Tenant) error {
+	err := r.txn.Delete("tenants", tenant)
 	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
-	if entry == nil {
-		return nil
+		return fmt.Errorf("failed to delete tenant: %w", err)
 	}
 
-	return r.txn.Delete("tenants", entry)
+	return nil
 }

@@ -4,19 +4,23 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
 type projectRepository struct {
-	txn *memdb.Txn
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryProjectRepository(txn *memdb.Txn) repositories.ProjectRepository {
+func NewInMemoryProjectRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *projectRepository {
 	return &projectRepository{
-		txn: txn,
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -99,6 +103,11 @@ func (r *projectRepository) List(_ context.Context, filter *repositories.Project
 }
 
 func (r *projectRepository) Insert(_ context.Context, project *repositories.Project) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, project))
+	return nil
+}
+
+func (r *projectRepository) ExecuteInsert(_ context.Context, project *repositories.Project) error {
 	err := r.txn.Insert("projects", *project)
 	if err != nil {
 		return fmt.Errorf("failed to insert project: %w", err)
@@ -109,6 +118,11 @@ func (r *projectRepository) Insert(_ context.Context, project *repositories.Proj
 }
 
 func (r *projectRepository) Update(_ context.Context, project *repositories.Project) error {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, project))
+	return nil
+}
+
+func (r *projectRepository) ExecuteUpdate(_ context.Context, project *repositories.Project) error {
 	err := r.txn.Insert("projects", *project)
 	if err != nil {
 		return fmt.Errorf("failed to insert project: %w", err)
@@ -118,16 +132,13 @@ func (r *projectRepository) Update(_ context.Context, project *repositories.Proj
 	return nil
 }
 
-func (r *projectRepository) Delete(_ context.Context, id uuid.UUID) error {
-	entry, err := r.First(context.Background(), repositories.NewProjectFilter().ById(id))
-	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
-	if entry == nil {
-		return nil
-	}
+func (r *projectRepository) Delete(_ context.Context, project *repositories.Project) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, project))
+	return nil
+}
 
-	err = r.txn.Delete("projects", entry)
+func (r *projectRepository) ExecuteDelete(_ context.Context, project *repositories.Project) error {
+	err := r.txn.Delete("projects", project)
 	if err != nil {
 		return fmt.Errorf("failed to delete project: %w", err)
 	}

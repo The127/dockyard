@@ -4,19 +4,23 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
 type userRepository struct {
-	txn *memdb.Txn
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryUserRepository(txn *memdb.Txn) repositories.UserRepository {
+func NewInMemoryUserRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *userRepository {
 	return &userRepository{
-		txn: txn,
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -100,6 +104,11 @@ func (r *userRepository) List(_ context.Context, filter *repositories.UserFilter
 }
 
 func (r *userRepository) Insert(_ context.Context, user *repositories.User) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, user))
+	return nil
+}
+
+func (r *userRepository) ExecuteInsert(_ context.Context, user *repositories.User) error {
 	err := r.txn.Insert("users", *user)
 	if err != nil {
 		return fmt.Errorf("failed to insert user: %w", err)
@@ -110,6 +119,11 @@ func (r *userRepository) Insert(_ context.Context, user *repositories.User) erro
 }
 
 func (r *userRepository) Update(_ context.Context, user *repositories.User) error {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, user))
+	return nil
+}
+
+func (r *userRepository) ExecuteUpdate(_ context.Context, user *repositories.User) error {
 	err := r.txn.Insert("users", *user)
 	if err != nil {
 		return fmt.Errorf("failed to insert user: %w", err)
@@ -119,16 +133,13 @@ func (r *userRepository) Update(_ context.Context, user *repositories.User) erro
 	return nil
 }
 
-func (r *userRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	entry, err := r.First(ctx, repositories.NewUserFilter().ById(id))
-	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
-	if entry == nil {
-		return nil
-	}
+func (r *userRepository) Delete(_ context.Context, user *repositories.User) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, user))
+	return nil
+}
 
-	err = r.txn.Delete("users", entry)
+func (r *userRepository) ExecuteDelete(_ context.Context, user *repositories.User) error {
+	err := r.txn.Delete("users", user)
 	if err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}

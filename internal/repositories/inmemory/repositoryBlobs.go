@@ -4,19 +4,23 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
 type repositoryBlobRepository struct {
-	txn *memdb.Txn
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryRepositoryBlobRepository(txn *memdb.Txn) repositories.RepositoryBlobRepository {
+func NewInMemoryRepositoryBlobRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) repositories.RepositoryBlobRepository {
 	return &repositoryBlobRepository{
-		txn: txn,
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -99,6 +103,11 @@ func (r *repositoryBlobRepository) List(_ context.Context, filter *repositories.
 }
 
 func (r *repositoryBlobRepository) Insert(_ context.Context, repositoryBlob *repositories.RepositoryBlob) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, repositoryBlob))
+	return nil
+}
+
+func (r *repositoryBlobRepository) ExecuteInsert(_ context.Context, repositoryBlob *repositories.RepositoryBlob) error {
 	err := r.txn.Insert("repository_blobs", *repositoryBlob)
 	if err != nil {
 		return fmt.Errorf("failed to insert repository blob: %w", err)
@@ -107,16 +116,13 @@ func (r *repositoryBlobRepository) Insert(_ context.Context, repositoryBlob *rep
 	return nil
 }
 
-func (r *repositoryBlobRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	entry, err := r.First(ctx, repositories.NewRepositoryBlobFilter().ById(id))
-	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
-	if entry == nil {
-		return nil
-	}
+func (r *repositoryBlobRepository) Delete(_ context.Context, repositoryBlob *repositories.RepositoryBlob) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, repositoryBlob))
+	return nil
+}
 
-	err = r.txn.Delete("repository_blobs", entry)
+func (r *repositoryBlobRepository) ExecuteDelete(_ context.Context, repositoryBlob *repositories.RepositoryBlob) error {
+	err := r.txn.Delete("repository_blobs", repositoryBlob)
 	if err != nil {
 		return fmt.Errorf("failed to delete repository blob: %w", err)
 	}

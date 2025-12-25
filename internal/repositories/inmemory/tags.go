@@ -4,19 +4,23 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
 type tagRepository struct {
-	txn *memdb.Txn
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryTagRepository(txn *memdb.Txn) repositories.TagRepository {
+func NewInMemoryTagRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *tagRepository {
 	return &tagRepository{
-		txn: txn,
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -29,7 +33,7 @@ func (r *tagRepository) applyFilter(iterator memdb.ResultIterator, filter *repos
 
 		if r.matches(&typed, filter) {
 			if filter.GetIncludeManifestInfo() {
-				manifestRepo := NewInMemoryManifestRepository(r.txn)
+				manifestRepo := NewInMemoryManifestRepository(r.txn, r.changeTracker, -1)
 				manifest, err := manifestRepo.Single(context.Background(), repositories.NewManifestFilter().ById(typed.GetRepositoryManifestId()))
 				if err != nil {
 					return nil, 0, fmt.Errorf("failed to get manifest for tag %s: %w", typed.GetId(), err)
@@ -123,6 +127,11 @@ func (r *tagRepository) List(_ context.Context, filter *repositories.TagFilter) 
 }
 
 func (r *tagRepository) Insert(_ context.Context, tag *repositories.Tag) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, tag))
+	return nil
+}
+
+func (r *tagRepository) ExecuteInsert(_ context.Context, tag *repositories.Tag) error {
 	err := r.txn.Insert("tags", *tag)
 	if err != nil {
 		return fmt.Errorf("failed to insert tag: %w", err)
@@ -131,16 +140,13 @@ func (r *tagRepository) Insert(_ context.Context, tag *repositories.Tag) error {
 	return nil
 }
 
-func (r *tagRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	entry, err := r.First(ctx, repositories.NewTagFilter().ById(id))
-	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
-	if entry == nil {
-		return nil
-	}
+func (r *tagRepository) Delete(_ context.Context, tag *repositories.Tag) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, tag))
+	return nil
+}
 
-	err = r.txn.Delete("tags", entry)
+func (r *tagRepository) ExecuteDelete(_ context.Context, tag *repositories.Tag) error {
+	err := r.txn.Delete("tags", tag)
 	if err != nil {
 		return fmt.Errorf("failed to delete tag: %w", err)
 	}

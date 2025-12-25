@@ -4,19 +4,23 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
 type blobRepository struct {
-	txn *memdb.Txn
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryBlobRepository(txn *memdb.Txn) repositories.BlobRepository {
+func NewInMemoryBlobRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *blobRepository {
 	return &blobRepository{
-		txn: txn,
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -93,6 +97,11 @@ func (r *blobRepository) List(_ context.Context, filter *repositories.BlobFilter
 }
 
 func (r *blobRepository) Insert(_ context.Context, blob *repositories.Blob) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, blob))
+	return nil
+}
+
+func (r *blobRepository) ExecuteInsert(_ context.Context, blob *repositories.Blob) error {
 	err := r.txn.Insert("blobs", *blob)
 	if err != nil {
 		return fmt.Errorf("failed to insert blob: %w", err)
@@ -101,16 +110,13 @@ func (r *blobRepository) Insert(_ context.Context, blob *repositories.Blob) erro
 	return nil
 }
 
-func (r *blobRepository) Delete(_ context.Context, id uuid.UUID) error {
-	entry, err := r.First(context.Background(), repositories.NewBlobFilter().ById(id))
-	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
-	if entry == nil {
-		return nil
-	}
+func (r *blobRepository) Delete(_ context.Context, blob *repositories.Blob) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, blob))
+	return nil
+}
 
-	err = r.txn.Delete("blobs", entry)
+func (r *blobRepository) ExecuteDelete(_ context.Context, blob *repositories.Blob) error {
+	err := r.txn.Delete("blobs", blob)
 	if err != nil {
 		return fmt.Errorf("failed to delete blob: %w", err)
 	}

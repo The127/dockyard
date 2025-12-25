@@ -4,19 +4,23 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/google/uuid"
 	"github.com/hashicorp/go-memdb"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/utils/apiError"
 )
 
 type repositoryRepository struct {
-	txn *memdb.Txn
+	txn           *memdb.Txn
+	changeTracker *change.Tracker
+	entityType    int
 }
 
-func NewInMemoryRepositoryRepository(txn *memdb.Txn) repositories.RepositoryRepository {
+func NewInMemoryRepositoryRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *repositoryRepository {
 	return &repositoryRepository{
-		txn: txn,
+		txn:           txn,
+		changeTracker: changeTracker,
+		entityType:    entityType,
 	}
 }
 
@@ -99,6 +103,11 @@ func (r *repositoryRepository) List(_ context.Context, filter *repositories.Repo
 }
 
 func (r *repositoryRepository) Insert(_ context.Context, repository *repositories.Repository) error {
+	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, repository))
+	return nil
+}
+
+func (r *repositoryRepository) ExecuteInsert(_ context.Context, repository *repositories.Repository) error {
 	err := r.txn.Insert("repositories", *repository)
 	if err != nil {
 		return fmt.Errorf("failed to insert repository: %w", err)
@@ -109,6 +118,11 @@ func (r *repositoryRepository) Insert(_ context.Context, repository *repositorie
 }
 
 func (r *repositoryRepository) Update(_ context.Context, repository *repositories.Repository) error {
+	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, repository))
+	return nil
+}
+
+func (r *repositoryRepository) ExecuteUpdate(_ context.Context, repository *repositories.Repository) error {
 	err := r.txn.Insert("repositories", *repository)
 	if err != nil {
 		return fmt.Errorf("failed to update repository: %w", err)
@@ -118,16 +132,13 @@ func (r *repositoryRepository) Update(_ context.Context, repository *repositorie
 	return nil
 }
 
-func (r *repositoryRepository) Delete(ctx context.Context, id uuid.UUID) error {
-	entry, err := r.First(ctx, repositories.NewRepositoryFilter().ById(id))
-	if err != nil {
-		return fmt.Errorf("failed to get by id: %w", err)
-	}
-	if entry == nil {
-		return nil
-	}
+func (r *repositoryRepository) Delete(_ context.Context, repository *repositories.Repository) error {
+	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, repository))
+	return nil
+}
 
-	err = r.txn.Delete("repositories", entry)
+func (r *repositoryRepository) ExecuteDelete(_ context.Context, repository *repositories.Repository) error {
+	err := r.txn.Delete("repositories", repository)
 	if err != nil {
 		return fmt.Errorf("failed to delete repository: %w", err)
 	}
