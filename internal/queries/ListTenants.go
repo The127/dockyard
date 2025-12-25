@@ -21,12 +21,7 @@ type ListTenantsResponseItem struct {
 
 func HandleListTenants(ctx context.Context, query ListTenants) (*ListTenantsResponse, error) {
 	scope := middlewares.GetScope(ctx)
-
-	dbFactory := ioc.GetDependency[db.Factory](scope)
-	dbContext, err := dbFactory.NewDbContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("getting transaction: %w", err)
-	}
+	dbContext := ioc.GetDependency[db.Context](scope)
 
 	tenantFilter := repositories.NewTenantFilter()
 	tenants, _, err := dbContext.Tenants().List(ctx, tenantFilter)

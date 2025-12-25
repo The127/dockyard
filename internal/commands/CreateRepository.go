@@ -26,12 +26,7 @@ type CreateRepositoryResponse struct {
 
 func HandleCreateRepository(ctx context.Context, command CreateRepository) (*CreateRepositoryResponse, error) {
 	scope := middlewares.GetScope(ctx)
-
-	dbFactory := ioc.GetDependency[db.Factory](scope)
-	dbContext, err := dbFactory.NewDbContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("getting transaction: %w", err)
-	}
+	dbContext := ioc.GetDependency[db.Context](scope)
 
 	tenantRepository := dbContext.Tenants()
 	tenantFilter := repositories.NewTenantFilter().

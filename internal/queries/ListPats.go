@@ -24,12 +24,7 @@ type ListPatsResponseItem struct {
 
 func HandleListPats(ctx context.Context, query ListPats) (*ListPatsResponse, error) {
 	scope := middlewares.GetScope(ctx)
-
-	dbFactory := ioc.GetDependency[db.Factory](scope)
-	dbContext, err := dbFactory.NewDbContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("getting transaction: %w", err)
-	}
+	dbContext := ioc.GetDependency[db.Context](scope)
 
 	patFilter := repositories.NewPatFilter().ByUserId(query.UserId)
 	pats, _, err := dbContext.Pats().List(ctx, patFilter)

@@ -2,7 +2,6 @@ package commands
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
@@ -28,12 +27,7 @@ type CreateTenantResponse struct {
 
 func HandleCreateTenant(ctx context.Context, command CreateTenant) (*CreateTenantResponse, error) {
 	scope := middlewares.GetScope(ctx)
-
-	dbFactory := ioc.GetDependency[db.Factory](scope)
-	dbContext, err := dbFactory.NewDbContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("getting transaction: %w", err)
-	}
+	dbContext := ioc.GetDependency[db.Context](scope)
 
 	tenant := repositories.NewTenant(
 		command.Slug,

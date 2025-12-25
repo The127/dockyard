@@ -28,12 +28,7 @@ type GetProjectResponse struct {
 
 func HandleGetProject(ctx context.Context, query GetProject) (*GetProjectResponse, error) {
 	scope := middlewares.GetScope(ctx)
-
-	dbFactory := ioc.GetDependency[db.Factory](scope)
-	dbContext, err := dbFactory.NewDbContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("getting transaction: %w", err)
-	}
+	dbContext := ioc.GetDependency[db.Context](scope)
 
 	tenantFilter := repositories.NewTenantFilter().BySlug(query.TenantSlug)
 	tenant, err := dbContext.Tenants().Single(ctx, tenantFilter)

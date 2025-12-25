@@ -23,12 +23,7 @@ type UpdateRepositoryReadmeResponse struct{}
 
 func HandleUpdateRepositoryReadme(ctx context.Context, command UpdateRepositoryReadme) (*UpdateRepositoryReadmeResponse, error) {
 	scope := middlewares.GetScope(ctx)
-
-	dbFactory := ioc.GetDependency[db.Factory](scope)
-	dbContext, err := dbFactory.NewDbContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("getting transaction: %w", err)
-	}
+	dbContext := ioc.GetDependency[db.Context](scope)
 
 	tenant, err := dbContext.Tenants().Single(ctx, repositories.NewTenantFilter().BySlug(command.TenantSlug))
 	if err != nil {

@@ -24,12 +24,7 @@ type CreatePatResponse struct {
 
 func HandleCreatePat(ctx context.Context, command CreatePat) (*CreatePatResponse, error) {
 	scope := middlewares.GetScope(ctx)
-
-	dbFactory := ioc.GetDependency[db.Factory](scope)
-	dbContext, err := dbFactory.NewDbContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("getting transaction: %w", err)
-	}
+	dbContext := ioc.GetDependency[db.Context](scope)
 
 	clockService := ioc.GetDependency[clock.Service](scope)
 	var displayName = command.DisplayName

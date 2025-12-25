@@ -22,12 +22,7 @@ type PatchRepositoryResponse struct{}
 
 func HandlePatchRepository(ctx context.Context, command PatchRepository) (*PatchRepositoryResponse, error) {
 	scope := middlewares.GetScope(ctx)
-
-	dbService := ioc.GetDependency[db.Factory](scope)
-	dbContext, err := dbService.NewDbContext(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("getting transaction: %w", err)
-	}
+	dbContext := ioc.GetDependency[db.Context](scope)
 
 	_, _, repository, err := getRepository(ctx, dbContext, command.TenantSlug, command.ProjectSlug, command.RepositorySlug)
 	if err != nil {
