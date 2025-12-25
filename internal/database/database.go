@@ -1,6 +1,8 @@
 package database
 
+import "context"
+
 type Database interface {
 	Migrate() error
-	Tx() (Transaction, error)
+	NewContext(ctx context.Context) (Context, error)
 }

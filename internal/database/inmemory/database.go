@@ -173,6 +173,6 @@ func (d *database) Migrate() error {
 	return nil
 }
 
-func (d *database) Tx() (db.Transaction, error) {
-	return newTransaction(d.memDB.Txn(true)), nil
+func (d *database) NewContext() (db.Context, error) {
+	return newContext(d.memDB.Txn(true)), nil
 }
