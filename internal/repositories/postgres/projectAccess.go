@@ -31,21 +31,21 @@ func (pa *postgresProjectAccess) Map() *repositories.ProjectAccess {
 	)
 }
 
-type projectAccessRepository struct {
-	tx            *sql.Tx
+type ProjectAccessRepository struct {
+	db            *sql.DB
 	changeTracker *change.Tracker
 	entityType    int
 }
 
-func NewPostgresProjectAccessRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *projectAccessRepository {
-	return &projectAccessRepository{
-		tx:            tx,
+func NewPostgresProjectAccessRepository(db *sql.DB, changeTracker *change.Tracker, entityType int) *ProjectAccessRepository {
+	return &ProjectAccessRepository{
+		db:            db,
 		changeTracker: changeTracker,
 		entityType:    entityType,
 	}
 }
 
-func (r *projectAccessRepository) selectQuery(filter *repositories.ProjectAccessFilter) *sqlbuilder.SelectBuilder {
+func (r *ProjectAccessRepository) selectQuery(filter *repositories.ProjectAccessFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
 		"project_accesses.xmin",
 		"project_accesses.id",
@@ -67,13 +67,13 @@ func (r *projectAccessRepository) selectQuery(filter *repositories.ProjectAccess
 	return s
 }
 
-func (r *projectAccessRepository) First(ctx context.Context, filter *repositories.ProjectAccessFilter) (*repositories.ProjectAccess, error) {
+func (r *ProjectAccessRepository) First(ctx context.Context, filter *repositories.ProjectAccessFilter) (*repositories.ProjectAccess, error) {
 	s := r.selectQuery(filter)
 	s.Limit(1)
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var projectAccess postgresProjectAccess
 	err := row.Scan(&projectAccess.xmin, &projectAccess.id, &projectAccess.createdAt, &projectAccess.updatedAt, &projectAccess.projectId, &projectAccess.userId, &projectAccess.role)
@@ -87,13 +87,13 @@ func (r *projectAccessRepository) First(ctx context.Context, filter *repositorie
 	return projectAccess.Map(), nil
 }
 
-func (r *projectAccessRepository) List(ctx context.Context, filter *repositories.ProjectAccessFilter) ([]*repositories.ProjectAccess, int, error) {
+func (r *ProjectAccessRepository) List(ctx context.Context, filter *repositories.ProjectAccessFilter) ([]*repositories.ProjectAccess, int, error) {
 	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	rows, err := r.tx.QueryContext(ctx, query, args...)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
 	}
@@ -113,12 +113,12 @@ func (r *projectAccessRepository) List(ctx context.Context, filter *repositories
 	return projectAccesses, totalCount, nil
 }
 
-func (r *projectAccessRepository) Insert(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) Insert(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, projectAccess))
 	return nil
 }
 
-func (r *projectAccessRepository) ExecuteInsert(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) ExecuteInsert(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
 	s := sqlbuilder.InsertInto("project_accesses").
 		Cols(
 			"id",
@@ -141,7 +141,7 @@ func (r *projectAccessRepository) ExecuteInsert(ctx context.Context, projectAcce
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -155,12 +155,12 @@ func (r *projectAccessRepository) ExecuteInsert(ctx context.Context, projectAcce
 	return nil
 }
 
-func (r *projectAccessRepository) Update(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) Update(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, projectAccess))
 	return nil
 }
 
-func (r *projectAccessRepository) ExecuteUpdate(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) ExecuteUpdate(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
 	if !projectAccess.HasChanges() {
 		return nil
 	}
@@ -181,7 +181,7 @@ func (r *projectAccessRepository) ExecuteUpdate(ctx context.Context, projectAcce
 	s.Returning("xmin")
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -200,18 +200,18 @@ func (r *projectAccessRepository) ExecuteUpdate(ctx context.Context, projectAcce
 	return nil
 }
 
-func (r *projectAccessRepository) Delete(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) Delete(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, projectAccess))
 	return nil
 }
 
-func (r *projectAccessRepository) ExecuteDelete(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) ExecuteDelete(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
 	s := sqlbuilder.DeleteFrom("project_accesses")
 	s.Where(s.Equal("id", projectAccess.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	_, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting project access: %w", err)
 	}

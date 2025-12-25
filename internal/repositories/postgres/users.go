@@ -33,21 +33,21 @@ func (u *postgresUser) Map() *repositories.User {
 	)
 }
 
-type userRepository struct {
-	tx            *sql.Tx
+type UserRepository struct {
+	db            *sql.DB
 	changeTracker *change.Tracker
 	entityType    int
 }
 
-func NewPostgresUserRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *userRepository {
-	return &userRepository{
-		tx:            tx,
+func NewPostgresUserRepository(db *sql.DB, changeTracker *change.Tracker, entityType int) *UserRepository {
+	return &UserRepository{
+		db:            db,
 		changeTracker: changeTracker,
 		entityType:    entityType,
 	}
 }
 
-func (r *userRepository) selectQuery(filter *repositories.UserFilter) *sqlbuilder.SelectBuilder {
+func (r *UserRepository) selectQuery(filter *repositories.UserFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
 		"users.id",
 		"users.created_at",
@@ -74,13 +74,13 @@ func (r *userRepository) selectQuery(filter *repositories.UserFilter) *sqlbuilde
 	return s
 }
 
-func (r *userRepository) First(ctx context.Context, filter *repositories.UserFilter) (*repositories.User, error) {
+func (r *UserRepository) First(ctx context.Context, filter *repositories.UserFilter) (*repositories.User, error) {
 	s := r.selectQuery(filter)
 	s.Limit(1)
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var user postgresUser
 	err := row.Scan(&user.id, &user.createdAt, &user.updatedAt, &user.xmin, &user.tenantId, &user.subject, &user.displayName, &user.email)
@@ -94,7 +94,7 @@ func (r *userRepository) First(ctx context.Context, filter *repositories.UserFil
 	return user.Map(), nil
 }
 
-func (r *userRepository) Single(ctx context.Context, filter *repositories.UserFilter) (*repositories.User, error) {
+func (r *UserRepository) Single(ctx context.Context, filter *repositories.UserFilter) (*repositories.User, error) {
 	result, err := r.First(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -105,13 +105,13 @@ func (r *userRepository) Single(ctx context.Context, filter *repositories.UserFi
 	return result, nil
 }
 
-func (r *userRepository) List(ctx context.Context, filter *repositories.UserFilter) ([]*repositories.User, int, error) {
+func (r *UserRepository) List(ctx context.Context, filter *repositories.UserFilter) ([]*repositories.User, int, error) {
 	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	rows, err := r.tx.QueryContext(ctx, query, args...)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
 	}
@@ -133,12 +133,12 @@ func (r *userRepository) List(ctx context.Context, filter *repositories.UserFilt
 	return users, totalCount, nil
 }
 
-func (r *userRepository) Insert(ctx context.Context, user *repositories.User) error {
+func (r *UserRepository) Insert(ctx context.Context, user *repositories.User) error {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, user))
 	return nil
 }
 
-func (r *userRepository) ExecuteInsert(ctx context.Context, user *repositories.User) error {
+func (r *UserRepository) ExecuteInsert(ctx context.Context, user *repositories.User) error {
 	s := sqlbuilder.InsertInto("users").
 		Cols(
 			"id",
@@ -163,7 +163,7 @@ func (r *userRepository) ExecuteInsert(ctx context.Context, user *repositories.U
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -177,12 +177,12 @@ func (r *userRepository) ExecuteInsert(ctx context.Context, user *repositories.U
 	return nil
 }
 
-func (r *userRepository) Update(ctx context.Context, user *repositories.User) error {
+func (r *UserRepository) Update(ctx context.Context, user *repositories.User) error {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, user))
 	return nil
 }
 
-func (r *userRepository) ExecuteUpdate(ctx context.Context, user *repositories.User) error {
+func (r *UserRepository) ExecuteUpdate(ctx context.Context, user *repositories.User) error {
 	if !user.HasChanges() {
 		return nil
 	}
@@ -205,7 +205,7 @@ func (r *userRepository) ExecuteUpdate(ctx context.Context, user *repositories.U
 	s.Returning("xmin")
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -224,18 +224,18 @@ func (r *userRepository) ExecuteUpdate(ctx context.Context, user *repositories.U
 	return nil
 }
 
-func (r *userRepository) Delete(ctx context.Context, user *repositories.User) error {
+func (r *UserRepository) Delete(ctx context.Context, user *repositories.User) error {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, user))
 	return nil
 }
 
-func (r *userRepository) ExecuteDelete(ctx context.Context, user *repositories.User) error {
+func (r *UserRepository) ExecuteDelete(ctx context.Context, user *repositories.User) error {
 	s := sqlbuilder.DeleteFrom("users")
 	s.Where(s.Equal("id", user.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	_, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting user: %w", err)
 	}

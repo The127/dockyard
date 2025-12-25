@@ -68,21 +68,21 @@ func newPostgresTenant(tenant *repositories.Tenant) *postgresTenant {
 	}
 }
 
-type tenantRepository struct {
-	tx            *sql.Tx
+type TenantRepository struct {
+	db            *sql.DB
 	changeTracker *change.Tracker
 	entityType    int
 }
 
-func NewPostgresTenantRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *tenantRepository {
-	return &tenantRepository{
-		tx:            tx,
+func NewPostgresTenantRepository(db *sql.DB, changeTracker *change.Tracker, entityType int) *TenantRepository {
+	return &TenantRepository{
+		db:            db,
 		changeTracker: changeTracker,
 		entityType:    entityType,
 	}
 }
 
-func (r *tenantRepository) selectQuery(filter *repositories.TenantFilter) *sqlbuilder.SelectBuilder {
+func (r *TenantRepository) selectQuery(filter *repositories.TenantFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
 		"tenants.id",
 		"tenants.created_at",
@@ -108,13 +108,13 @@ func (r *tenantRepository) selectQuery(filter *repositories.TenantFilter) *sqlbu
 	return s
 }
 
-func (r *tenantRepository) First(ctx context.Context, filter *repositories.TenantFilter) (*repositories.Tenant, error) {
+func (r *TenantRepository) First(ctx context.Context, filter *repositories.TenantFilter) (*repositories.Tenant, error) {
 	s := r.selectQuery(filter)
 	s.Limit(1)
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var tenant postgresTenant
 	err := row.Scan(&tenant.id, &tenant.createdAt, &tenant.updatedAt, &tenant.xmin, &tenant.slug, &tenant.displayName, &tenant.oidcClient, &tenant.oidcIssuer, &tenant.oidcRoleClaim, &tenant.oidcRoleClaimFormat, &tenant.oidcRoleMapping)
@@ -128,7 +128,7 @@ func (r *tenantRepository) First(ctx context.Context, filter *repositories.Tenan
 	return tenant.Map(), nil
 }
 
-func (r *tenantRepository) Single(ctx context.Context, filter *repositories.TenantFilter) (*repositories.Tenant, error) {
+func (r *TenantRepository) Single(ctx context.Context, filter *repositories.TenantFilter) (*repositories.Tenant, error) {
 	result, err := r.First(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -139,13 +139,13 @@ func (r *tenantRepository) Single(ctx context.Context, filter *repositories.Tena
 	return result, nil
 }
 
-func (r *tenantRepository) List(ctx context.Context, filter *repositories.TenantFilter) ([]*repositories.Tenant, int, error) {
+func (r *TenantRepository) List(ctx context.Context, filter *repositories.TenantFilter) ([]*repositories.Tenant, int, error) {
 	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	rows, err := r.tx.QueryContext(ctx, query, args...)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
 	}
@@ -165,12 +165,12 @@ func (r *tenantRepository) List(ctx context.Context, filter *repositories.Tenant
 	return tenants, totalCount, nil
 }
 
-func (r *tenantRepository) Insert(ctx context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) Insert(ctx context.Context, tenant *repositories.Tenant) error {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, tenant))
 	return nil
 }
 
-func (r *tenantRepository) ExecuteInsert(ctx context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) ExecuteInsert(ctx context.Context, tenant *repositories.Tenant) error {
 	pgTenant := newPostgresTenant(tenant)
 
 	s := sqlbuilder.InsertInto("tenants").
@@ -203,7 +203,7 @@ func (r *tenantRepository) ExecuteInsert(ctx context.Context, tenant *repositori
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -217,12 +217,12 @@ func (r *tenantRepository) ExecuteInsert(ctx context.Context, tenant *repositori
 	return nil
 }
 
-func (r *tenantRepository) Update(ctx context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) Update(ctx context.Context, tenant *repositories.Tenant) error {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, tenant))
 	return nil
 }
 
-func (r *tenantRepository) ExecuteUpdate(ctx context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) ExecuteUpdate(ctx context.Context, tenant *repositories.Tenant) error {
 	if !tenant.HasChanges() {
 		return nil
 	}
@@ -256,7 +256,7 @@ func (r *tenantRepository) ExecuteUpdate(ctx context.Context, tenant *repositori
 	s.Returning("xmin")
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -275,18 +275,18 @@ func (r *tenantRepository) ExecuteUpdate(ctx context.Context, tenant *repositori
 	return nil
 }
 
-func (r *tenantRepository) Delete(ctx context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) Delete(ctx context.Context, tenant *repositories.Tenant) error {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, tenant))
 	return nil
 }
 
-func (r *tenantRepository) ExecuteDelete(ctx context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) ExecuteDelete(ctx context.Context, tenant *repositories.Tenant) error {
 	s := sqlbuilder.DeleteFrom("tenants")
 	s.Where(s.Equal("id", tenant.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	_, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting tenant: %w", err)
 	}

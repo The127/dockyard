@@ -37,21 +37,21 @@ func (r *postgresRepository) Map() *repositories.Repository {
 	)
 }
 
-type repositoryRepository struct {
-	tx            *sql.Tx
+type RepositoryRepository struct {
+	db            *sql.DB
 	changeTracker *change.Tracker
 	entityType    int
 }
 
-func NewPostgresRepositoryRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *repositoryRepository {
-	return &repositoryRepository{
-		tx:            tx,
+func NewPostgresRepositoryRepository(db *sql.DB, changeTracker *change.Tracker, entityType int) *RepositoryRepository {
+	return &RepositoryRepository{
+		db:            db,
 		changeTracker: changeTracker,
 		entityType:    entityType,
 	}
 }
 
-func (r *repositoryRepository) selectQuery(filter *repositories.RepositoryFilter) *sqlbuilder.SelectBuilder {
+func (r *RepositoryRepository) selectQuery(filter *repositories.RepositoryFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
 		"repositories.xmin",
 		"repositories.id",
@@ -80,13 +80,13 @@ func (r *repositoryRepository) selectQuery(filter *repositories.RepositoryFilter
 	return s
 }
 
-func (r *repositoryRepository) First(ctx context.Context, filter *repositories.RepositoryFilter) (*repositories.Repository, error) {
+func (r *RepositoryRepository) First(ctx context.Context, filter *repositories.RepositoryFilter) (*repositories.Repository, error) {
 	s := r.selectQuery(filter)
 	s.Limit(1)
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var repository postgresRepository
 	err := row.Scan(&repository.xmin, &repository.id, &repository.createdAt, &repository.updatedAt, &repository.projectId, &repository.slug, &repository.displayName, &repository.description, &repository.readmeFileId, &repository.isPublic)
@@ -100,7 +100,7 @@ func (r *repositoryRepository) First(ctx context.Context, filter *repositories.R
 	return repository.Map(), nil
 }
 
-func (r *repositoryRepository) Single(ctx context.Context, filter *repositories.RepositoryFilter) (*repositories.Repository, error) {
+func (r *RepositoryRepository) Single(ctx context.Context, filter *repositories.RepositoryFilter) (*repositories.Repository, error) {
 	result, err := r.First(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -111,13 +111,13 @@ func (r *repositoryRepository) Single(ctx context.Context, filter *repositories.
 	return result, nil
 }
 
-func (r *repositoryRepository) List(ctx context.Context, filter *repositories.RepositoryFilter) ([]*repositories.Repository, int, error) {
+func (r *RepositoryRepository) List(ctx context.Context, filter *repositories.RepositoryFilter) ([]*repositories.Repository, int, error) {
 	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	rows, err := r.tx.QueryContext(ctx, query, args...)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
 	}
@@ -138,12 +138,12 @@ func (r *repositoryRepository) List(ctx context.Context, filter *repositories.Re
 	return repos, totalCount, nil
 }
 
-func (r *repositoryRepository) Insert(ctx context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) Insert(ctx context.Context, repository *repositories.Repository) error {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, repository))
 	return nil
 }
 
-func (r *repositoryRepository) ExecuteInsert(ctx context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) ExecuteInsert(ctx context.Context, repository *repositories.Repository) error {
 	s := sqlbuilder.InsertInto("repositories").
 		Cols(
 			"id",
@@ -172,7 +172,7 @@ func (r *repositoryRepository) ExecuteInsert(ctx context.Context, repository *re
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -186,12 +186,12 @@ func (r *repositoryRepository) ExecuteInsert(ctx context.Context, repository *re
 	return nil
 }
 
-func (r *repositoryRepository) Update(ctx context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) Update(ctx context.Context, repository *repositories.Repository) error {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, repository))
 	return nil
 }
 
-func (r *repositoryRepository) ExecuteUpdate(ctx context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) ExecuteUpdate(ctx context.Context, repository *repositories.Repository) error {
 	if !repository.HasChanges() {
 		return nil
 	}
@@ -219,7 +219,7 @@ func (r *repositoryRepository) ExecuteUpdate(ctx context.Context, repository *re
 	s.Returning("xmin")
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -238,18 +238,18 @@ func (r *repositoryRepository) ExecuteUpdate(ctx context.Context, repository *re
 	return nil
 }
 
-func (r *repositoryRepository) Delete(ctx context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) Delete(ctx context.Context, repository *repositories.Repository) error {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, repository))
 	return nil
 }
 
-func (r *repositoryRepository) ExecuteDelete(ctx context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) ExecuteDelete(ctx context.Context, repository *repositories.Repository) error {
 	s := sqlbuilder.DeleteFrom("repositories")
 	s.Where(s.Equal("id", repository.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	_, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting repository: %w", err)
 	}

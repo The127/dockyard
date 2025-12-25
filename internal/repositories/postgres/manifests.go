@@ -34,21 +34,21 @@ func (m *postgresManifest) Map() *repositories.Manifest {
 	)
 }
 
-type manifestRepository struct {
-	tx            *sql.Tx
+type ManifestRepository struct {
+	db            *sql.DB
 	changeTracker *change.Tracker
 	entityType    int
 }
 
-func NewPostgresManifestRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *manifestRepository {
-	return &manifestRepository{
-		tx:            tx,
+func NewPostgresManifestRepository(db *sql.DB, changeTracker *change.Tracker, entityType int) *ManifestRepository {
+	return &ManifestRepository{
+		db:            db,
 		changeTracker: changeTracker,
 		entityType:    entityType,
 	}
 }
 
-func (r *manifestRepository) selectQuery(filter *repositories.ManifestFilter) *sqlbuilder.SelectBuilder {
+func (r *ManifestRepository) selectQuery(filter *repositories.ManifestFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
 		"manifests.xmin",
 		"manifests.id",
@@ -78,13 +78,13 @@ func (r *manifestRepository) selectQuery(filter *repositories.ManifestFilter) *s
 	return s
 }
 
-func (r *manifestRepository) First(ctx context.Context, filter *repositories.ManifestFilter) (*repositories.Manifest, error) {
+func (r *ManifestRepository) First(ctx context.Context, filter *repositories.ManifestFilter) (*repositories.Manifest, error) {
 	s := r.selectQuery(filter)
 	s.Limit(1)
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var manifest postgresManifest
 	err := row.Scan(&manifest.xmin, &manifest.id, &manifest.createdAt, &manifest.updatedAt, &manifest.repositoryId, &manifest.blobId, &manifest.digest)
@@ -98,7 +98,7 @@ func (r *manifestRepository) First(ctx context.Context, filter *repositories.Man
 	return manifest.Map(), nil
 }
 
-func (r *manifestRepository) Single(ctx context.Context, filter *repositories.ManifestFilter) (*repositories.Manifest, error) {
+func (r *ManifestRepository) Single(ctx context.Context, filter *repositories.ManifestFilter) (*repositories.Manifest, error) {
 	result, err := r.First(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -109,13 +109,13 @@ func (r *manifestRepository) Single(ctx context.Context, filter *repositories.Ma
 	return result, nil
 }
 
-func (r *manifestRepository) List(ctx context.Context, filter *repositories.ManifestFilter) ([]*repositories.Manifest, int, error) {
+func (r *ManifestRepository) List(ctx context.Context, filter *repositories.ManifestFilter) ([]*repositories.Manifest, int, error) {
 	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	rows, err := r.tx.QueryContext(ctx, query, args...)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
 	}
@@ -135,12 +135,12 @@ func (r *manifestRepository) List(ctx context.Context, filter *repositories.Mani
 	return manifests, totalCount, nil
 }
 
-func (r *manifestRepository) Insert(ctx context.Context, manifest *repositories.Manifest) error {
+func (r *ManifestRepository) Insert(ctx context.Context, manifest *repositories.Manifest) error {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, manifest))
 	return nil
 }
 
-func (r *manifestRepository) ExecuteInsert(ctx context.Context, manifest *repositories.Manifest) error {
+func (r *ManifestRepository) ExecuteInsert(ctx context.Context, manifest *repositories.Manifest) error {
 	s := sqlbuilder.InsertInto("manifests").
 		Cols(
 			"id",
@@ -163,7 +163,7 @@ func (r *manifestRepository) ExecuteInsert(ctx context.Context, manifest *reposi
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -176,18 +176,18 @@ func (r *manifestRepository) ExecuteInsert(ctx context.Context, manifest *reposi
 	return nil
 }
 
-func (r *manifestRepository) Delete(ctx context.Context, manifest *repositories.Manifest) error {
+func (r *ManifestRepository) Delete(ctx context.Context, manifest *repositories.Manifest) error {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, manifest))
 	return nil
 }
 
-func (r *manifestRepository) ExecuteDelete(ctx context.Context, manifest *repositories.Manifest) error {
+func (r *ManifestRepository) ExecuteDelete(ctx context.Context, manifest *repositories.Manifest) error {
 	s := sqlbuilder.DeleteFrom("manifest")
 	s.Where(s.Equal("id", manifest.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	_, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting manifest: %w", err)
 	}

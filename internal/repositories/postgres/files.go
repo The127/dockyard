@@ -32,21 +32,21 @@ func (f *postgresFile) Map() *repositories.File {
 	)
 }
 
-type fileRepository struct {
-	tx            *sql.Tx
+type FileRepository struct {
+	db            *sql.DB
 	changeTracker *change.Tracker
 	entityType    int
 }
 
-func NewPostgresFileRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *fileRepository {
-	return &fileRepository{
-		tx:            tx,
+func NewPostgresFileRepository(db *sql.DB, changeTracker *change.Tracker, entityType int) *FileRepository {
+	return &FileRepository{
+		db:            db,
 		changeTracker: changeTracker,
 		entityType:    entityType,
 	}
 }
 
-func (r *fileRepository) selectQuery(filter *repositories.FileFilter) *sqlbuilder.SelectBuilder {
+func (r *FileRepository) selectQuery(filter *repositories.FileFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
 		"files.xmin",
 		"files.id",
@@ -69,13 +69,13 @@ func (r *fileRepository) selectQuery(filter *repositories.FileFilter) *sqlbuilde
 	return s
 }
 
-func (r *fileRepository) First(ctx context.Context, filter *repositories.FileFilter) (*repositories.File, error) {
+func (r *FileRepository) First(ctx context.Context, filter *repositories.FileFilter) (*repositories.File, error) {
 	s := r.selectQuery(filter)
 	s.Limit(1)
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var file postgresFile
 	err := row.Scan(&file.xmin, &file.id, &file.createdAt, &file.updatedAt, &file.digest, &file.contentType, &file.data, &file.size)
@@ -89,7 +89,7 @@ func (r *fileRepository) First(ctx context.Context, filter *repositories.FileFil
 	return file.Map(), nil
 }
 
-func (r *fileRepository) Single(ctx context.Context, filter *repositories.FileFilter) (*repositories.File, error) {
+func (r *FileRepository) Single(ctx context.Context, filter *repositories.FileFilter) (*repositories.File, error) {
 	result, err := r.First(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -100,13 +100,13 @@ func (r *fileRepository) Single(ctx context.Context, filter *repositories.FileFi
 	return result, nil
 }
 
-func (r *fileRepository) List(ctx context.Context, filter *repositories.FileFilter) ([]*repositories.File, int, error) {
+func (r *FileRepository) List(ctx context.Context, filter *repositories.FileFilter) ([]*repositories.File, int, error) {
 	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	rows, err := r.tx.QueryContext(ctx, query, args...)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
 	}
@@ -126,12 +126,12 @@ func (r *fileRepository) List(ctx context.Context, filter *repositories.FileFilt
 	return files, totalCount, nil
 }
 
-func (r *fileRepository) Insert(ctx context.Context, file *repositories.File) error {
+func (r *FileRepository) Insert(ctx context.Context, file *repositories.File) error {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, file))
 	return nil
 }
 
-func (r *fileRepository) ExecuteInsert(ctx context.Context, file *repositories.File) error {
+func (r *FileRepository) ExecuteInsert(ctx context.Context, file *repositories.File) error {
 	s := sqlbuilder.InsertInto("files").
 		Cols(
 			"id",
@@ -156,7 +156,7 @@ func (r *fileRepository) ExecuteInsert(ctx context.Context, file *repositories.F
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -169,18 +169,18 @@ func (r *fileRepository) ExecuteInsert(ctx context.Context, file *repositories.F
 	return nil
 }
 
-func (r *fileRepository) Delete(ctx context.Context, file *repositories.File) error {
+func (r *FileRepository) Delete(ctx context.Context, file *repositories.File) error {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, file))
 	return nil
 }
 
-func (r *fileRepository) ExecuteDelete(ctx context.Context, file *repositories.File) error {
+func (r *FileRepository) ExecuteDelete(ctx context.Context, file *repositories.File) error {
 	s := sqlbuilder.DeleteFrom("files")
 	s.Where(s.Equal("id", file.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	_, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting file: %w", err)
 	}

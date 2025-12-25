@@ -33,21 +33,21 @@ func (p *postgresProject) Map() *repositories.Project {
 	)
 }
 
-type projectRepository struct {
-	tx            *sql.Tx
+type ProjectRepository struct {
+	db            *sql.DB
 	changeTracker *change.Tracker
 	entityType    int
 }
 
-func NewPostgresProjectRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *projectRepository {
-	return &projectRepository{
-		tx:            tx,
+func NewPostgresProjectRepository(db *sql.DB, changeTracker *change.Tracker, entityType int) *ProjectRepository {
+	return &ProjectRepository{
+		db:            db,
 		changeTracker: changeTracker,
 		entityType:    entityType,
 	}
 }
 
-func (r *projectRepository) selectQuery(filter *repositories.ProjectFilter) *sqlbuilder.SelectBuilder {
+func (r *ProjectRepository) selectQuery(filter *repositories.ProjectFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
 		"projects.xmin",
 		"projects.id",
@@ -74,13 +74,13 @@ func (r *projectRepository) selectQuery(filter *repositories.ProjectFilter) *sql
 	return s
 }
 
-func (r *projectRepository) First(ctx context.Context, filter *repositories.ProjectFilter) (*repositories.Project, error) {
+func (r *ProjectRepository) First(ctx context.Context, filter *repositories.ProjectFilter) (*repositories.Project, error) {
 	s := r.selectQuery(filter)
 	s.Limit(1)
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var project postgresProject
 	err := row.Scan(&project.xmin, &project.id, &project.createdAt, &project.updatedAt, &project.tenantId, &project.slug, &project.displayName, &project.description)
@@ -94,7 +94,7 @@ func (r *projectRepository) First(ctx context.Context, filter *repositories.Proj
 	return project.Map(), nil
 }
 
-func (r *projectRepository) Single(ctx context.Context, filter *repositories.ProjectFilter) (*repositories.Project, error) {
+func (r *ProjectRepository) Single(ctx context.Context, filter *repositories.ProjectFilter) (*repositories.Project, error) {
 	result, err := r.First(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -105,13 +105,13 @@ func (r *projectRepository) Single(ctx context.Context, filter *repositories.Pro
 	return result, nil
 }
 
-func (r *projectRepository) List(ctx context.Context, filter *repositories.ProjectFilter) ([]*repositories.Project, int, error) {
+func (r *ProjectRepository) List(ctx context.Context, filter *repositories.ProjectFilter) ([]*repositories.Project, int, error) {
 	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	rows, err := r.tx.QueryContext(ctx, query, args...)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
 	}
@@ -131,12 +131,12 @@ func (r *projectRepository) List(ctx context.Context, filter *repositories.Proje
 	return projects, totalCount, nil
 }
 
-func (r *projectRepository) Insert(ctx context.Context, project *repositories.Project) error {
+func (r *ProjectRepository) Insert(ctx context.Context, project *repositories.Project) error {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, project))
 	return nil
 }
 
-func (r *projectRepository) ExecuteInsert(ctx context.Context, project *repositories.Project) error {
+func (r *ProjectRepository) ExecuteInsert(ctx context.Context, project *repositories.Project) error {
 	s := sqlbuilder.InsertInto("projects").
 		Cols(
 			"id",
@@ -161,7 +161,7 @@ func (r *projectRepository) ExecuteInsert(ctx context.Context, project *reposito
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -175,12 +175,12 @@ func (r *projectRepository) ExecuteInsert(ctx context.Context, project *reposito
 	return nil
 }
 
-func (r *projectRepository) Update(ctx context.Context, project *repositories.Project) error {
+func (r *ProjectRepository) Update(ctx context.Context, project *repositories.Project) error {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, project))
 	return nil
 }
 
-func (r *projectRepository) ExecuteUpdate(ctx context.Context, project *repositories.Project) error {
+func (r *ProjectRepository) ExecuteUpdate(ctx context.Context, project *repositories.Project) error {
 	if !project.HasChanges() {
 		return nil
 	}
@@ -203,7 +203,7 @@ func (r *projectRepository) ExecuteUpdate(ctx context.Context, project *reposito
 	s.Returning("xmin")
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -222,18 +222,18 @@ func (r *projectRepository) ExecuteUpdate(ctx context.Context, project *reposito
 	return nil
 }
 
-func (r *projectRepository) Delete(ctx context.Context, project *repositories.Project) error {
+func (r *ProjectRepository) Delete(ctx context.Context, project *repositories.Project) error {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, project))
 	return nil
 }
 
-func (r *projectRepository) ExecuteDelete(ctx context.Context, project *repositories.Project) error {
+func (r *ProjectRepository) ExecuteDelete(ctx context.Context, project *repositories.Project) error {
 	s := sqlbuilder.DeleteFrom("projects")
 	s.Where(s.Equal("id", project.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	_, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting project: %w", err)
 	}

@@ -46,21 +46,21 @@ func (t *postgresTag) Map() *repositories.Tag {
 	return tag
 }
 
-type tagRepository struct {
-	tx            *sql.Tx
+type TagRepository struct {
+	db            *sql.DB
 	changeTracker *change.Tracker
 	entityType    int
 }
 
-func NewPostgresTagRepository(tx *sql.Tx, changeTracker *change.Tracker, entityType int) *tagRepository {
-	return &tagRepository{
-		tx:            tx,
+func NewPostgresTagRepository(db *sql.DB, changeTracker *change.Tracker, entityType int) *TagRepository {
+	return &TagRepository{
+		db:            db,
 		changeTracker: changeTracker,
 		entityType:    entityType,
 	}
 }
 
-func (r *tagRepository) selectQuery(filter *repositories.TagFilter) *sqlbuilder.SelectBuilder {
+func (r *TagRepository) selectQuery(filter *repositories.TagFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
 		"tags.id",
 		"tags.created_at",
@@ -95,13 +95,13 @@ func (r *tagRepository) selectQuery(filter *repositories.TagFilter) *sqlbuilder.
 	return s
 }
 
-func (r *tagRepository) First(ctx context.Context, filter *repositories.TagFilter) (*repositories.Tag, error) {
+func (r *TagRepository) First(ctx context.Context, filter *repositories.TagFilter) (*repositories.Tag, error) {
 	s := r.selectQuery(filter)
 	s.Limit(1)
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var tag postgresTag
 	cols := []any{&tag.id, &tag.createdAt, &tag.updatedAt, &tag.xmin, &tag.repositoryId, &tag.manifestId, &tag.name}
@@ -122,7 +122,7 @@ func (r *tagRepository) First(ctx context.Context, filter *repositories.TagFilte
 	return tag.Map(), nil
 }
 
-func (r *tagRepository) Single(ctx context.Context, filter *repositories.TagFilter) (*repositories.Tag, error) {
+func (r *TagRepository) Single(ctx context.Context, filter *repositories.TagFilter) (*repositories.Tag, error) {
 	result, err := r.First(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -133,13 +133,13 @@ func (r *tagRepository) Single(ctx context.Context, filter *repositories.TagFilt
 	return result, nil
 }
 
-func (r *tagRepository) List(ctx context.Context, filter *repositories.TagFilter) ([]*repositories.Tag, int, error) {
+func (r *TagRepository) List(ctx context.Context, filter *repositories.TagFilter) ([]*repositories.Tag, int, error) {
 	s := r.selectQuery(filter)
 	s.SelectMore("count(*) over() as total_count")
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	rows, err := r.tx.QueryContext(ctx, query, args...)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("querying db: %w", err)
 	}
@@ -170,12 +170,12 @@ func (r *tagRepository) List(ctx context.Context, filter *repositories.TagFilter
 	return tags, totalCount, nil
 }
 
-func (r *tagRepository) Insert(ctx context.Context, tag *repositories.Tag) error {
+func (r *TagRepository) Insert(ctx context.Context, tag *repositories.Tag) error {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, tag))
 	return nil
 }
 
-func (r *tagRepository) ExecuteInsert(ctx context.Context, tag *repositories.Tag) error {
+func (r *TagRepository) ExecuteInsert(ctx context.Context, tag *repositories.Tag) error {
 	s := sqlbuilder.InsertInto("tags").
 		Cols(
 			"id",
@@ -198,7 +198,7 @@ func (r *tagRepository) ExecuteInsert(ctx context.Context, tag *repositories.Tag
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.tx.QueryRowContext(ctx, query, args...)
+	row := r.db.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -211,18 +211,18 @@ func (r *tagRepository) ExecuteInsert(ctx context.Context, tag *repositories.Tag
 	return nil
 }
 
-func (r *tagRepository) Delete(ctx context.Context, tag *repositories.Tag) error {
+func (r *TagRepository) Delete(ctx context.Context, tag *repositories.Tag) error {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, tag))
 	return nil
 }
 
-func (r *tagRepository) ExecuteDelete(ctx context.Context, tag *repositories.Tag) error {
+func (r *TagRepository) ExecuteDelete(ctx context.Context, tag *repositories.Tag) error {
 	s := sqlbuilder.DeleteFrom("tags")
 	s.Where(s.Equal("id", tag.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.tx.ExecContext(ctx, query, args...)
+	_, err := r.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("executing query: %w", err)
 	}
