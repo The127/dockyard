@@ -100,7 +100,7 @@ func initApp(dp *ioc.DependencyProvider) {
 
 	anyTenant, err := dbContext.Tenants().First(ctx, repositories.NewTenantFilter())
 	if err != nil {
-		panic(fmt.Errorf("failed to get any tenant: %w", err))
+		logging.Logger.Panicf("failed to get any tenant: %s", err)
 	}
 	if anyTenant != nil {
 		// app already initialized
@@ -118,6 +118,13 @@ func initApp(dp *ioc.DependencyProvider) {
 		OidcRoleMapping: config.C.InitialTenant.Oidc.RoleClaimMapping,
 	})
 	if err != nil {
-		panic(fmt.Errorf("failed to create initial tenant: %w", err))
+		logging.Logger.Panicf("failed to create initial tenant: %s", err)
 	}
+
+	err = dbContext.SaveChanges(ctx)
+	if err != nil {
+		logging.Logger.Panicf("failed to save changes: %s", err)
+	}
+
+	logging.Logger.Infof("initial tenant created: %s", config.C.InitialTenant.Slug)
 }
