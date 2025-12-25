@@ -32,7 +32,8 @@ type Context struct {
 
 func newContext(db *sql.DB) *Context {
 	return &Context{
-		db: db,
+		db:            db,
+		changeTracker: change.NewTracker(),
 	}
 }
 

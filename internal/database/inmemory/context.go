@@ -31,8 +31,9 @@ type Context struct {
 
 func newContext(db *memdb.MemDB) *Context {
 	return &Context{
-		db:  db,
-		txn: db.Txn(false),
+		db:            db,
+		txn:           db.Txn(false),
+		changeTracker: change.NewTracker(),
 	}
 }
 
