@@ -35,11 +35,11 @@ func main() {
 		return clock.NewSystemClock()
 	})
 
-	db := setup.Database(dc, config.C.Database)
+	database := setup.Database(dc, config.C.Database)
 
 	err := retry.Do(
 		func() error {
-			return db.Migrate()
+			return database.Migrate()
 		},
 		retry.Attempts(5),
 		retry.Delay(time.Second*5),
