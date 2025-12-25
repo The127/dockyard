@@ -21,11 +21,30 @@ type postgresBlob struct {
 	size   int64
 }
 
+func mapBlob(blob *repositories.Blob) *postgresBlob {
+	return &postgresBlob{
+		postgresBaseModel: mapBase(blob.BaseModel),
+		digest:            blob.GetDigest(),
+		size:              blob.GetSize(),
+	}
+}
+
 func (b *postgresBlob) Map() *repositories.Blob {
 	return repositories.NewBlobFromDB(
 		b.digest,
 		b.size,
 		b.MapBase(),
+	)
+}
+
+func (b *postgresBlob) scan(row RowScanner) error {
+	return row.Scan(
+		&b.id,
+		&b.createdAt,
+		&b.updatedAt,
+		&b.xmin,
+		&b.digest,
+		&b.size,
 	)
 }
 
@@ -72,8 +91,8 @@ func (r *BlobRepository) First(ctx context.Context, filter *repositories.BlobFil
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.db.QueryRowContext(ctx, query, args...)
 
-	var blob postgresBlob
-	err := row.Scan(&blob.id, &blob.createdAt, &blob.updatedAt, &blob.xmin, &blob.digest, &blob.size)
+	blob := &postgresBlob{}
+	err := blob.scan(row)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -110,8 +129,8 @@ func (r *BlobRepository) List(ctx context.Context, filter *repositories.BlobFilt
 	var blobs []*repositories.Blob
 	var totalCount int
 	for rows.Next() {
-		var blob postgresBlob
-		err := rows.Scan(&blob.id, &blob.createdAt, &blob.updatedAt, &blob.xmin, &blob.digest, &blob.size, &totalCount)
+		blob := &postgresBlob{}
+		err := blob.scan(rows)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
@@ -126,6 +145,8 @@ func (r *BlobRepository) Insert(blob *repositories.Blob) {
 }
 
 func (r *BlobRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, blob *repositories.Blob) error {
+	mapped := mapBlob(blob)
+
 	s := sqlbuilder.InsertInto("blobs").
 		Cols(
 			"id",
@@ -135,11 +156,11 @@ func (r *BlobRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, blob *re
 			"size",
 		).
 		Values(
-			blob.GetId(),
-			blob.GetCreatedAt(),
-			blob.GetUpdatedAt(),
-			blob.GetDigest(),
-			blob.GetSize(),
+			mapped.id,
+			mapped.createdAt,
+			mapped.updatedAt,
+			mapped.digest,
+			mapped.size,
 		)
 
 	s.Returning("xmin")

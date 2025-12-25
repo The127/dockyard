@@ -25,12 +25,32 @@ type postgresManifest struct {
 	digest string
 }
 
+func mapManifest(m *repositories.Manifest) *postgresManifest {
+	return &postgresManifest{
+		postgresBaseModel: mapBase(m.BaseModel),
+		repositoryId:      m.GetRepositoryId(),
+		blobId:            m.GetBlobId(),
+		digest:            m.GetDigest(),
+	}
+}
+
 func (m *postgresManifest) Map() *repositories.Manifest {
 	return repositories.NewManifestFromDB(
 		m.repositoryId,
 		m.blobId,
 		m.digest,
 		m.MapBase(),
+	)
+}
+
+func (m *postgresManifest) scan(row RowScanner) error {
+	return row.Scan(
+		&m.id,
+		&m.createdAt,
+		&m.updatedAt,
+		&m.xmin,
+		&m.repositoryId,
+		&m.blobId,
 	)
 }
 
@@ -86,8 +106,8 @@ func (r *ManifestRepository) First(ctx context.Context, filter *repositories.Man
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.db.QueryRowContext(ctx, query, args...)
 
-	var manifest postgresManifest
-	err := row.Scan(&manifest.xmin, &manifest.id, &manifest.createdAt, &manifest.updatedAt, &manifest.repositoryId, &manifest.blobId, &manifest.digest)
+	manifest := &postgresManifest{}
+	err := manifest.scan(row)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -124,8 +144,8 @@ func (r *ManifestRepository) List(ctx context.Context, filter *repositories.Mani
 	var manifests []*repositories.Manifest
 	var totalCount int
 	for rows.Next() {
-		var manifest postgresManifest
-		err := rows.Scan(&manifest.xmin, &manifest.id, &manifest.createdAt, &manifest.updatedAt, &manifest.repositoryId, &manifest.blobId, &manifest.digest, &totalCount)
+		manifest := &postgresManifest{}
+		err := manifest.scan(rows)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
@@ -140,6 +160,8 @@ func (r *ManifestRepository) Insert(manifest *repositories.Manifest) {
 }
 
 func (r *ManifestRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, manifest *repositories.Manifest) error {
+	mapped := mapManifest(manifest)
+
 	s := sqlbuilder.InsertInto("manifests").
 		Cols(
 			"id",
@@ -150,12 +172,12 @@ func (r *ManifestRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, mani
 			"digest",
 		).
 		Values(
-			manifest.GetId(),
-			manifest.GetCreatedAt(),
-			manifest.GetUpdatedAt(),
-			manifest.GetRepositoryId(),
-			manifest.GetBlobId(),
-			manifest.GetDigest(),
+			mapped.id,
+			mapped.createdAt,
+			mapped.updatedAt,
+			mapped.repositoryId,
+			mapped.blobId,
+			mapped.digest,
 		)
 
 	s.Returning("xmin")

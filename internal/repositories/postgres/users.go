@@ -23,6 +23,16 @@ type postgresUser struct {
 	email       *string
 }
 
+func mapUser(u *repositories.User) *postgresUser {
+	return &postgresUser{
+		postgresBaseModel: mapBase(u.BaseModel),
+		tenantId:          u.GetTenantId(),
+		subject:           u.GetSubject(),
+		displayName:       u.GetDisplayName(),
+		email:             u.GetEmail(),
+	}
+}
+
 func (u *postgresUser) Map() *repositories.User {
 	return repositories.NewUserFromDB(
 		u.tenantId,
@@ -30,6 +40,19 @@ func (u *postgresUser) Map() *repositories.User {
 		u.displayName,
 		u.email,
 		u.MapBase(),
+	)
+}
+
+func (u *postgresUser) scan(row RowScanner) error {
+	return row.Scan(
+		&u.id,
+		&u.createdAt,
+		&u.updatedAt,
+		&u.xmin,
+		&u.tenantId,
+		&u.subject,
+		&u.displayName,
+		&u.email,
 	)
 }
 
@@ -82,8 +105,8 @@ func (r *UserRepository) First(ctx context.Context, filter *repositories.UserFil
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.db.QueryRowContext(ctx, query, args...)
 
-	var user postgresUser
-	err := row.Scan(&user.id, &user.createdAt, &user.updatedAt, &user.xmin, &user.tenantId, &user.subject, &user.displayName, &user.email)
+	user := &postgresUser{}
+	err := user.scan(row)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -121,9 +144,8 @@ func (r *UserRepository) List(ctx context.Context, filter *repositories.UserFilt
 	var totalCount int
 
 	for rows.Next() {
-		var user postgresUser
-
-		err := rows.Scan(&user.id, &user.createdAt, &user.updatedAt, &user.xmin, &user.tenantId, &user.subject, &user.displayName, &user.email, &totalCount)
+		user := &postgresUser{}
+		err := user.scan(rows)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
@@ -138,6 +160,8 @@ func (r *UserRepository) Insert(user *repositories.User) {
 }
 
 func (r *UserRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, user *repositories.User) error {
+	mapped := mapUser(user)
+
 	s := sqlbuilder.InsertInto("users").
 		Cols(
 			"id",
@@ -149,13 +173,13 @@ func (r *UserRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, user *re
 			"email",
 		).
 		Values(
-			user.GetId(),
-			user.GetCreatedAt(),
-			user.GetUpdatedAt(),
-			user.GetTenantId(),
-			user.GetSubject(),
-			user.GetDisplayName(),
-			user.GetEmail(),
+			mapped.id,
+			mapped.createdAt,
+			mapped.updatedAt,
+			mapped.tenantId,
+			mapped.subject,
+			mapped.displayName,
+			mapped.email,
 		)
 
 	s.Returning("xmin")
@@ -185,6 +209,8 @@ func (r *UserRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, user *re
 		return nil
 	}
 
+	mapped := mapUser(user)
+
 	s := sqlbuilder.Update("users")
 	s.Where(s.Equal("id", user.GetId()))
 	s.Where(s.Equal("xmin", user.GetVersion()))
@@ -192,9 +218,9 @@ func (r *UserRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, user *re
 	for _, field := range user.GetChanges() {
 		switch field {
 		case repositories.UserChangeEmail:
-			s.SetMore(s.Assign("email", user.GetEmail()))
+			s.SetMore(s.Assign("email", mapped.email))
 		case repositories.UserChangeDisplayName:
-			s.SetMore(s.Assign("display_name", user.GetDisplayName()))
+			s.SetMore(s.Assign("display_name", mapped.displayName))
 		default:
 			panic(fmt.Errorf("unknown user change: %d", field))
 		}

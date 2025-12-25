@@ -22,12 +22,33 @@ type postgresRepositoryAccess struct {
 	role         string
 }
 
+func mapRepositoryAccess(ra *repositories.RepositoryAccess) *postgresRepositoryAccess {
+	return &postgresRepositoryAccess{
+		postgresBaseModel: mapBase(ra.BaseModel),
+		repositoryId:      ra.GetRepositoryId(),
+		userId:            ra.GetUserId(),
+		role:              string(ra.GetRole()),
+	}
+}
+
 func (ra *postgresRepositoryAccess) Map() *repositories.RepositoryAccess {
 	return repositories.NewRepositoryAccessFromDB(
 		ra.repositoryId,
 		ra.userId,
 		repositories.RepositoryAccessRole(ra.role),
 		ra.MapBase(),
+	)
+}
+
+func (ra *postgresRepositoryAccess) scan(row RowScanner) error {
+	return row.Scan(
+		&ra.xmin,
+		&ra.id,
+		&ra.createdAt,
+		&ra.updatedAt,
+		&ra.repositoryId,
+		&ra.userId,
+		&ra.role,
 	)
 }
 
@@ -47,10 +68,10 @@ func NewPostgresRepositoryAccessRepository(db *sql.DB, changeTracker *change.Tra
 
 func (r *RepositoryAccessRepository) selectQuery(filter *repositories.RepositoryAccessFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
-		"repository_accesses.xmin",
 		"repository_accesses.id",
 		"repository_accesses.created_at",
 		"repository_accesses.updated_at",
+		"repository_accesses.xmin",
 		"repository_accesses.repository_id",
 		"repository_accesses.user_id",
 		"repository_accesses.role",
@@ -75,8 +96,8 @@ func (r *RepositoryAccessRepository) First(ctx context.Context, filter *reposito
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.db.QueryRowContext(ctx, query, args...)
 
-	var repositoryAccess postgresRepositoryAccess
-	err := row.Scan(&repositoryAccess.xmin, &repositoryAccess.id, &repositoryAccess.createdAt, &repositoryAccess.updatedAt, &repositoryAccess.repositoryId, &repositoryAccess.userId, &repositoryAccess.role)
+	repositoryAccess := &postgresRepositoryAccess{}
+	err := repositoryAccess.scan(row)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -102,8 +123,8 @@ func (r *RepositoryAccessRepository) List(ctx context.Context, filter *repositor
 	var repositoryAccesses []*repositories.RepositoryAccess
 	var totalCount int
 	for rows.Next() {
-		var repositoryAccess postgresRepositoryAccess
-		err := rows.Scan(&repositoryAccess.xmin, &repositoryAccess.id, &repositoryAccess.createdAt, &repositoryAccess.updatedAt, &repositoryAccess.repositoryId, &repositoryAccess.userId, &repositoryAccess.role, &totalCount)
+		repositoryAccess := &postgresRepositoryAccess{}
+		err := repositoryAccess.scan(rows)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
@@ -118,6 +139,8 @@ func (r *RepositoryAccessRepository) Insert(repositoryAccess *repositories.Repos
 }
 
 func (r *RepositoryAccessRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, repositoryAccess *repositories.RepositoryAccess) error {
+	mapped := mapRepositoryAccess(repositoryAccess)
+
 	s := sqlbuilder.InsertInto("repository_accesses").
 		Cols(
 			"id",
@@ -128,12 +151,12 @@ func (r *RepositoryAccessRepository) ExecuteInsert(ctx context.Context, tx *sql.
 			"role",
 		).
 		Values(
-			repositoryAccess.GetId(),
-			repositoryAccess.GetCreatedAt(),
-			repositoryAccess.GetUpdatedAt(),
-			repositoryAccess.GetRepositoryId(),
-			repositoryAccess.GetUserId(),
-			repositoryAccess.GetRole(),
+			mapped.id,
+			mapped.createdAt,
+			mapped.updatedAt,
+			mapped.repositoryId,
+			mapped.userId,
+			mapped.role,
 		)
 
 	s.Returning("xmin")
@@ -163,6 +186,8 @@ func (r *RepositoryAccessRepository) ExecuteUpdate(ctx context.Context, tx *sql.
 		return nil
 	}
 
+	mapped := mapRepositoryAccess(repositoryAccess)
+
 	s := sqlbuilder.Update("repository_accesses")
 	s.Where(s.Equal("id", repositoryAccess.GetId()))
 	s.Where(s.Equal("xmin", repositoryAccess.GetVersion()))
@@ -170,7 +195,7 @@ func (r *RepositoryAccessRepository) ExecuteUpdate(ctx context.Context, tx *sql.
 	for _, field := range repositoryAccess.GetChanges() {
 		switch field {
 		case repositories.RepositoryAccessChangeRole:
-			s.SetMore(s.Assign("role", repositoryAccess.GetRole()))
+			s.SetMore(s.Assign("role", mapped.role))
 		default:
 			panic(fmt.Errorf("unknown repositoryAccess change: %d", field))
 		}

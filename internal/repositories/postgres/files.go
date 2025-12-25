@@ -22,6 +22,16 @@ type postgresFile struct {
 	size        int64
 }
 
+func mapFile(file *repositories.File) *postgresFile {
+	return &postgresFile{
+		postgresBaseModel: mapBase(file.BaseModel),
+		digest:            file.GetDigest(),
+		contentType:       file.GetContentType(),
+		data:              file.GetData(),
+		size:              file.GetSize(),
+	}
+}
+
 func (f *postgresFile) Map() *repositories.File {
 	return repositories.NewFileFromDB(
 		f.digest,
@@ -29,6 +39,19 @@ func (f *postgresFile) Map() *repositories.File {
 		f.data,
 		f.size,
 		f.MapBase(),
+	)
+}
+
+func (f *postgresFile) scan(row RowScanner) error {
+	return row.Scan(
+		&f.id,
+		&f.createdAt,
+		&f.updatedAt,
+		&f.xmin,
+		&f.digest,
+		&f.contentType,
+		&f.data,
+		&f.size,
 	)
 }
 
@@ -48,10 +71,10 @@ func NewPostgresFileRepository(db *sql.DB, changeTracker *change.Tracker, entity
 
 func (r *FileRepository) selectQuery(filter *repositories.FileFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
-		"files.xmin",
 		"files.id",
 		"files.created_at",
 		"files.updated_at",
+		"files.xmin",
 		"files.digest",
 		"files.content_type",
 		"files.data",
@@ -77,8 +100,8 @@ func (r *FileRepository) First(ctx context.Context, filter *repositories.FileFil
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.db.QueryRowContext(ctx, query, args...)
 
-	var file postgresFile
-	err := row.Scan(&file.xmin, &file.id, &file.createdAt, &file.updatedAt, &file.digest, &file.contentType, &file.data, &file.size)
+	file := &postgresFile{}
+	err := file.scan(row)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -115,8 +138,8 @@ func (r *FileRepository) List(ctx context.Context, filter *repositories.FileFilt
 	var files []*repositories.File
 	var totalCount int
 	for rows.Next() {
-		var file postgresFile
-		err := rows.Scan(&file.xmin, &file.id, &file.createdAt, &file.updatedAt, &file.digest, &file.contentType, &file.data, &file.size, &totalCount)
+		file := &postgresFile{}
+		err := file.scan(rows)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
@@ -131,6 +154,8 @@ func (r *FileRepository) Insert(file *repositories.File) {
 }
 
 func (r *FileRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, file *repositories.File) error {
+	mapped := mapFile(file)
+
 	s := sqlbuilder.InsertInto("files").
 		Cols(
 			"id",
@@ -142,13 +167,13 @@ func (r *FileRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, file *re
 			"size",
 		).
 		Values(
-			file.GetId(),
-			file.GetCreatedAt(),
-			file.GetUpdatedAt(),
-			file.GetDigest(),
-			file.GetContentType(),
-			file.GetData(),
-			file.GetSize(),
+			mapped.id,
+			mapped.createdAt,
+			mapped.updatedAt,
+			mapped.digest,
+			mapped.contentType,
+			mapped.data,
+			mapped.size,
 		)
 
 	s.Returning("xmin")

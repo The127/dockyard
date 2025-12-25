@@ -21,11 +21,30 @@ type postgresRepositoryBlob struct {
 	blobId       uuid.UUID
 }
 
+func mapRepositoryBlob(rb *repositories.RepositoryBlob) *postgresRepositoryBlob {
+	return &postgresRepositoryBlob{
+		postgresBaseModel: mapBase(rb.BaseModel),
+		repositoryId:      rb.GetRepositoryId(),
+		blobId:            rb.GetBlobId(),
+	}
+}
+
 func (rb *postgresRepositoryBlob) Map() *repositories.RepositoryBlob {
 	return repositories.NewRepositoryBlobFromDB(
 		rb.repositoryId,
 		rb.blobId,
 		rb.MapBase(),
+	)
+}
+
+func (rb *postgresRepositoryBlob) scan(row RowScanner) error {
+	return row.Scan(
+		&rb.id,
+		&rb.createdAt,
+		&rb.updatedAt,
+		&rb.xmin,
+		&rb.repositoryId,
+		&rb.blobId,
 	)
 }
 
@@ -45,10 +64,10 @@ func NewPostgresRepositoryBlobRepository(db *sql.DB, changeTracker *change.Track
 
 func (r *RepositoryBlobRepository) selectQuery(filter *repositories.RepositoryBlobFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
-		"repository_blobs.xmin",
 		"repository_blobs.id",
 		"repository_blobs.created_at",
 		"repository_blobs.updated_at",
+		"repository_blobs.xmin",
 		"repository_blobs.repository_id",
 		"repository_blobs.blob_id",
 	).From("repository_blobs")
@@ -76,8 +95,8 @@ func (r *RepositoryBlobRepository) First(ctx context.Context, filter *repositori
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.db.QueryRowContext(ctx, query, args...)
 
-	var repositoryBlob postgresRepositoryBlob
-	err := row.Scan(&repositoryBlob.xmin, &repositoryBlob.id, &repositoryBlob.createdAt, &repositoryBlob.updatedAt, &repositoryBlob.repositoryId, &repositoryBlob.blobId)
+	repositoryBlob := &postgresRepositoryBlob{}
+	err := repositoryBlob.scan(row)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -114,8 +133,8 @@ func (r *RepositoryBlobRepository) List(ctx context.Context, filter *repositorie
 	var repositoryBlobs []*repositories.RepositoryBlob
 	var totalCount int
 	for rows.Next() {
-		var repositoryBlob postgresRepositoryBlob
-		err := rows.Scan(&repositoryBlob.xmin, &repositoryBlob.id, &repositoryBlob.createdAt, &repositoryBlob.updatedAt, &repositoryBlob.repositoryId, &repositoryBlob.blobId, &totalCount)
+		repositoryBlob := &postgresRepositoryBlob{}
+		err := repositoryBlob.scan(rows)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
@@ -130,6 +149,8 @@ func (r *RepositoryBlobRepository) Insert(repositoryBlob *repositories.Repositor
 }
 
 func (r *RepositoryBlobRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, repositoryBlob *repositories.RepositoryBlob) error {
+	mapped := mapRepositoryBlob(repositoryBlob)
+
 	s := sqlbuilder.InsertInto("repository_blobs").
 		Cols(
 			"id",
@@ -139,11 +160,11 @@ func (r *RepositoryBlobRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx
 			"blob_id",
 		).
 		Values(
-			repositoryBlob.GetId(),
-			repositoryBlob.GetCreatedAt(),
-			repositoryBlob.GetUpdatedAt(),
-			repositoryBlob.GetRepositoryId(),
-			repositoryBlob.GetBlobId(),
+			mapped.id,
+			mapped.createdAt,
+			mapped.updatedAt,
+			mapped.repositoryId,
+			mapped.blobId,
 		)
 
 	s.Returning("xmin")
