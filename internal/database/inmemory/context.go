@@ -2,6 +2,7 @@ package inmemory
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/hashicorp/go-memdb"
 	"github.com/the127/dockyard/internal/change"
@@ -15,18 +16,18 @@ type Context struct {
 	txn           *memdb.Txn
 	changeTracker *change.Tracker
 
-	tenants          repositories.TenantRepository
-	projects         repositories.ProjectRepository
-	projectAccess    repositories.ProjectAccessRepository
-	users            repositories.UserRepository
-	pats             repositories.PatRepository
-	repos            repositories.RepositoryRepository
-	repositoryAccess repositories.RepositoryAccessRepository
-	manifest         repositories.ManifestRepository
-	tags             repositories.TagRepository
-	blobs            repositories.BlobRepository
-	repositoryBlobs  repositories.RepositoryBlobRepository
-	files            repositories.FileRepository
+	tenants          inmemory.TenantRepository
+	projects         inmemory.ProjectRepository
+	projectAccess    inmemory.ProjectAccessRepository
+	users            inmemory.UserRepository
+	pats             inmemory.PatRepository
+	repos            inmemory.RepositoryRepository
+	repositoryAccess inmemory.RepositoryAccessRepository
+	manifest         inmemory.ManifestRepository
+	tags             inmemory.TagRepository
+	blobs            inmemory.BlobRepository
+	repositoryBlobs  inmemory.RepositoryBlobRepository
+	files            inmemory.FileRepository
 }
 
 func newContext(db *memdb.MemDB) *Context {
@@ -122,7 +123,152 @@ func (c *Context) Files() repositories.FileRepository {
 }
 
 func (c *Context) SaveChanges(ctx context.Context) error {
-	_ = c.db.Txn(true)
-	// TODO: implement
+	tx := c.db.Txn(true)
+
+	changes := c.changeTracker.GetChanges()
+	for _, changeEntry := range changes {
+		err := c.applyChange(tx, changeEntry)
+		if err != nil {
+			return fmt.Errorf("failed to apply change: %w", err)
+		}
+	}
+
+	tx.Commit()
 	return nil
+}
+
+func (c *Context) applyChange(tx *memdb.Txn, entry *change.Entry) error {
+	switch entry.GetItemType() {
+	case db.TenantType:
+		return c.applyTenantChange(tx, entry)
+
+	case db.ProjectType:
+		return c.applyProjectChange(tx, entry)
+
+	case db.ProjectAccessType:
+		return c.applyProjectAccessChange(tx, entry)
+
+	case db.UserType:
+		return c.applyUserChange(tx, entry)
+
+	case db.PatType:
+		return c.applyPatChange(tx, entry)
+
+	case db.RepositoryType:
+		return c.applyRepositoryChange(tx, entry)
+
+	case db.RepositoryAccessType:
+		return c.applyRepositoryAccessChange(tx, entry)
+
+	case db.ManifestType:
+		return c.applyManifestChange(tx, entry)
+
+	case db.TagType:
+		return c.applyTagChange(tx, entry)
+
+	case db.BlobType:
+		return c.applyBlobChange(tx, entry)
+
+	case db.RepositoryBlobType:
+		return c.applyRepositoryBlobChange(tx, entry)
+
+	case db.FileType:
+		return c.applyFileChange(tx, entry)
+
+	default:
+		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+	}
+}
+
+func (c *Context) applyTenantChange(tx *memdb.Txn, entry *change.Entry) error {
+	switch entry.GetChangeType() {
+	case change.Added:
+		return c.tenants.ExecuteInsert(tx, entry.GetItem().(*repositories.Tenant))
+
+	case change.Updated:
+		return c.tenants.ExecuteUpdate(tx, entry.GetItem().(*repositories.Tenant))
+
+	case change.Deleted:
+		return c.tenants.ExecuteDelete(tx, entry.GetItem().(*repositories.Tenant))
+
+	default:
+		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+	}
+}
+
+func (c *Context) applyProjectChange(tx *memdb.Txn, entry *change.Entry) error {
+	switch entry.GetChangeType() {
+	default:
+		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+	}
+}
+
+func (c *Context) applyProjectAccessChange(tx *memdb.Txn, entry *change.Entry) error {
+	switch entry.GetChangeType() {
+	default:
+		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+	}
+}
+
+func (c *Context) applyUserChange(tx *memdb.Txn, entry *change.Entry) error {
+	switch entry.GetChangeType() {
+	default:
+		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+	}
+}
+
+func (c *Context) applyPatChange(tx *memdb.Txn, entry *change.Entry) error {
+	switch entry.GetChangeType() {
+	default:
+		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+	}
+}
+
+func (c *Context) applyRepositoryChange(tx *memdb.Txn, entry *change.Entry) error {
+	switch entry.GetChangeType() {
+	default:
+		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+	}
+}
+
+func (c *Context) applyRepositoryAccessChange(tx *memdb.Txn, entry *change.Entry) error {
+	switch entry.GetChangeType() {
+	default:
+		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+	}
+}
+
+func (c *Context) applyManifestChange(tx *memdb.Txn, entry *change.Entry) error {
+	switch entry.GetChangeType() {
+	default:
+		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+	}
+}
+
+func (c *Context) applyTagChange(tx *memdb.Txn, entry *change.Entry) error {
+	switch entry.GetChangeType() {
+	default:
+		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+	}
+}
+
+func (c *Context) applyBlobChange(tx *memdb.Txn, entry *change.Entry) error {
+	switch entry.GetChangeType() {
+	default:
+		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+	}
+}
+
+func (c *Context) applyRepositoryBlobChange(tx *memdb.Txn, entry *change.Entry) error {
+	switch entry.GetChangeType() {
+	default:
+		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+	}
+}
+
+func (c *Context) applyFileChange(tx *memdb.Txn, entry *change.Entry) error {
+	switch entry.GetChangeType() {
+	default:
+		return fmt.Errorf("unsupported change type: %s", entry.GetChangeType())
+	}
 }

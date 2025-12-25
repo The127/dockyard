@@ -101,8 +101,8 @@ func (r *TenantRepository) Insert(_ context.Context, tenant *repositories.Tenant
 	return nil
 }
 
-func (r *TenantRepository) ExecuteInsert(_ context.Context, tenant *repositories.Tenant) error {
-	err := r.txn.Insert("tenants", *tenant)
+func (r *TenantRepository) ExecuteInsert(tx *memdb.Txn, tenant *repositories.Tenant) error {
+	err := tx.Insert("tenants", *tenant)
 	if err != nil {
 		return fmt.Errorf("failed to insert tenant: %w", err)
 	}
@@ -116,7 +116,7 @@ func (r *TenantRepository) Update(_ context.Context, tenant *repositories.Tenant
 	return nil
 }
 
-func (r *TenantRepository) ExecuteUpdate(_ context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) ExecuteUpdate(tx *memdb.Txn, tenant *repositories.Tenant) error {
 	err := r.txn.Insert("tenants", *tenant)
 	if err != nil {
 		return fmt.Errorf("failed to insert tenant: %w", err)
@@ -126,12 +126,12 @@ func (r *TenantRepository) ExecuteUpdate(_ context.Context, tenant *repositories
 	return nil
 }
 
-func (r *TenantRepository) Delete(ctx context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) Delete(_ context.Context, tenant *repositories.Tenant) error {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, tenant))
 	return nil
 }
 
-func (r *TenantRepository) ExecuteDelete(ctx context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) ExecuteDelete(tx *memdb.Txn, tenant *repositories.Tenant) error {
 	err := r.txn.Delete("tenants", tenant)
 	if err != nil {
 		return fmt.Errorf("failed to delete tenant: %w", err)
