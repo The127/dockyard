@@ -102,9 +102,8 @@ func (r *ProjectRepository) List(_ context.Context, filter *repositories.Project
 	return result, count, err
 }
 
-func (r *ProjectRepository) Insert(_ context.Context, project *repositories.Project) error {
+func (r *ProjectRepository) Insert(project *repositories.Project) {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, project))
-	return nil
 }
 
 func (r *ProjectRepository) ExecuteInsert(tx *memdb.Txn, project *repositories.Project) error {
@@ -117,9 +116,8 @@ func (r *ProjectRepository) ExecuteInsert(tx *memdb.Txn, project *repositories.P
 	return nil
 }
 
-func (r *ProjectRepository) Update(_ context.Context, project *repositories.Project) error {
+func (r *ProjectRepository) Update(project *repositories.Project) {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, project))
-	return nil
 }
 
 func (r *ProjectRepository) ExecuteUpdate(tx *memdb.Txn, project *repositories.Project) error {
@@ -132,9 +130,8 @@ func (r *ProjectRepository) ExecuteUpdate(tx *memdb.Txn, project *repositories.P
 	return nil
 }
 
-func (r *ProjectRepository) Delete(_ context.Context, project *repositories.Project) error {
+func (r *ProjectRepository) Delete(project *repositories.Project) {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, project))
-	return nil
 }
 
 func (r *ProjectRepository) ExecuteDelete(tx *memdb.Txn, project *repositories.Project) error {

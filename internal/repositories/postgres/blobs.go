@@ -121,9 +121,8 @@ func (r *BlobRepository) List(ctx context.Context, filter *repositories.BlobFilt
 	return blobs, totalCount, nil
 }
 
-func (r *BlobRepository) Insert(ctx context.Context, blob *repositories.Blob) error {
+func (r *BlobRepository) Insert(blob *repositories.Blob) {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, blob))
-	return nil
 }
 
 func (r *BlobRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, blob *repositories.Blob) error {
@@ -160,9 +159,8 @@ func (r *BlobRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, blob *re
 	return nil
 }
 
-func (r *BlobRepository) Delete(ctx context.Context, blob *repositories.Blob) error {
+func (r *BlobRepository) Delete(blob *repositories.Blob) {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, blob))
-	return nil
 }
 
 func (r *BlobRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, blob *repositories.Blob) error {

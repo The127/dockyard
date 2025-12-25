@@ -113,9 +113,8 @@ func (r *ProjectAccessRepository) List(ctx context.Context, filter *repositories
 	return projectAccesses, totalCount, nil
 }
 
-func (r *ProjectAccessRepository) Insert(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) Insert(projectAccess *repositories.ProjectAccess) {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, projectAccess))
-	return nil
 }
 
 func (r *ProjectAccessRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, projectAccess *repositories.ProjectAccess) error {
@@ -155,9 +154,8 @@ func (r *ProjectAccessRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx,
 	return nil
 }
 
-func (r *ProjectAccessRepository) Update(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) Update(projectAccess *repositories.ProjectAccess) {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, projectAccess))
-	return nil
 }
 
 func (r *ProjectAccessRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, projectAccess *repositories.ProjectAccess) error {
@@ -200,9 +198,8 @@ func (r *ProjectAccessRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx,
 	return nil
 }
 
-func (r *ProjectAccessRepository) Delete(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) Delete(projectAccess *repositories.ProjectAccess) {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, projectAccess))
-	return nil
 }
 
 func (r *ProjectAccessRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, projectAccess *repositories.ProjectAccess) error {

@@ -126,9 +126,8 @@ func (r *FileRepository) List(ctx context.Context, filter *repositories.FileFilt
 	return files, totalCount, nil
 }
 
-func (r *FileRepository) Insert(ctx context.Context, file *repositories.File) error {
+func (r *FileRepository) Insert(file *repositories.File) {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, file))
-	return nil
 }
 
 func (r *FileRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, file *repositories.File) error {
@@ -169,9 +168,8 @@ func (r *FileRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, file *re
 	return nil
 }
 
-func (r *FileRepository) Delete(ctx context.Context, file *repositories.File) error {
+func (r *FileRepository) Delete(file *repositories.File) {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, file))
-	return nil
 }
 
 func (r *FileRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, file *repositories.File) error {

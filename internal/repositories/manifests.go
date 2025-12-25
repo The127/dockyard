@@ -122,6 +122,6 @@ type ManifestRepository interface {
 	Single(ctx context.Context, filter *ManifestFilter) (*Manifest, error)
 	First(ctx context.Context, filter *ManifestFilter) (*Manifest, error)
 	List(ctx context.Context, filter *ManifestFilter) ([]*Manifest, int, error)
-	Insert(ctx context.Context, manifest *Manifest) error
-	Delete(ctx context.Context, manifest *Manifest) error
+	Insert(manifest *Manifest)
+	Delete(manifest *Manifest)
 }

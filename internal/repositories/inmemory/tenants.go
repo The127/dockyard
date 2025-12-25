@@ -96,9 +96,8 @@ func (r *TenantRepository) List(_ context.Context, filter *repositories.TenantFi
 	return result, count, err
 }
 
-func (r *TenantRepository) Insert(_ context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) Insert(tenant *repositories.Tenant) {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, tenant))
-	return nil
 }
 
 func (r *TenantRepository) ExecuteInsert(tx *memdb.Txn, tenant *repositories.Tenant) error {
@@ -111,9 +110,8 @@ func (r *TenantRepository) ExecuteInsert(tx *memdb.Txn, tenant *repositories.Ten
 	return nil
 }
 
-func (r *TenantRepository) Update(_ context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) Update(tenant *repositories.Tenant) {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, tenant))
-	return nil
 }
 
 func (r *TenantRepository) ExecuteUpdate(tx *memdb.Txn, tenant *repositories.Tenant) error {
@@ -126,9 +124,8 @@ func (r *TenantRepository) ExecuteUpdate(tx *memdb.Txn, tenant *repositories.Ten
 	return nil
 }
 
-func (r *TenantRepository) Delete(_ context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) Delete(tenant *repositories.Tenant) {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, tenant))
-	return nil
 }
 
 func (r *TenantRepository) ExecuteDelete(tx *memdb.Txn, tenant *repositories.Tenant) error {

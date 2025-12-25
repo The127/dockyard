@@ -120,7 +120,7 @@ type PatRepository interface {
 	Single(ctx context.Context, filter *PatFilter) (*Pat, error)
 	First(ctx context.Context, filter *PatFilter) (*Pat, error)
 	List(ctx context.Context, filter *PatFilter) ([]*Pat, int, error)
-	Insert(ctx context.Context, entity *Pat) error
-	Update(ctx context.Context, entity *Pat) error
-	Delete(ctx context.Context, entity *Pat) error
+	Insert(entity *Pat)
+	Update(entity *Pat)
+	Delete(entity *Pat)
 }

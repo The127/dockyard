@@ -96,9 +96,8 @@ func (r *FileRepository) List(_ context.Context, filter *repositories.FileFilter
 	return result, count, nil
 }
 
-func (r *FileRepository) Insert(_ context.Context, file *repositories.File) error {
+func (r *FileRepository) Insert(file *repositories.File) {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, file))
-	return nil
 }
 
 func (r *FileRepository) ExecuteInsert(tx *memdb.Txn, file *repositories.File) error {
@@ -110,9 +109,8 @@ func (r *FileRepository) ExecuteInsert(tx *memdb.Txn, file *repositories.File) e
 	return nil
 }
 
-func (r *FileRepository) Delete(_ context.Context, file *repositories.File) error {
+func (r *FileRepository) Delete(file *repositories.File) {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, file))
-	return nil
 }
 
 func (r *FileRepository) ExecuteDelete(tx *memdb.Txn, file *repositories.File) error {

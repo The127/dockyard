@@ -135,9 +135,8 @@ func (r *ManifestRepository) List(ctx context.Context, filter *repositories.Mani
 	return manifests, totalCount, nil
 }
 
-func (r *ManifestRepository) Insert(ctx context.Context, manifest *repositories.Manifest) error {
+func (r *ManifestRepository) Insert(manifest *repositories.Manifest) {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, manifest))
-	return nil
 }
 
 func (r *ManifestRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, manifest *repositories.Manifest) error {
@@ -176,9 +175,8 @@ func (r *ManifestRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, mani
 	return nil
 }
 
-func (r *ManifestRepository) Delete(ctx context.Context, manifest *repositories.Manifest) error {
+func (r *ManifestRepository) Delete(manifest *repositories.Manifest) {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, manifest))
-	return nil
 }
 
 func (r *ManifestRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, manifest *repositories.Manifest) error {

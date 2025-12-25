@@ -79,9 +79,8 @@ func (r *RepositoryAccessRepository) First(_ context.Context, filter *repositori
 	return result[0], nil
 }
 
-func (r *RepositoryAccessRepository) Insert(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
+func (r *RepositoryAccessRepository) Insert(repositoryAccess *repositories.RepositoryAccess) {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, repositoryAccess))
-	return nil
 }
 
 func (r *RepositoryAccessRepository) ExecuteInsert(tx *memdb.Txn, repositoryAccess *repositories.RepositoryAccess) error {
@@ -94,9 +93,8 @@ func (r *RepositoryAccessRepository) ExecuteInsert(tx *memdb.Txn, repositoryAcce
 	return nil
 }
 
-func (r *RepositoryAccessRepository) Update(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
+func (r *RepositoryAccessRepository) Update(repositoryAccess *repositories.RepositoryAccess) {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, repositoryAccess))
-	return nil
 }
 
 func (r *RepositoryAccessRepository) ExecuteUpdate(tx *memdb.Txn, repositoryAccess *repositories.RepositoryAccess) error {
@@ -109,9 +107,8 @@ func (r *RepositoryAccessRepository) ExecuteUpdate(tx *memdb.Txn, repositoryAcce
 	return nil
 }
 
-func (r *RepositoryAccessRepository) Delete(_ context.Context, repositoryAccess *repositories.RepositoryAccess) error {
+func (r *RepositoryAccessRepository) Delete(repositoryAccess *repositories.RepositoryAccess) {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, repositoryAccess))
-	return nil
 }
 
 func (r *RepositoryAccessRepository) ExecuteDelete(tx *memdb.Txn, repositoryAccess *repositories.RepositoryAccess) error {

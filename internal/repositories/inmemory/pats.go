@@ -98,9 +98,8 @@ func (r *PatRepository) List(_ context.Context, filter *repositories.PatFilter) 
 	return pats, count, nil
 }
 
-func (r *PatRepository) Insert(_ context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) Insert(pat *repositories.Pat) {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, pat))
-	return nil
 }
 
 func (r *PatRepository) ExecuteInsert(tx *memdb.Txn, pat *repositories.Pat) error {
@@ -113,9 +112,8 @@ func (r *PatRepository) ExecuteInsert(tx *memdb.Txn, pat *repositories.Pat) erro
 	return nil
 }
 
-func (r *PatRepository) Update(_ context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) Update(pat *repositories.Pat) {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, pat))
-	return nil
 }
 
 func (r *PatRepository) ExecuteUpdate(tx *memdb.Txn, pat *repositories.Pat) error {
@@ -128,9 +126,8 @@ func (r *PatRepository) ExecuteUpdate(tx *memdb.Txn, pat *repositories.Pat) erro
 	return nil
 }
 
-func (r *PatRepository) Delete(_ context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) Delete(pat *repositories.Pat) {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, pat))
-	return nil
 }
 
 func (r *PatRepository) ExecuteDelete(tx *memdb.Txn, pat *repositories.Pat) error {

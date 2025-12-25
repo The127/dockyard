@@ -215,7 +215,7 @@ type TenantRepository interface {
 	Single(ctx context.Context, filter *TenantFilter) (*Tenant, error)
 	First(ctx context.Context, filter *TenantFilter) (*Tenant, error)
 	List(ctx context.Context, filter *TenantFilter) ([]*Tenant, int, error)
-	Insert(ctx context.Context, tenant *Tenant) error
-	Update(ctx context.Context, tenant *Tenant) error
-	Delete(ctx context.Context, tenant *Tenant) error
+	Insert(tenant *Tenant)
+	Update(tenant *Tenant)
+	Delete(tenant *Tenant)
 }

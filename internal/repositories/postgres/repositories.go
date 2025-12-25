@@ -138,9 +138,8 @@ func (r *RepositoryRepository) List(ctx context.Context, filter *repositories.Re
 	return repos, totalCount, nil
 }
 
-func (r *RepositoryRepository) Insert(ctx context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) Insert(repository *repositories.Repository) {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, repository))
-	return nil
 }
 
 func (r *RepositoryRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, repository *repositories.Repository) error {
@@ -186,9 +185,8 @@ func (r *RepositoryRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, re
 	return nil
 }
 
-func (r *RepositoryRepository) Update(ctx context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) Update(repository *repositories.Repository) {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, repository))
-	return nil
 }
 
 func (r *RepositoryRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, repository *repositories.Repository) error {
@@ -238,9 +236,8 @@ func (r *RepositoryRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, re
 	return nil
 }
 
-func (r *RepositoryRepository) Delete(ctx context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) Delete(repository *repositories.Repository) {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, repository))
-	return nil
 }
 
 func (r *RepositoryRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, repository *repositories.Repository) error {

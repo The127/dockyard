@@ -126,9 +126,8 @@ func (r *TagRepository) List(_ context.Context, filter *repositories.TagFilter) 
 	return result, count, nil
 }
 
-func (r *TagRepository) Insert(_ context.Context, tag *repositories.Tag) error {
+func (r *TagRepository) Insert(tag *repositories.Tag) {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, tag))
-	return nil
 }
 
 func (r *TagRepository) ExecuteInsert(tx *memdb.Txn, tag *repositories.Tag) error {
@@ -140,9 +139,8 @@ func (r *TagRepository) ExecuteInsert(tx *memdb.Txn, tag *repositories.Tag) erro
 	return nil
 }
 
-func (r *TagRepository) Delete(_ context.Context, tag *repositories.Tag) error {
+func (r *TagRepository) Delete(tag *repositories.Tag) {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, tag))
-	return nil
 }
 
 func (r *TagRepository) ExecuteDelete(tx *memdb.Txn, tag *repositories.Tag) error {

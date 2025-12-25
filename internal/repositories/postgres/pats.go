@@ -124,9 +124,8 @@ func (r *PatRepository) List(ctx context.Context, filter *repositories.PatFilter
 	return pats, totalCount, nil
 }
 
-func (r *PatRepository) Insert(ctx context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) Insert(pat *repositories.Pat) {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, pat))
-	return nil
 }
 
 func (r *PatRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, pat *repositories.Pat) error {
@@ -165,9 +164,8 @@ func (r *PatRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, pat *repo
 	return nil
 }
 
-func (r *PatRepository) Update(ctx context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) Update(pat *repositories.Pat) {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, pat))
-	return nil
 }
 
 func (r *PatRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, pat *repositories.Pat) error {
@@ -210,9 +208,8 @@ func (r *PatRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, pat *repo
 	return nil
 }
 
-func (r *PatRepository) Delete(ctx context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) Delete(pat *repositories.Pat) {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, pat))
-	return nil
 }
 
 func (r *PatRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, pat *repositories.Pat) error {

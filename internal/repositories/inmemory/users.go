@@ -103,9 +103,8 @@ func (r *UserRepository) List(_ context.Context, filter *repositories.UserFilter
 	return r.applyFilter(iterator, filter)
 }
 
-func (r *UserRepository) Insert(_ context.Context, user *repositories.User) error {
+func (r *UserRepository) Insert(user *repositories.User) {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, user))
-	return nil
 }
 
 func (r *UserRepository) ExecuteInsert(tx *memdb.Txn, user *repositories.User) error {
@@ -118,9 +117,8 @@ func (r *UserRepository) ExecuteInsert(tx *memdb.Txn, user *repositories.User) e
 	return nil
 }
 
-func (r *UserRepository) Update(_ context.Context, user *repositories.User) error {
+func (r *UserRepository) Update(user *repositories.User) {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, user))
-	return nil
 }
 
 func (r *UserRepository) ExecuteUpdate(tx *memdb.Txn, user *repositories.User) error {
@@ -133,9 +131,8 @@ func (r *UserRepository) ExecuteUpdate(tx *memdb.Txn, user *repositories.User) e
 	return nil
 }
 
-func (r *UserRepository) Delete(_ context.Context, user *repositories.User) error {
+func (r *UserRepository) Delete(user *repositories.User) {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, user))
-	return nil
 }
 
 func (r *UserRepository) ExecuteDelete(tx *memdb.Txn, user *repositories.User) error {

@@ -98,6 +98,6 @@ type FileRepository interface {
 	Single(ctx context.Context, filter *FileFilter) (*File, error)
 	First(ctx context.Context, filter *FileFilter) (*File, error)
 	List(ctx context.Context, filter *FileFilter) ([]*File, int, error)
-	Insert(ctx context.Context, file *File) error
-	Delete(ctx context.Context, file *File) error
+	Insert(file *File)
+	Delete(file *File)
 }

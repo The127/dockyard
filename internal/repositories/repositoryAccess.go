@@ -141,7 +141,7 @@ func (f *RepositoryAccessFilter) GetUserId() uuid.UUID {
 
 type RepositoryAccessRepository interface {
 	First(ctx context.Context, filter *RepositoryAccessFilter) (*RepositoryAccess, error)
-	Insert(ctx context.Context, entity *RepositoryAccess) error
-	Update(ctx context.Context, entity *RepositoryAccess) error
-	Delete(ctx context.Context, entity *RepositoryAccess) error
+	Insert(entity *RepositoryAccess)
+	Update(entity *RepositoryAccess)
+	Delete(entity *RepositoryAccess)
 }

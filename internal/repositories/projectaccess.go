@@ -131,7 +131,7 @@ func (f *ProjectAccessFilter) GetUserId() uuid.UUID {
 
 type ProjectAccessRepository interface {
 	First(ctx context.Context, filter *ProjectAccessFilter) (*ProjectAccess, error)
-	Insert(ctx context.Context, entity *ProjectAccess) error
-	Update(ctx context.Context, entity *ProjectAccess) error
-	Delete(ctx context.Context, entity *ProjectAccess) error
+	Insert(entity *ProjectAccess)
+	Update(entity *ProjectAccess)
+	Delete(entity *ProjectAccess)
 }

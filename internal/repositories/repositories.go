@@ -184,7 +184,7 @@ type RepositoryRepository interface {
 	Single(ctx context.Context, filter *RepositoryFilter) (*Repository, error)
 	First(ctx context.Context, filter *RepositoryFilter) (*Repository, error)
 	List(ctx context.Context, filter *RepositoryFilter) ([]*Repository, int, error)
-	Insert(ctx context.Context, repository *Repository) error
-	Update(ctx context.Context, repository *Repository) error
-	Delete(ctx context.Context, repository *Repository) error
+	Insert(repository *Repository)
+	Update(repository *Repository)
+	Delete(repository *Repository)
 }

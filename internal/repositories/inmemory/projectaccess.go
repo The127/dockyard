@@ -79,9 +79,8 @@ func (r *ProjectAccessRepository) First(_ context.Context, filter *repositories.
 	return result[0], nil
 }
 
-func (r *ProjectAccessRepository) Insert(_ context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) Insert(projectAccess *repositories.ProjectAccess) {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, projectAccess))
-	return nil
 }
 
 func (r *ProjectAccessRepository) ExecuteInsert(tx *memdb.Txn, projectAccess *repositories.ProjectAccess) error {
@@ -94,9 +93,8 @@ func (r *ProjectAccessRepository) ExecuteInsert(tx *memdb.Txn, projectAccess *re
 	return nil
 }
 
-func (r *ProjectAccessRepository) Update(_ context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) Update(projectAccess *repositories.ProjectAccess) {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, projectAccess))
-	return nil
 }
 
 func (r *ProjectAccessRepository) ExecuteUpdate(tx *memdb.Txn, projectAccess *repositories.ProjectAccess) error {
@@ -109,9 +107,8 @@ func (r *ProjectAccessRepository) ExecuteUpdate(tx *memdb.Txn, projectAccess *re
 	return nil
 }
 
-func (r *ProjectAccessRepository) Delete(_ context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) Delete(projectAccess *repositories.ProjectAccess) {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, projectAccess))
-	return nil
 }
 
 func (r *ProjectAccessRepository) ExecuteDelete(tx *memdb.Txn, projectAccess *repositories.ProjectAccess) error {

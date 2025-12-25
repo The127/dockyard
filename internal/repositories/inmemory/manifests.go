@@ -108,9 +108,8 @@ func (r *ManifestRepository) List(_ context.Context, filter *repositories.Manife
 	return result, count, nil
 }
 
-func (r *ManifestRepository) Insert(_ context.Context, manifest *repositories.Manifest) error {
+func (r *ManifestRepository) Insert(manifest *repositories.Manifest) {
 	r.changeTracker.Add(change.NewEntry(change.Added, r.entityType, manifest))
-	return nil
 }
 
 func (r *ManifestRepository) ExecuteInsert(tx *memdb.Txn, manifest *repositories.Manifest) error {
@@ -122,9 +121,8 @@ func (r *ManifestRepository) ExecuteInsert(tx *memdb.Txn, manifest *repositories
 	return nil
 }
 
-func (r *ManifestRepository) Update(_ context.Context, manifest *repositories.Manifest) error {
+func (r *ManifestRepository) Update(manifest *repositories.Manifest) {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, manifest))
-	return nil
 }
 
 func (r *ManifestRepository) ExecuteUpdate(tx *memdb.Txn, manifest *repositories.Manifest) error {
@@ -136,9 +134,8 @@ func (r *ManifestRepository) ExecuteUpdate(tx *memdb.Txn, manifest *repositories
 	return nil
 }
 
-func (r *ManifestRepository) Delete(_ context.Context, manifest *repositories.Manifest) error {
+func (r *ManifestRepository) Delete(manifest *repositories.Manifest) {
 	r.changeTracker.Add(change.NewEntry(change.Deleted, r.entityType, manifest))
-	return nil
 }
 
 func (r *ManifestRepository) ExecuteDelete(tx *memdb.Txn, manifest *repositories.Manifest) error {

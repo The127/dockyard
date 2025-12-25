@@ -99,6 +99,6 @@ type RepositoryBlobRepository interface {
 	Single(ctx context.Context, filter *RepositoryBlobFilter) (*RepositoryBlob, error)
 	First(ctx context.Context, filter *RepositoryBlobFilter) (*RepositoryBlob, error)
 	List(ctx context.Context, filter *RepositoryBlobFilter) ([]*RepositoryBlob, int, error)
-	Insert(ctx context.Context, repositoryBlob *RepositoryBlob) error
-	Delete(ctx context.Context, repositoryBlob *RepositoryBlob) error
+	Insert(repositoryBlob *RepositoryBlob)
+	Delete(repositoryBlob *RepositoryBlob)
 }
