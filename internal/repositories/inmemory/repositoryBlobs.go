@@ -16,7 +16,7 @@ type RepositoryBlobRepository struct {
 	entityType    int
 }
 
-func NewInMemoryRepositoryBlobRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) repositories.RepositoryBlobRepository {
+func NewInMemoryRepositoryBlobRepository(txn *memdb.Txn, changeTracker *change.Tracker, entityType int) *RepositoryBlobRepository {
 	return &RepositoryBlobRepository{
 		txn:           txn,
 		changeTracker: changeTracker,
