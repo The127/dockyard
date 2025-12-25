@@ -121,10 +121,5 @@ func initApp(dp *ioc.DependencyProvider) {
 		logging.Logger.Panicf("failed to create initial tenant: %s", err)
 	}
 
-	err = dbContext.SaveChanges(ctx)
-	if err != nil {
-		logging.Logger.Panicf("failed to save changes: %s", err)
-	}
-
 	logging.Logger.Infof("initial tenant created: %s", config.C.InitialTenant.Slug)
 }
