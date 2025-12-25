@@ -19,5 +19,5 @@ func NewDbFactory(db Database) Factory {
 }
 
 func (s *factory) NewDbContext(ctx context.Context) (Context, error) {
-	return s.db.Tx(ctx)
+	return s.db.NewContext(ctx)
 }

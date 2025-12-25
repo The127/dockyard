@@ -6,9 +6,9 @@ import (
 
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
+	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 )
 
 type ListProjects struct {
@@ -26,21 +26,21 @@ type ListProjectsResponseItem struct {
 
 func HandleListProjects(ctx context.Context, query ListProjects) (*ListProjectsResponse, error) {
 	scope := middlewares.GetScope(ctx)
-	dbService := ioc.GetDependency[services.DbService](scope)
 
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[db.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
 
 	tenantFilter := repositories.NewTenantFilter().BySlug(query.TenantSlug)
-	tenant, err := tx.Tenants().Single(ctx, tenantFilter)
+	tenant, err := dbContext.Tenants().Single(ctx, tenantFilter)
 	if err != nil {
 		return nil, fmt.Errorf("getting tenant: %w", err)
 	}
 
 	projectFilter := repositories.NewProjectFilter().ByTenantId(tenant.GetId())
-	projects, _, err := tx.Projects().List(ctx, projectFilter)
+	projects, _, err := dbContext.Projects().List(ctx, projectFilter)
 	if err != nil {
 		return nil, fmt.Errorf("listing projects: %w", err)
 	}

@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/The127/ioc"
+	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 )
 
 type GetTenantOidcInfo struct {
@@ -21,15 +21,15 @@ type GetTenantOidcInfoResponse struct {
 
 func HandleGetTenantOidcInfo(ctx context.Context, query GetTenantOidcInfo) (*GetTenantOidcInfoResponse, error) {
 	scope := middlewares.GetScope(ctx)
-	dbService := ioc.GetDependency[services.DbService](scope)
 
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[db.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
 
 	tenantFilter := repositories.NewTenantFilter().BySlug(query.TenantSlug)
-	tenant, err := tx.Tenants().Single(ctx, tenantFilter)
+	tenant, err := dbContext.Tenants().Single(ctx, tenantFilter)
 	if err != nil {
 		return nil, fmt.Errorf("getting tenant: %w", err)
 	}

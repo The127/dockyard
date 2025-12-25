@@ -11,9 +11,9 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/the127/dockyard/internal/config"
+	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
 
@@ -50,15 +50,15 @@ func getOciCurrentUser(r *http.Request) (*CurrentUser, error) {
 
 	ctx := r.Context()
 	scope := middlewares.GetScope(ctx)
-	dbService := ioc.GetDependency[services.DbService](scope)
 
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[db.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
 
 	tenantSlug := strings.Split(r.Host, ".")[0]
-	tenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(tenantSlug))
+	tenant, err := dbContext.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(tenantSlug))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenant: %w", err)
 	}

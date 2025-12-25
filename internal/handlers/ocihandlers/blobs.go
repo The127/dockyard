@@ -14,13 +14,12 @@ import (
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/middlewares/ociAuthentication"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 	"github.com/the127/dockyard/internal/services/blobStorage"
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
 
-func getRepositoryBlob(ctx context.Context, tx database.Transaction, repositoryId uuid.UUID, digest string) (*repositories.RepositoryBlob, *repositories.Blob, error) { // nolint:unparam
-	blob, err := tx.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(digest))
+func getRepositoryBlob(ctx context.Context, dbContext database.Context, repositoryId uuid.UUID, digest string) (*repositories.RepositoryBlob, *repositories.Blob, error) { // nolint:unparam
+	blob, err := dbContext.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(digest))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -31,7 +30,7 @@ func getRepositoryBlob(ctx context.Context, tx database.Transaction, repositoryI
 		return nil, nil, err
 	}
 
-	repositoryBlob, err := tx.RepositoryBlobs().First(ctx, repositories.NewRepositoryBlobFilter().ByBlobId(blob.GetId()).ByRepositoryId(repositoryId))
+	repositoryBlob, err := dbContext.RepositoryBlobs().First(ctx, repositories.NewRepositoryBlobFilter().ByBlobId(blob.GetId()).ByRepositoryId(repositoryId))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -60,19 +59,19 @@ func BlobsDownload(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	digest := vars["digest"]
 
-	dbService := ioc.GetDependency[services.DbService](scope)
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[database.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
-	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
+	_, _, repository, err := getRepositoryByIdentifier(ctx, dbContext, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 	}
 
-	_, blob, err := getRepositoryBlob(ctx, tx, repository.GetId(), digest)
+	_, blob, err := getRepositoryBlob(ctx, dbContext, repository.GetId(), digest)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 	}
@@ -102,20 +101,20 @@ func BlobExists(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	digest := vars["digest"]
 
-	dbService := ioc.GetDependency[services.DbService](scope)
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[database.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
-	_, _, repository, err := getRepositoryByIdentifier(ctx, tx, repoIdentifier)
+	_, _, repository, err := getRepositoryByIdentifier(ctx, dbContext, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
-	_, blob, err := getRepositoryBlob(ctx, tx, repository.GetId(), digest)
+	_, blob, err := getRepositoryBlob(ctx, dbContext, repository.GetId(), digest)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -138,8 +137,8 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 
 	scope := middlewares.GetScope(ctx)
 
-	dbService := ioc.GetDependency[services.DbService](scope)
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[database.Factory](scope)
+	tx, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -334,28 +333,34 @@ func FinishUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbService := ioc.GetDependency[services.DbService](scope)
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[database.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
-	blob, err := tx.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(digest))
+	blob, err := dbContext.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(digest))
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 	if blob == nil {
 		blob = repositories.NewBlob(completeResponse.ComputedDigest, completeResponse.Size)
-		err = tx.Blobs().Insert(ctx, blob)
+		err = dbContext.Blobs().Insert(ctx, blob)
 		if err != nil {
 			ociError.HandleHttpError(w, r, err)
 			return
 		}
 	}
 
-	err = tx.RepositoryBlobs().Insert(ctx, repositories.NewRepositoryBlob(completeResponse.RepositoryId, blob.GetId()))
+	err = dbContext.RepositoryBlobs().Insert(ctx, repositories.NewRepositoryBlob(completeResponse.RepositoryId, blob.GetId()))
+	if err != nil {
+		ociError.HandleHttpError(w, r, err)
+		return
+	}
+
+	err = dbContext.SaveChanges(ctx)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return

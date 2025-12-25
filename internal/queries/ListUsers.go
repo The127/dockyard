@@ -6,9 +6,9 @@ import (
 
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
+	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 )
 
 type ListUsers struct {
@@ -26,9 +26,9 @@ type ListUsersResponseItem struct {
 
 func HandleListUsers(ctx context.Context, query ListUsers) (*ListUsersResponse, error) {
 	scope := middlewares.GetScope(ctx)
-	dbService := ioc.GetDependency[services.DbService](scope)
 
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[db.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
@@ -37,7 +37,7 @@ func HandleListUsers(ctx context.Context, query ListUsers) (*ListUsersResponse, 
 
 	if query.TenantSlug != nil {
 		tenantFilter := repositories.NewTenantFilter().BySlug(*query.TenantSlug)
-		tenant, err := tx.Tenants().Single(ctx, tenantFilter)
+		tenant, err := dbContext.Tenants().Single(ctx, tenantFilter)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get tenant: %w", err)
 		}
@@ -45,7 +45,7 @@ func HandleListUsers(ctx context.Context, query ListUsers) (*ListUsersResponse, 
 		userFilter = userFilter.ByTenantId(tenant.GetId())
 	}
 
-	users, _, err := tx.Users().List(ctx, userFilter)
+	users, _, err := dbContext.Users().List(ctx, userFilter)
 	if err != nil {
 		return nil, fmt.Errorf("listing users: %w", err)
 	}

@@ -1,6 +1,7 @@
 package postgres
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"fmt"
@@ -70,6 +71,6 @@ func (d *database) Migrate() error {
 	return nil
 }
 
-func (d *database) NewContext() (db.Context, error) {
+func (d *database) NewContext(_ context.Context) (db.Context, error) {
 	return newContext(d.db), nil
 }

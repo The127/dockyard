@@ -6,9 +6,9 @@ import (
 
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
+	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 )
 
 type ListPats struct {
@@ -24,15 +24,15 @@ type ListPatsResponseItem struct {
 
 func HandleListPats(ctx context.Context, query ListPats) (*ListPatsResponse, error) {
 	scope := middlewares.GetScope(ctx)
-	dbService := ioc.GetDependency[services.DbService](scope)
 
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[db.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
 
 	patFilter := repositories.NewPatFilter().ByUserId(query.UserId)
-	pats, _, err := tx.Pats().List(ctx, patFilter)
+	pats, _, err := dbContext.Pats().List(ctx, patFilter)
 	if err != nil {
 		return nil, fmt.Errorf("listing pats: %w", err)
 	}

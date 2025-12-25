@@ -15,11 +15,11 @@ import (
 	"github.com/the127/dockyard/internal/args"
 	"github.com/the127/dockyard/internal/commands"
 	"github.com/the127/dockyard/internal/config"
+	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/logging"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
 	"github.com/the127/dockyard/internal/server"
-	"github.com/the127/dockyard/internal/services"
 	"github.com/the127/dockyard/internal/setup"
 	"github.com/the127/dockyard/internal/utils"
 )
@@ -92,13 +92,13 @@ func initApp(dp *ioc.DependencyProvider) {
 
 	ctx := middlewares.ContextWithScope(context.Background(), scope)
 
-	dbService := ioc.GetDependency[services.DbService](scope)
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[db.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		panic(fmt.Errorf("failed to get transaction: %w", err))
 	}
 
-	anyTenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter())
+	anyTenant, err := dbContext.Tenants().First(ctx, repositories.NewTenantFilter())
 	if err != nil {
 		panic(fmt.Errorf("failed to get any tenant: %w", err))
 	}

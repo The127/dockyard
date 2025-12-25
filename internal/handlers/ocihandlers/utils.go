@@ -40,8 +40,8 @@ func checkAccess(
 		WithHeader("WWW-Authenticate", wwwAuthenticateHeaderValue)
 }
 
-func getRepositoryByIdentifier(ctx context.Context, tx database.Transaction, repoIdentifier middlewares.OciRepositoryIdentifier) (*repositories.Tenant, *repositories.Project, *repositories.Repository, error) {
-	tenant, err := tx.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(repoIdentifier.TenantSlug))
+func getRepositoryByIdentifier(ctx context.Context, dbContext database.Context, repoIdentifier middlewares.OciRepositoryIdentifier) (*repositories.Tenant, *repositories.Project, *repositories.Repository, error) {
+	tenant, err := dbContext.Tenants().First(ctx, repositories.NewTenantFilter().BySlug(repoIdentifier.TenantSlug))
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -51,7 +51,7 @@ func getRepositoryByIdentifier(ctx context.Context, tx database.Transaction, rep
 			WithHttpCode(http.StatusNotFound)
 	}
 
-	project, err := tx.Projects().First(ctx, repositories.NewProjectFilter().ByTenantId(tenant.GetId()).BySlug(repoIdentifier.ProjectSlug))
+	project, err := dbContext.Projects().First(ctx, repositories.NewProjectFilter().ByTenantId(tenant.GetId()).BySlug(repoIdentifier.ProjectSlug))
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -61,7 +61,7 @@ func getRepositoryByIdentifier(ctx context.Context, tx database.Transaction, rep
 			WithHttpCode(http.StatusNotFound)
 	}
 
-	repository, err := tx.Repositories().First(ctx, repositories.NewRepositoryFilter().ByProjectId(project.GetId()).BySlug(repoIdentifier.RepositorySlug))
+	repository, err := dbContext.Repositories().First(ctx, repositories.NewRepositoryFilter().ByProjectId(project.GetId()).BySlug(repoIdentifier.RepositorySlug))
 	if err != nil {
 		return nil, nil, nil, err
 	}

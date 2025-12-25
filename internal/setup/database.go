@@ -8,17 +8,13 @@ import (
 	"github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/database/inmemory"
 	"github.com/the127/dockyard/internal/database/postgres"
-	"github.com/the127/dockyard/internal/services"
 )
 
 func Database(dc *ioc.DependencyCollection, c config.DatabaseConfig) database.Database {
 	db := connectToDatabase(c)
 
-	ioc.RegisterScoped(dc, func(_ *ioc.DependencyProvider) services.DbService {
-		return services.NewDbService(db)
-	})
-	ioc.RegisterCloseHandler(dc, func(dbService services.DbService) error {
-		return dbService.Close()
+	ioc.RegisterScoped(dc, func(_ *ioc.DependencyProvider) database.Factory {
+		return database.NewDbFactory(db)
 	})
 
 	return db

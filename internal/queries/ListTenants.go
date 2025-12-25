@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/The127/ioc"
+	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 )
 
 type ListTenants struct{}
@@ -21,15 +21,15 @@ type ListTenantsResponseItem struct {
 
 func HandleListTenants(ctx context.Context, query ListTenants) (*ListTenantsResponse, error) {
 	scope := middlewares.GetScope(ctx)
-	dbService := ioc.GetDependency[services.DbService](scope)
 
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[db.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
 
 	tenantFilter := repositories.NewTenantFilter()
-	tenants, _, err := tx.Tenants().List(ctx, tenantFilter)
+	tenants, _, err := dbContext.Tenants().List(ctx, tenantFilter)
 	if err != nil {
 		return nil, fmt.Errorf("listing tenants: %w", err)
 	}

@@ -6,9 +6,9 @@ import (
 
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
+	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 )
 
 type CreateProject struct {
@@ -27,13 +27,13 @@ type CreateProjectResponse struct {
 func HandleCreateProject(ctx context.Context, command CreateProject) (*CreateProjectResponse, error) {
 	scope := middlewares.GetScope(ctx)
 
-	db := ioc.GetDependency[services.DbService](scope)
-	tx, err := db.GetTransaction()
+	dbFactory := ioc.GetDependency[db.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("getting transaction: %w", err)
 	}
 
-	tenantRepository := tx.Tenants()
+	tenantRepository := dbContext.Tenants()
 	tenantFilter := repositories.NewTenantFilter().
 		BySlug(command.TenantSlug)
 	tenant, err := tenantRepository.Single(ctx, tenantFilter)
@@ -44,14 +44,14 @@ func HandleCreateProject(ctx context.Context, command CreateProject) (*CreatePro
 	project := repositories.NewProject(tenant.GetId(), command.Slug, command.DisplayName)
 	project.SetDescription(command.Description)
 
-	projectRepository := tx.Projects()
+	projectRepository := dbContext.Projects()
 	err = projectRepository.Insert(ctx, project)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert project: %w", err)
 	}
 
 	projectAccess := repositories.NewProjectAccess(project.GetId(), command.UserId, repositories.ProjectAccessRoleAdmin)
-	err = tx.ProjectAccess().Insert(ctx, projectAccess)
+	err = dbContext.ProjectAccess().Insert(ctx, projectAccess)
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert project access: %w", err)
 	}

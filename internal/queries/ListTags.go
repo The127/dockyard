@@ -6,9 +6,9 @@ import (
 
 	"github.com/The127/ioc"
 	"github.com/google/uuid"
+	db "github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/repositories"
-	"github.com/the127/dockyard/internal/services"
 )
 
 type ListTags struct {
@@ -28,29 +28,29 @@ type ListTagsResponseItem struct {
 
 func HandleListTags(ctx context.Context, query ListTags) (*ListTagsResponse, error) {
 	scope := middlewares.GetScope(ctx)
-	dbService := ioc.GetDependency[services.DbService](scope)
 
-	tx, err := dbService.GetTransaction()
+	dbFactory := ioc.GetDependency[db.Factory](scope)
+	dbContext, err := dbFactory.NewDbContext(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	tenant, err := tx.Tenants().Single(ctx, repositories.NewTenantFilter().BySlug(query.TenantSlug))
+	tenant, err := dbContext.Tenants().Single(ctx, repositories.NewTenantFilter().BySlug(query.TenantSlug))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get tenant: %w", err)
 	}
 
-	project, err := tx.Projects().Single(ctx, repositories.NewProjectFilter().ByTenantId(tenant.GetId()).BySlug(query.ProjectSlug))
+	project, err := dbContext.Projects().Single(ctx, repositories.NewProjectFilter().ByTenantId(tenant.GetId()).BySlug(query.ProjectSlug))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get project: %w", err)
 	}
 
-	repository, err := tx.Repositories().Single(ctx, repositories.NewRepositoryFilter().ByProjectId(project.GetId()).BySlug(query.RepositorySlug))
+	repository, err := dbContext.Repositories().Single(ctx, repositories.NewRepositoryFilter().ByProjectId(project.GetId()).BySlug(query.RepositorySlug))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get repository: %w", err)
 	}
 
-	tags, _, err := tx.Tags().List(ctx, repositories.NewTagFilter().ByRepositoryId(repository.GetId()).WithManifestInfo())
+	tags, _, err := dbContext.Tags().List(ctx, repositories.NewTagFilter().ByRepositoryId(repository.GetId()).WithManifestInfo())
 	if err != nil {
 		return nil, fmt.Errorf("listing tags: %w", err)
 	}
