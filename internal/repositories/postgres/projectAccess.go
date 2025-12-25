@@ -118,7 +118,7 @@ func (r *ProjectAccessRepository) Insert(ctx context.Context, projectAccess *rep
 	return nil
 }
 
-func (r *ProjectAccessRepository) ExecuteInsert(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, projectAccess *repositories.ProjectAccess) error {
 	s := sqlbuilder.InsertInto("project_accesses").
 		Cols(
 			"id",
@@ -141,7 +141,7 @@ func (r *ProjectAccessRepository) ExecuteInsert(ctx context.Context, projectAcce
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -160,7 +160,7 @@ func (r *ProjectAccessRepository) Update(ctx context.Context, projectAccess *rep
 	return nil
 }
 
-func (r *ProjectAccessRepository) ExecuteUpdate(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, projectAccess *repositories.ProjectAccess) error {
 	if !projectAccess.HasChanges() {
 		return nil
 	}
@@ -181,7 +181,7 @@ func (r *ProjectAccessRepository) ExecuteUpdate(ctx context.Context, projectAcce
 	s.Returning("xmin")
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -205,13 +205,13 @@ func (r *ProjectAccessRepository) Delete(ctx context.Context, projectAccess *rep
 	return nil
 }
 
-func (r *ProjectAccessRepository) ExecuteDelete(ctx context.Context, projectAccess *repositories.ProjectAccess) error {
+func (r *ProjectAccessRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, projectAccess *repositories.ProjectAccess) error {
 	s := sqlbuilder.DeleteFrom("project_accesses")
 	s.Where(s.Equal("id", projectAccess.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.db.ExecContext(ctx, query, args...)
+	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting project access: %w", err)
 	}

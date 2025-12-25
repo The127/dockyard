@@ -140,7 +140,7 @@ func (r *ManifestRepository) Insert(ctx context.Context, manifest *repositories.
 	return nil
 }
 
-func (r *ManifestRepository) ExecuteInsert(ctx context.Context, manifest *repositories.Manifest) error {
+func (r *ManifestRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, manifest *repositories.Manifest) error {
 	s := sqlbuilder.InsertInto("manifests").
 		Cols(
 			"id",
@@ -163,7 +163,7 @@ func (r *ManifestRepository) ExecuteInsert(ctx context.Context, manifest *reposi
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -181,13 +181,13 @@ func (r *ManifestRepository) Delete(ctx context.Context, manifest *repositories.
 	return nil
 }
 
-func (r *ManifestRepository) ExecuteDelete(ctx context.Context, manifest *repositories.Manifest) error {
+func (r *ManifestRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, manifest *repositories.Manifest) error {
 	s := sqlbuilder.DeleteFrom("manifest")
 	s.Where(s.Equal("id", manifest.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.db.ExecContext(ctx, query, args...)
+	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting manifest: %w", err)
 	}

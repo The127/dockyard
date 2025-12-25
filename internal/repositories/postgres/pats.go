@@ -129,7 +129,7 @@ func (r *PatRepository) Insert(ctx context.Context, pat *repositories.Pat) error
 	return nil
 }
 
-func (r *PatRepository) ExecuteInsert(ctx context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, pat *repositories.Pat) error {
 	s := sqlbuilder.InsertInto("pats").
 		Cols(
 			"id",
@@ -152,7 +152,7 @@ func (r *PatRepository) ExecuteInsert(ctx context.Context, pat *repositories.Pat
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -170,7 +170,7 @@ func (r *PatRepository) Update(ctx context.Context, pat *repositories.Pat) error
 	return nil
 }
 
-func (r *PatRepository) ExecuteUpdate(ctx context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, pat *repositories.Pat) error {
 	if !pat.HasChanges() {
 		return nil
 	}
@@ -191,7 +191,7 @@ func (r *PatRepository) ExecuteUpdate(ctx context.Context, pat *repositories.Pat
 	s.Returning("xmin")
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -215,13 +215,13 @@ func (r *PatRepository) Delete(ctx context.Context, pat *repositories.Pat) error
 	return nil
 }
 
-func (r *PatRepository) ExecuteDelete(ctx context.Context, pat *repositories.Pat) error {
+func (r *PatRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, pat *repositories.Pat) error {
 	s := sqlbuilder.DeleteFrom("pats")
 	s.Where(s.Equal("id", pat.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.db.ExecContext(ctx, query, args...)
+	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting pat: %w", err)
 	}

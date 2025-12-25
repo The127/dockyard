@@ -118,7 +118,7 @@ func (r *RepositoryAccessRepository) Insert(ctx context.Context, repositoryAcces
 	return nil
 }
 
-func (r *RepositoryAccessRepository) ExecuteInsert(ctx context.Context, repositoryAccess *repositories.RepositoryAccess) error {
+func (r *RepositoryAccessRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, repositoryAccess *repositories.RepositoryAccess) error {
 	s := sqlbuilder.InsertInto("repository_accesses").
 		Cols(
 			"id",
@@ -141,7 +141,7 @@ func (r *RepositoryAccessRepository) ExecuteInsert(ctx context.Context, reposito
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -160,7 +160,7 @@ func (r *RepositoryAccessRepository) Update(ctx context.Context, repositoryAcces
 	return nil
 }
 
-func (r *RepositoryAccessRepository) ExecuteUpdate(ctx context.Context, repositoryAccess *repositories.RepositoryAccess) error {
+func (r *RepositoryAccessRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, repositoryAccess *repositories.RepositoryAccess) error {
 	if !repositoryAccess.HasChanges() {
 		return nil
 	}
@@ -181,7 +181,7 @@ func (r *RepositoryAccessRepository) ExecuteUpdate(ctx context.Context, reposito
 	s.Returning("xmin")
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -205,13 +205,13 @@ func (r *RepositoryAccessRepository) Delete(ctx context.Context, repositoryAcces
 	return nil
 }
 
-func (r *RepositoryAccessRepository) ExecuteDelete(ctx context.Context, repositoryAccess *repositories.RepositoryAccess) error {
+func (r *RepositoryAccessRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, repositoryAccess *repositories.RepositoryAccess) error {
 	s := sqlbuilder.DeleteFrom("repository_accesses")
 	s.Where(s.Equal("id", repositoryAccess.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.db.ExecContext(ctx, query, args...)
+	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting repository access: %w", err)
 	}

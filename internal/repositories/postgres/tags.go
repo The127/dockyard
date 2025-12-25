@@ -175,7 +175,7 @@ func (r *TagRepository) Insert(ctx context.Context, tag *repositories.Tag) error
 	return nil
 }
 
-func (r *TagRepository) ExecuteInsert(ctx context.Context, tag *repositories.Tag) error {
+func (r *TagRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, tag *repositories.Tag) error {
 	s := sqlbuilder.InsertInto("tags").
 		Cols(
 			"id",
@@ -198,7 +198,7 @@ func (r *TagRepository) ExecuteInsert(ctx context.Context, tag *repositories.Tag
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -216,13 +216,13 @@ func (r *TagRepository) Delete(ctx context.Context, tag *repositories.Tag) error
 	return nil
 }
 
-func (r *TagRepository) ExecuteDelete(ctx context.Context, tag *repositories.Tag) error {
+func (r *TagRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, tag *repositories.Tag) error {
 	s := sqlbuilder.DeleteFrom("tags")
 	s.Where(s.Equal("id", tag.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.db.ExecContext(ctx, query, args...)
+	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("executing query: %w", err)
 	}

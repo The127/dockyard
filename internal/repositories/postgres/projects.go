@@ -136,7 +136,7 @@ func (r *ProjectRepository) Insert(ctx context.Context, project *repositories.Pr
 	return nil
 }
 
-func (r *ProjectRepository) ExecuteInsert(ctx context.Context, project *repositories.Project) error {
+func (r *ProjectRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, project *repositories.Project) error {
 	s := sqlbuilder.InsertInto("projects").
 		Cols(
 			"id",
@@ -161,7 +161,7 @@ func (r *ProjectRepository) ExecuteInsert(ctx context.Context, project *reposito
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -180,7 +180,7 @@ func (r *ProjectRepository) Update(ctx context.Context, project *repositories.Pr
 	return nil
 }
 
-func (r *ProjectRepository) ExecuteUpdate(ctx context.Context, project *repositories.Project) error {
+func (r *ProjectRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, project *repositories.Project) error {
 	if !project.HasChanges() {
 		return nil
 	}
@@ -203,7 +203,7 @@ func (r *ProjectRepository) ExecuteUpdate(ctx context.Context, project *reposito
 	s.Returning("xmin")
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -227,13 +227,13 @@ func (r *ProjectRepository) Delete(ctx context.Context, project *repositories.Pr
 	return nil
 }
 
-func (r *ProjectRepository) ExecuteDelete(ctx context.Context, project *repositories.Project) error {
+func (r *ProjectRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, project *repositories.Project) error {
 	s := sqlbuilder.DeleteFrom("projects")
 	s.Where(s.Equal("id", project.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.db.ExecContext(ctx, query, args...)
+	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting project: %w", err)
 	}

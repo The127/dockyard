@@ -131,7 +131,7 @@ func (r *FileRepository) Insert(ctx context.Context, file *repositories.File) er
 	return nil
 }
 
-func (r *FileRepository) ExecuteInsert(ctx context.Context, file *repositories.File) error {
+func (r *FileRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, file *repositories.File) error {
 	s := sqlbuilder.InsertInto("files").
 		Cols(
 			"id",
@@ -156,7 +156,7 @@ func (r *FileRepository) ExecuteInsert(ctx context.Context, file *repositories.F
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -174,13 +174,13 @@ func (r *FileRepository) Delete(ctx context.Context, file *repositories.File) er
 	return nil
 }
 
-func (r *FileRepository) ExecuteDelete(ctx context.Context, file *repositories.File) error {
+func (r *FileRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, file *repositories.File) error {
 	s := sqlbuilder.DeleteFrom("files")
 	s.Where(s.Equal("id", file.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.db.ExecContext(ctx, query, args...)
+	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting file: %w", err)
 	}

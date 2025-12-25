@@ -126,7 +126,7 @@ func (r *BlobRepository) Insert(ctx context.Context, blob *repositories.Blob) er
 	return nil
 }
 
-func (r *BlobRepository) ExecuteInsert(ctx context.Context, blob *repositories.Blob) error {
+func (r *BlobRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, blob *repositories.Blob) error {
 	s := sqlbuilder.InsertInto("blobs").
 		Cols(
 			"id",
@@ -147,7 +147,7 @@ func (r *BlobRepository) ExecuteInsert(ctx context.Context, blob *repositories.B
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -165,13 +165,13 @@ func (r *BlobRepository) Delete(ctx context.Context, blob *repositories.Blob) er
 	return nil
 }
 
-func (r *BlobRepository) ExecuteDelete(ctx context.Context, blob *repositories.Blob) error {
+func (r *BlobRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, blob *repositories.Blob) error {
 	s := sqlbuilder.DeleteFrom("blob")
 	s.Where(s.Equal("id", blob.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.db.ExecContext(ctx, query, args...)
+	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting blob: %w", err)
 	}

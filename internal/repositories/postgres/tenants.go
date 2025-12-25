@@ -170,7 +170,7 @@ func (r *TenantRepository) Insert(ctx context.Context, tenant *repositories.Tena
 	return nil
 }
 
-func (r *TenantRepository) ExecuteInsert(ctx context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, tenant *repositories.Tenant) error {
 	pgTenant := newPostgresTenant(tenant)
 
 	s := sqlbuilder.InsertInto("tenants").
@@ -203,7 +203,7 @@ func (r *TenantRepository) ExecuteInsert(ctx context.Context, tenant *repositori
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -217,12 +217,12 @@ func (r *TenantRepository) ExecuteInsert(ctx context.Context, tenant *repositori
 	return nil
 }
 
-func (r *TenantRepository) Update(ctx context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) Update(_ context.Context, tenant *repositories.Tenant) error {
 	r.changeTracker.Add(change.NewEntry(change.Updated, r.entityType, tenant))
 	return nil
 }
 
-func (r *TenantRepository) ExecuteUpdate(ctx context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, tenant *repositories.Tenant) error {
 	if !tenant.HasChanges() {
 		return nil
 	}
@@ -256,7 +256,7 @@ func (r *TenantRepository) ExecuteUpdate(ctx context.Context, tenant *repositori
 	s.Returning("xmin")
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -280,13 +280,13 @@ func (r *TenantRepository) Delete(ctx context.Context, tenant *repositories.Tena
 	return nil
 }
 
-func (r *TenantRepository) ExecuteDelete(ctx context.Context, tenant *repositories.Tenant) error {
+func (r *TenantRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, tenant *repositories.Tenant) error {
 	s := sqlbuilder.DeleteFrom("tenants")
 	s.Where(s.Equal("id", tenant.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.db.ExecContext(ctx, query, args...)
+	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting tenant: %w", err)
 	}

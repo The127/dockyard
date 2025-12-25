@@ -138,7 +138,7 @@ func (r *UserRepository) Insert(ctx context.Context, user *repositories.User) er
 	return nil
 }
 
-func (r *UserRepository) ExecuteInsert(ctx context.Context, user *repositories.User) error {
+func (r *UserRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, user *repositories.User) error {
 	s := sqlbuilder.InsertInto("users").
 		Cols(
 			"id",
@@ -163,7 +163,7 @@ func (r *UserRepository) ExecuteInsert(ctx context.Context, user *repositories.U
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -182,7 +182,7 @@ func (r *UserRepository) Update(ctx context.Context, user *repositories.User) er
 	return nil
 }
 
-func (r *UserRepository) ExecuteUpdate(ctx context.Context, user *repositories.User) error {
+func (r *UserRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, user *repositories.User) error {
 	if !user.HasChanges() {
 		return nil
 	}
@@ -205,7 +205,7 @@ func (r *UserRepository) ExecuteUpdate(ctx context.Context, user *repositories.U
 	s.Returning("xmin")
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -229,13 +229,13 @@ func (r *UserRepository) Delete(ctx context.Context, user *repositories.User) er
 	return nil
 }
 
-func (r *UserRepository) ExecuteDelete(ctx context.Context, user *repositories.User) error {
+func (r *UserRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, user *repositories.User) error {
 	s := sqlbuilder.DeleteFrom("users")
 	s.Where(s.Equal("id", user.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.db.ExecContext(ctx, query, args...)
+	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting user: %w", err)
 	}

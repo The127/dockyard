@@ -143,7 +143,7 @@ func (r *RepositoryRepository) Insert(ctx context.Context, repository *repositor
 	return nil
 }
 
-func (r *RepositoryRepository) ExecuteInsert(ctx context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, repository *repositories.Repository) error {
 	s := sqlbuilder.InsertInto("repositories").
 		Cols(
 			"id",
@@ -172,7 +172,7 @@ func (r *RepositoryRepository) ExecuteInsert(ctx context.Context, repository *re
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -191,7 +191,7 @@ func (r *RepositoryRepository) Update(ctx context.Context, repository *repositor
 	return nil
 }
 
-func (r *RepositoryRepository) ExecuteUpdate(ctx context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, repository *repositories.Repository) error {
 	if !repository.HasChanges() {
 		return nil
 	}
@@ -219,7 +219,7 @@ func (r *RepositoryRepository) ExecuteUpdate(ctx context.Context, repository *re
 	s.Returning("xmin")
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	row := r.db.QueryRowContext(ctx, query, args...)
+	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
 
@@ -243,13 +243,13 @@ func (r *RepositoryRepository) Delete(ctx context.Context, repository *repositor
 	return nil
 }
 
-func (r *RepositoryRepository) ExecuteDelete(ctx context.Context, repository *repositories.Repository) error {
+func (r *RepositoryRepository) ExecuteDelete(ctx context.Context, tx *sql.Tx, repository *repositories.Repository) error {
 	s := sqlbuilder.DeleteFrom("repositories")
 	s.Where(s.Equal("id", repository.GetId()))
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
-	_, err := r.db.ExecContext(ctx, query, args...)
+	_, err := tx.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("deleting repository: %w", err)
 	}
