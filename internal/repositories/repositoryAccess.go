@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/utils/pointer"
 )
 
@@ -32,7 +33,7 @@ func (r RepositoryAccessRole) AllowPull() bool {
 
 type RepositoryAccess struct {
 	BaseModel
-	Changes[RepositoryAccessChange]
+	change.List[RepositoryAccessChange]
 
 	repositoryId uuid.UUID
 	userId       uuid.UUID
@@ -43,7 +44,7 @@ type RepositoryAccess struct {
 func NewRepositoryAccess(repositoryId uuid.UUID, userId uuid.UUID, role RepositoryAccessRole) *RepositoryAccess {
 	return &RepositoryAccess{
 		BaseModel:    NewBaseModel(),
-		Changes:      NewChanges[RepositoryAccessChange](),
+		List:         change.NewChanges[RepositoryAccessChange](),
 		repositoryId: repositoryId,
 		userId:       userId,
 		role:         role,
@@ -53,7 +54,7 @@ func NewRepositoryAccess(repositoryId uuid.UUID, userId uuid.UUID, role Reposito
 func NewRepositoryAccessFromDB(repositoryId uuid.UUID, userId uuid.UUID, role RepositoryAccessRole, base BaseModel) *RepositoryAccess {
 	return &RepositoryAccess{
 		BaseModel:    base,
-		Changes:      NewChanges[RepositoryAccessChange](),
+		List:         change.NewChanges[RepositoryAccessChange](),
 		repositoryId: repositoryId,
 		userId:       userId,
 		role:         role,
@@ -78,7 +79,7 @@ func (r *RepositoryAccess) SetRole(role RepositoryAccessRole) {
 	}
 
 	r.role = role
-	r.trackChange(RepositoryAccessChangeRole)
+	r.TrackChange(RepositoryAccessChangeRole)
 }
 
 type RepositoryAccessFilter struct {

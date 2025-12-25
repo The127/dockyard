@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/utils/pointer"
 )
 
@@ -18,7 +19,7 @@ const (
 
 type Repository struct {
 	BaseModel
-	Changes[RepositoryChange]
+	change.List[RepositoryChange]
 
 	projectId uuid.UUID
 
@@ -34,7 +35,7 @@ type Repository struct {
 func NewRepository(projectId uuid.UUID, slug string, displayName string) *Repository {
 	return &Repository{
 		BaseModel:   NewBaseModel(),
-		Changes:     NewChanges[RepositoryChange](),
+		List:        change.NewChanges[RepositoryChange](),
 		projectId:   projectId,
 		slug:        slug,
 		displayName: displayName,
@@ -52,7 +53,7 @@ func NewRepositoryFromDB(
 ) *Repository {
 	return &Repository{
 		BaseModel:    base,
-		Changes:      NewChanges[RepositoryChange](),
+		List:         change.NewChanges[RepositoryChange](),
 		projectId:    projectId,
 		slug:         slug,
 		displayName:  displayName,
@@ -80,7 +81,7 @@ func (r *Repository) SetDisplayName(displayName string) {
 	}
 
 	r.displayName = displayName
-	r.trackChange(RepositoryChangeDisplayName)
+	r.TrackChange(RepositoryChangeDisplayName)
 }
 
 func (r *Repository) GetDescription() *string {
@@ -93,7 +94,7 @@ func (r *Repository) SetDescription(description *string) {
 	}
 
 	r.description = description
-	r.trackChange(RepositoryChangeDescription)
+	r.TrackChange(RepositoryChangeDescription)
 }
 
 func (r *Repository) GetReadmeFileId() *uuid.UUID {
@@ -106,7 +107,7 @@ func (r *Repository) SetReadmeFileId(readmeFileId *uuid.UUID) {
 	}
 
 	r.readmeFileId = readmeFileId
-	r.trackChange(RepositoryChangeReadmeFileId)
+	r.TrackChange(RepositoryChangeReadmeFileId)
 }
 
 func (r *Repository) GetIsPublic() bool {
@@ -119,7 +120,7 @@ func (r *Repository) SetIsPublic(isPublic bool) {
 	}
 
 	r.isPublic = isPublic
-	r.trackChange(RepositoryChangeIsPublic)
+	r.TrackChange(RepositoryChangeIsPublic)
 }
 
 type RepositoryFilter struct {

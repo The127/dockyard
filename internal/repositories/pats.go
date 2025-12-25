@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 
 	"github.com/google/uuid"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/utils/pointer"
 )
 
@@ -17,7 +18,7 @@ const (
 
 type Pat struct {
 	BaseModel
-	Changes[PatChange]
+	change.List[PatChange]
 
 	userId       uuid.UUID
 	displayName  string
@@ -35,7 +36,7 @@ func NewPat(userId uuid.UUID, displayName string) (*Pat, []byte) {
 
 	return &Pat{
 		BaseModel:    NewBaseModel(),
-		Changes:      NewChanges[PatChange](),
+		List:         change.NewChanges[PatChange](),
 		userId:       userId,
 		displayName:  displayName,
 		hashedSecret: hashedSecret,
@@ -45,7 +46,7 @@ func NewPat(userId uuid.UUID, displayName string) (*Pat, []byte) {
 func NewPatFromDB(userId uuid.UUID, displayName string, hashedSecret []byte, base BaseModel) *Pat {
 	return &Pat{
 		BaseModel:    base,
-		Changes:      NewChanges[PatChange](),
+		List:         change.NewChanges[PatChange](),
 		userId:       userId,
 		displayName:  displayName,
 		hashedSecret: hashedSecret,
@@ -70,7 +71,7 @@ func (p *Pat) SetDisplayName(displayName string) {
 	}
 
 	p.displayName = displayName
-	p.trackChange(PatChangeDisplayName)
+	p.TrackChange(PatChangeDisplayName)
 }
 
 type PatFilter struct {

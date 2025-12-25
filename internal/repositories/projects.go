@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/google/uuid"
+	"github.com/the127/dockyard/internal/change"
 	"github.com/the127/dockyard/internal/utils/pointer"
 )
 
@@ -16,7 +17,7 @@ const (
 
 type Project struct {
 	BaseModel
-	Changes[ProjectChange]
+	change.List[ProjectChange]
 
 	tenantId uuid.UUID
 
@@ -29,7 +30,7 @@ type Project struct {
 func NewProject(tenantId uuid.UUID, slug string, displayName string) *Project {
 	return &Project{
 		BaseModel:   NewBaseModel(),
-		Changes:     NewChanges[ProjectChange](),
+		List:        change.NewChanges[ProjectChange](),
 		tenantId:    tenantId,
 		slug:        slug,
 		displayName: displayName,
@@ -39,7 +40,7 @@ func NewProject(tenantId uuid.UUID, slug string, displayName string) *Project {
 func NewProjectFromDB(tenantId uuid.UUID, slug string, displayName string, description *string, base BaseModel) *Project {
 	return &Project{
 		BaseModel:   base,
-		Changes:     NewChanges[ProjectChange](),
+		List:        change.NewChanges[ProjectChange](),
 		tenantId:    tenantId,
 		slug:        slug,
 		displayName: displayName,
@@ -61,7 +62,7 @@ func (p *Project) SetDisplayName(displayName string) {
 	}
 
 	p.displayName = displayName
-	p.trackChange(ProjectChangeDisplayName)
+	p.TrackChange(ProjectChangeDisplayName)
 }
 
 func (p *Project) GetTenantId() uuid.UUID {
@@ -78,7 +79,7 @@ func (p *Project) SetDescription(description *string) {
 	}
 
 	p.description = description
-	p.trackChange(ProjectChangeDescription)
+	p.TrackChange(ProjectChangeDescription)
 }
 
 type ProjectFilter struct {
