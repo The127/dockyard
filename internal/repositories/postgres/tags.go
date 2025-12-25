@@ -27,6 +27,15 @@ type tagManifestInfo struct {
 	digest string
 }
 
+func mapTag(tag *repositories.Tag) *postgresTag {
+	return &postgresTag{
+		postgresBaseModel: mapBase(tag.BaseModel),
+		repositoryId:      tag.GetRepositoryId(),
+		manifestId:        tag.GetRepositoryManifestId(),
+		name:              tag.GetName(),
+	}
+}
+
 func (t *postgresTag) Map() *repositories.Tag {
 	var manifestInfo *repositories.TagManifestInfo
 	if t.manifestInfo != nil {
@@ -44,6 +53,25 @@ func (t *postgresTag) Map() *repositories.Tag {
 	)
 
 	return tag
+}
+
+func (t *postgresTag) scan(row RowScanner, filter *repositories.TagFilter) error {
+	ptrs := []any{
+		&t.id,
+		&t.createdAt,
+		&t.updatedAt,
+		&t.xmin,
+		&t.repositoryId,
+		&t.manifestId,
+		&t.name,
+	}
+
+	if filter.GetIncludeManifestInfo() {
+		t.manifestInfo = &tagManifestInfo{}
+		ptrs = append(ptrs, &t.manifestInfo.digest)
+	}
+
+	return row.Scan(ptrs...)
 }
 
 type TagRepository struct {
@@ -103,15 +131,8 @@ func (r *TagRepository) First(ctx context.Context, filter *repositories.TagFilte
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.db.QueryRowContext(ctx, query, args...)
 
-	var tag postgresTag
-	cols := []any{&tag.id, &tag.createdAt, &tag.updatedAt, &tag.xmin, &tag.repositoryId, &tag.manifestId, &tag.name}
-
-	if filter.GetIncludeManifestInfo() {
-		tag.manifestInfo = &tagManifestInfo{}
-		cols = append(cols, &tag.manifestInfo.digest)
-	}
-
-	err := row.Scan(cols...)
+	tag := &postgresTag{}
+	err := tag.scan(row, filter)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -148,19 +169,9 @@ func (r *TagRepository) List(ctx context.Context, filter *repositories.TagFilter
 	var tags []*repositories.Tag
 	var totalCount int
 
-	var tag postgresTag
-	cols := []any{&tag.id, &tag.createdAt, &tag.updatedAt, &tag.xmin, &tag.repositoryId, &tag.manifestId, &tag.name}
-
-	if filter.GetIncludeManifestInfo() {
-		tag.manifestInfo = &tagManifestInfo{}
-		cols = append(cols, &tag.manifestInfo.digest)
-	}
-
-	cols = append(cols, &totalCount)
-
 	for rows.Next() {
-
-		err := rows.Scan(cols...)
+		tag := &postgresTag{}
+		err := tag.scan(rows, filter)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
@@ -175,6 +186,8 @@ func (r *TagRepository) Insert(tag *repositories.Tag) {
 }
 
 func (r *TagRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, tag *repositories.Tag) error {
+	mapped := mapTag(tag)
+
 	s := sqlbuilder.InsertInto("tags").
 		Cols(
 			"id",
@@ -185,12 +198,12 @@ func (r *TagRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, tag *repo
 			"name",
 		).
 		Values(
-			tag.GetId(),
-			tag.GetCreatedAt(),
-			tag.GetUpdatedAt(),
-			tag.GetRepositoryId(),
-			tag.GetRepositoryManifestId(),
-			tag.GetName(),
+			mapped.id,
+			mapped.createdAt,
+			mapped.updatedAt,
+			mapped.repositoryId,
+			mapped.manifestId,
+			mapped.name,
 		)
 
 	s.Returning("xmin")

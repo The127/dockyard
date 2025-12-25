@@ -22,12 +22,33 @@ type postgresProjectAccess struct {
 	role      string
 }
 
+func mapProjectAccess(pa *repositories.ProjectAccess) *postgresProjectAccess {
+	return &postgresProjectAccess{
+		postgresBaseModel: mapBase(pa.BaseModel),
+		projectId:         pa.GetProjectId(),
+		userId:            pa.GetUserId(),
+		role:              string(pa.GetRole()),
+	}
+}
+
 func (pa *postgresProjectAccess) Map() *repositories.ProjectAccess {
 	return repositories.NewProjectAccessFromDB(
 		pa.projectId,
 		pa.userId,
 		repositories.ProjectAccessRole(pa.role),
 		pa.MapBase(),
+	)
+}
+
+func (pa *postgresProjectAccess) scan(row RowScanner) error {
+	return row.Scan(
+		&pa.id,
+		&pa.createdAt,
+		&pa.updatedAt,
+		&pa.xmin,
+		&pa.projectId,
+		&pa.userId,
+		&pa.role,
 	)
 }
 
@@ -47,10 +68,10 @@ func NewPostgresProjectAccessRepository(db *sql.DB, changeTracker *change.Tracke
 
 func (r *ProjectAccessRepository) selectQuery(filter *repositories.ProjectAccessFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
-		"project_accesses.xmin",
 		"project_accesses.id",
 		"project_accesses.created_at",
 		"project_accesses.updated_at",
+		"project_accesses.xmin",
 		"project_accesses.project_id",
 		"project_accesses.user_id",
 		"project_accesses.role",
@@ -75,8 +96,8 @@ func (r *ProjectAccessRepository) First(ctx context.Context, filter *repositorie
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.db.QueryRowContext(ctx, query, args...)
 
-	var projectAccess postgresProjectAccess
-	err := row.Scan(&projectAccess.xmin, &projectAccess.id, &projectAccess.createdAt, &projectAccess.updatedAt, &projectAccess.projectId, &projectAccess.userId, &projectAccess.role)
+	projectAccess := &postgresProjectAccess{}
+	err := projectAccess.scan(row)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -102,8 +123,8 @@ func (r *ProjectAccessRepository) List(ctx context.Context, filter *repositories
 	var projectAccesses []*repositories.ProjectAccess
 	var totalCount int
 	for rows.Next() {
-		var projectAccess postgresProjectAccess
-		err := rows.Scan(&projectAccess.xmin, &projectAccess.id, &projectAccess.createdAt, &projectAccess.updatedAt, &projectAccess.projectId, &projectAccess.userId, &projectAccess.role, &totalCount)
+		projectAccess := &postgresProjectAccess{}
+		err := projectAccess.scan(rows)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
@@ -118,6 +139,8 @@ func (r *ProjectAccessRepository) Insert(projectAccess *repositories.ProjectAcce
 }
 
 func (r *ProjectAccessRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, projectAccess *repositories.ProjectAccess) error {
+	mapped := mapProjectAccess(projectAccess)
+
 	s := sqlbuilder.InsertInto("project_accesses").
 		Cols(
 			"id",
@@ -128,12 +151,12 @@ func (r *ProjectAccessRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx,
 			"role",
 		).
 		Values(
-			projectAccess.GetId(),
-			projectAccess.GetCreatedAt(),
-			projectAccess.GetUpdatedAt(),
-			projectAccess.GetProjectId(),
-			projectAccess.GetUserId(),
-			projectAccess.GetRole(),
+			mapped.id,
+			mapped.createdAt,
+			mapped.updatedAt,
+			mapped.projectId,
+			mapped.userId,
+			mapped.role,
 		)
 
 	s.Returning("xmin")
@@ -163,6 +186,8 @@ func (r *ProjectAccessRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx,
 		return nil
 	}
 
+	mapped := mapProjectAccess(projectAccess)
+
 	s := sqlbuilder.Update("project_accesses")
 	s.Where(s.Equal("id", projectAccess.GetId()))
 	s.Where(s.Equal("xmin", projectAccess.GetVersion()))
@@ -170,7 +195,7 @@ func (r *ProjectAccessRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx,
 	for _, field := range projectAccess.GetChanges() {
 		switch field {
 		case repositories.ProjectAccessChangeRole:
-			s.SetMore(s.Assign("role", projectAccess.GetRole()))
+			s.SetMore(s.Assign("role", mapped.role))
 		default:
 			panic(fmt.Errorf("unknown project access change: %d", field))
 		}

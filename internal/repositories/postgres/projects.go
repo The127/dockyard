@@ -23,6 +23,16 @@ type postgresProject struct {
 	description *string
 }
 
+func mapProject(p *repositories.Project) *postgresProject {
+	return &postgresProject{
+		postgresBaseModel: mapBase(p.BaseModel),
+		tenantId:          p.GetTenantId(),
+		slug:              p.GetSlug(),
+		displayName:       p.GetDisplayName(),
+		description:       p.GetDescription(),
+	}
+}
+
 func (p *postgresProject) Map() *repositories.Project {
 	return repositories.NewProjectFromDB(
 		p.tenantId,
@@ -30,6 +40,19 @@ func (p *postgresProject) Map() *repositories.Project {
 		p.displayName,
 		p.description,
 		p.MapBase(),
+	)
+}
+
+func (p *postgresProject) scan(row RowScanner) error {
+	return row.Scan(
+		&p.id,
+		&p.createdAt,
+		&p.updatedAt,
+		&p.xmin,
+		&p.tenantId,
+		&p.slug,
+		&p.displayName,
+		&p.description,
 	)
 }
 
@@ -49,10 +72,10 @@ func NewPostgresProjectRepository(db *sql.DB, changeTracker *change.Tracker, ent
 
 func (r *ProjectRepository) selectQuery(filter *repositories.ProjectFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
-		"projects.xmin",
 		"projects.id",
 		"projects.created_at",
 		"projects.updated_at",
+		"projects.xmin",
 		"projects.tenant_id",
 		"projects.slug",
 		"projects.display_name",
@@ -82,8 +105,8 @@ func (r *ProjectRepository) First(ctx context.Context, filter *repositories.Proj
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.db.QueryRowContext(ctx, query, args...)
 
-	var project postgresProject
-	err := row.Scan(&project.xmin, &project.id, &project.createdAt, &project.updatedAt, &project.tenantId, &project.slug, &project.displayName, &project.description)
+	project := &postgresProject{}
+	err := project.scan(row)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -120,8 +143,8 @@ func (r *ProjectRepository) List(ctx context.Context, filter *repositories.Proje
 	var projects []*repositories.Project
 	var totalCount int
 	for rows.Next() {
-		var project postgresProject
-		err := rows.Scan(&project.xmin, &project.id, &project.createdAt, &project.updatedAt, &project.tenantId, &project.slug, &project.displayName, &project.description, &totalCount)
+		project := &postgresProject{}
+		err := project.scan(rows)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
@@ -136,6 +159,8 @@ func (r *ProjectRepository) Insert(project *repositories.Project) {
 }
 
 func (r *ProjectRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, project *repositories.Project) error {
+	mapped := mapProject(project)
+
 	s := sqlbuilder.InsertInto("projects").
 		Cols(
 			"id",
@@ -147,13 +172,13 @@ func (r *ProjectRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, proje
 			"description",
 		).
 		Values(
-			project.GetId(),
-			project.GetCreatedAt(),
-			project.GetUpdatedAt(),
-			project.GetTenantId(),
-			project.GetSlug(),
-			project.GetDisplayName(),
-			project.GetDescription(),
+			mapped.id,
+			mapped.createdAt,
+			mapped.updatedAt,
+			mapped.tenantId,
+			mapped.slug,
+			mapped.displayName,
+			mapped.description,
 		)
 
 	s.Returning("xmin")
@@ -183,6 +208,8 @@ func (r *ProjectRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, proje
 		return nil
 	}
 
+	mapped := mapProject(project)
+
 	s := sqlbuilder.Update("projects")
 	s.Where(s.Equal("id", project.GetId()))
 	s.Where(s.Equal("xmin", project.GetVersion()))
@@ -190,9 +217,9 @@ func (r *ProjectRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, proje
 	for _, field := range project.GetChanges() {
 		switch field {
 		case repositories.ProjectChangeDisplayName:
-			s.SetMore(s.Assign("display_name", project.GetDisplayName()))
+			s.SetMore(s.Assign("display_name", mapped.displayName))
 		case repositories.ProjectChangeDescription:
-			s.SetMore(s.Assign("description", project.GetDescription()))
+			s.SetMore(s.Assign("description", mapped.description))
 		default:
 			panic(fmt.Errorf("unknown project change: %d", field))
 		}

@@ -25,6 +25,18 @@ type postgresRepository struct {
 	isPublic     bool
 }
 
+func mapRepository(r *repositories.Repository) *postgresRepository {
+	return &postgresRepository{
+		postgresBaseModel: mapBase(r.BaseModel),
+		projectId:         r.GetProjectId(),
+		slug:              r.GetSlug(),
+		displayName:       r.GetDisplayName(),
+		description:       r.GetDescription(),
+		readmeFileId:      r.GetReadmeFileId(),
+		isPublic:          r.GetIsPublic(),
+	}
+}
+
 func (r *postgresRepository) Map() *repositories.Repository {
 	return repositories.NewRepositoryFromDB(
 		r.projectId,
@@ -34,6 +46,21 @@ func (r *postgresRepository) Map() *repositories.Repository {
 		r.readmeFileId,
 		r.isPublic,
 		r.MapBase(),
+	)
+}
+
+func (r *postgresRepository) scan(row RowScanner) error {
+	return row.Scan(
+		&r.id,
+		&r.createdAt,
+		&r.updatedAt,
+		&r.xmin,
+		&r.projectId,
+		&r.slug,
+		&r.displayName,
+		&r.description,
+		&r.readmeFileId,
+		&r.isPublic,
 	)
 }
 
@@ -53,10 +80,10 @@ func NewPostgresRepositoryRepository(db *sql.DB, changeTracker *change.Tracker, 
 
 func (r *RepositoryRepository) selectQuery(filter *repositories.RepositoryFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
-		"repositories.xmin",
 		"repositories.id",
 		"repositories.created_at",
 		"repositories.updated_at",
+		"repositories.xmin",
 		"repositories.project_id",
 		"repositories.slug",
 		"repositories.display_name",
@@ -88,8 +115,8 @@ func (r *RepositoryRepository) First(ctx context.Context, filter *repositories.R
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.db.QueryRowContext(ctx, query, args...)
 
-	var repository postgresRepository
-	err := row.Scan(&repository.xmin, &repository.id, &repository.createdAt, &repository.updatedAt, &repository.projectId, &repository.slug, &repository.displayName, &repository.description, &repository.readmeFileId, &repository.isPublic)
+	repository := &postgresRepository{}
+	err := repository.scan(row)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -126,8 +153,8 @@ func (r *RepositoryRepository) List(ctx context.Context, filter *repositories.Re
 	var repos []*repositories.Repository
 	var totalCount int
 	for rows.Next() {
-		var repository postgresRepository
-		err := rows.Scan(&repository.xmin, &repository.id, &repository.createdAt, &repository.updatedAt, &repository.projectId, &repository.slug, &repository.displayName, &repository.description, &repository.readmeFileId, &repository.isPublic, &totalCount)
+		repository := &postgresRepository{}
+		err := repository.scan(rows)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
@@ -143,6 +170,8 @@ func (r *RepositoryRepository) Insert(repository *repositories.Repository) {
 }
 
 func (r *RepositoryRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, repository *repositories.Repository) error {
+	mapped := mapRepository(repository)
+
 	s := sqlbuilder.InsertInto("repositories").
 		Cols(
 			"id",
@@ -156,15 +185,15 @@ func (r *RepositoryRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, re
 			"is_public",
 		).
 		Values(
-			repository.GetId(),
-			repository.GetCreatedAt(),
-			repository.GetUpdatedAt(),
-			repository.GetProjectId(),
-			repository.GetSlug(),
-			repository.GetDisplayName(),
-			repository.GetDescription(),
-			repository.GetReadmeFileId(),
-			repository.GetIsPublic(),
+			mapped.id,
+			mapped.createdAt,
+			mapped.updatedAt,
+			mapped.projectId,
+			mapped.slug,
+			mapped.displayName,
+			mapped.description,
+			mapped.readmeFileId,
+			mapped.isPublic,
 		)
 
 	s.Returning("xmin")
@@ -194,6 +223,8 @@ func (r *RepositoryRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, re
 		return nil
 	}
 
+	mapped := mapRepository(repository)
+
 	s := sqlbuilder.Update("repositories")
 	s.Where(s.Equal("id", repository.GetId()))
 	s.Where(s.Equal("xmin", repository.GetVersion()))
@@ -201,13 +232,13 @@ func (r *RepositoryRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, re
 	for _, field := range repository.GetChanges() {
 		switch field {
 		case repositories.RepositoryChangeDisplayName:
-			s.SetMore(s.Assign("display_name", repository.GetDisplayName()))
+			s.SetMore(s.Assign("display_name", mapped.displayName))
 		case repositories.RepositoryChangeDescription:
-			s.SetMore(s.Assign("description", repository.GetDescription()))
+			s.SetMore(s.Assign("description", mapped.description))
 		case repositories.RepositoryChangeReadmeFileId:
-			s.SetMore(s.Assign("readme_file_id", repository.GetReadmeFileId()))
+			s.SetMore(s.Assign("readme_file_id", mapped.readmeFileId))
 		case repositories.RepositoryChangeIsPublic:
-			s.SetMore(s.Assign("is_public", repository.GetIsPublic()))
+			s.SetMore(s.Assign("is_public", mapped.isPublic))
 
 		default:
 			panic(fmt.Errorf("unknown repository change: %d", field))

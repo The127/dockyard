@@ -22,12 +22,33 @@ type postgresPat struct {
 	hashedSecret []byte
 }
 
+func mapPat(p *repositories.Pat) *postgresPat {
+	return &postgresPat{
+		postgresBaseModel: mapBase(p.BaseModel),
+		userId:            p.GetUserId(),
+		displayName:       p.GetDisplayName(),
+		hashedSecret:      p.GetHashedSecret(),
+	}
+}
+
 func (p *postgresPat) Map() *repositories.Pat {
 	return repositories.NewPatFromDB(
 		p.userId,
 		p.displayName,
 		p.hashedSecret,
 		p.MapBase(),
+	)
+}
+
+func (p *postgresPat) scan(row RowScanner) error {
+	return row.Scan(
+		&p.id,
+		&p.createdAt,
+		&p.updatedAt,
+		&p.xmin,
+		&p.userId,
+		&p.displayName,
+		&p.hashedSecret,
 	)
 }
 
@@ -47,10 +68,10 @@ func NewPostgresPatRepository(db *sql.DB, changeTracker *change.Tracker, entityT
 
 func (r *PatRepository) selectQuery(filter *repositories.PatFilter) *sqlbuilder.SelectBuilder {
 	s := sqlbuilder.Select(
-		"pats.xmin",
 		"pats.id",
 		"pats.created_at",
 		"pats.updated_at",
+		"pats.xmin",
 		"pats.user_id",
 		"pats.display_name",
 		"pats.hashed_secret",
@@ -75,8 +96,8 @@ func (r *PatRepository) First(ctx context.Context, filter *repositories.PatFilte
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.db.QueryRowContext(ctx, query, args...)
 
-	var pat postgresPat
-	err := row.Scan(&pat.xmin, &pat.id, &pat.createdAt, &pat.updatedAt, &pat.userId, &pat.displayName, &pat.hashedSecret)
+	pat := &postgresPat{}
+	err := pat.scan(row)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -113,8 +134,8 @@ func (r *PatRepository) List(ctx context.Context, filter *repositories.PatFilter
 	var pats []*repositories.Pat
 	var totalCount int
 	for rows.Next() {
-		var pat postgresPat
-		err := rows.Scan(&pat.xmin, &pat.id, &pat.createdAt, &pat.updatedAt, &pat.userId, &pat.displayName, &pat.hashedSecret, &totalCount)
+		pat := &postgresPat{}
+		err := pat.scan(rows)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
@@ -129,6 +150,8 @@ func (r *PatRepository) Insert(pat *repositories.Pat) {
 }
 
 func (r *PatRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, pat *repositories.Pat) error {
+	mapped := mapPat(pat)
+
 	s := sqlbuilder.InsertInto("pats").
 		Cols(
 			"id",
@@ -139,12 +162,12 @@ func (r *PatRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, pat *repo
 			"hashed_secret",
 		).
 		Values(
-			pat.GetId(),
-			pat.GetCreatedAt(),
-			pat.GetUpdatedAt(),
-			pat.GetUserId(),
-			pat.GetDisplayName(),
-			pat.GetHashedSecret(),
+			mapped.id,
+			mapped.createdAt,
+			mapped.updatedAt,
+			mapped.userId,
+			mapped.displayName,
+			mapped.hashedSecret,
 		)
 
 	s.Returning("xmin")
@@ -173,6 +196,8 @@ func (r *PatRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, pat *repo
 		return nil
 	}
 
+	mapped := mapPat(pat)
+
 	s := sqlbuilder.Update("pats")
 	s.Where(s.Equal("id", pat.GetId()))
 	s.Where(s.Equal("xmin", pat.GetVersion()))
@@ -180,7 +205,7 @@ func (r *PatRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, pat *repo
 	for _, field := range pat.GetChanges() {
 		switch field {
 		case repositories.PatChangeDisplayName:
-			s.SetMore(s.Assign("display_name", pat.GetDisplayName()))
+			s.SetMore(s.Assign("display_name", mapped.displayName))
 		default:
 			panic(fmt.Errorf("unknown pat change: %d", field))
 		}

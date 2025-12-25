@@ -27,6 +27,27 @@ type postgresTenant struct {
 	oidcRoleMapping     hstore.Hstore
 }
 
+func mapTenant(tenant *repositories.Tenant) *postgresTenant {
+	oidcRoleMapping := hstore.Hstore{
+		Map: make(map[string]sql.NullString),
+	}
+
+	for k, v := range tenant.GetOidcRoleMapping() {
+		oidcRoleMapping.Map[k] = sql.NullString{String: v, Valid: true}
+	}
+
+	return &postgresTenant{
+		postgresBaseModel:   mapBase(tenant.BaseModel),
+		slug:                tenant.GetSlug(),
+		displayName:         tenant.GetDisplayName(),
+		oidcClient:          tenant.GetOidcClient(),
+		oidcIssuer:          tenant.GetOidcIssuer(),
+		oidcRoleClaim:       tenant.GetOidcRoleClaim(),
+		oidcRoleClaimFormat: tenant.GetOidcRoleClaimFormat(),
+		oidcRoleMapping:     oidcRoleMapping,
+	}
+}
+
 func (t *postgresTenant) Map() *repositories.Tenant {
 	oidcRoleMapping := make(map[string]string)
 	for k, v := range t.oidcRoleMapping.Map {
@@ -47,25 +68,18 @@ func (t *postgresTenant) Map() *repositories.Tenant {
 	)
 }
 
-func newPostgresTenant(tenant *repositories.Tenant) *postgresTenant {
-	oidcRoleMapping := hstore.Hstore{
-		Map: make(map[string]sql.NullString),
-	}
-
-	for k, v := range tenant.GetOidcRoleMapping() {
-		oidcRoleMapping.Map[k] = sql.NullString{String: v, Valid: true}
-	}
-
-	return &postgresTenant{
-		postgresBaseModel:   newPostgresBaseModel(tenant.BaseModel),
-		slug:                tenant.GetSlug(),
-		displayName:         tenant.GetDisplayName(),
-		oidcClient:          tenant.GetOidcClient(),
-		oidcIssuer:          tenant.GetOidcIssuer(),
-		oidcRoleClaim:       tenant.GetOidcRoleClaim(),
-		oidcRoleClaimFormat: tenant.GetOidcRoleClaimFormat(),
-		oidcRoleMapping:     oidcRoleMapping,
-	}
+func (t *postgresTenant) scan(row RowScanner) error {
+	return row.Scan(
+		&t.id,
+		&t.createdAt,
+		&t.updatedAt,
+		&t.xmin,
+		&t.slug,
+		&t.displayName,
+		&t.oidcClient,
+		&t.oidcIssuer,
+		&t.oidcRoleClaim,
+	)
 }
 
 type TenantRepository struct {
@@ -116,8 +130,8 @@ func (r *TenantRepository) First(ctx context.Context, filter *repositories.Tenan
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := r.db.QueryRowContext(ctx, query, args...)
 
-	var tenant postgresTenant
-	err := row.Scan(&tenant.id, &tenant.createdAt, &tenant.updatedAt, &tenant.xmin, &tenant.slug, &tenant.displayName, &tenant.oidcClient, &tenant.oidcIssuer, &tenant.oidcRoleClaim, &tenant.oidcRoleClaimFormat, &tenant.oidcRoleMapping)
+	tenant := &postgresTenant{}
+	err := tenant.scan(row)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -154,8 +168,8 @@ func (r *TenantRepository) List(ctx context.Context, filter *repositories.Tenant
 	var tenants []*repositories.Tenant
 	var totalCount int
 	for rows.Next() {
-		var tenant postgresTenant
-		err := rows.Scan(&tenant.id, &tenant.createdAt, &tenant.updatedAt, &tenant.xmin, &tenant.slug, &tenant.displayName, &tenant.oidcClient, &tenant.oidcIssuer, &tenant.oidcRoleClaim, &tenant.oidcRoleClaimFormat, &tenant.oidcRoleMapping, &totalCount)
+		tenant := &postgresTenant{}
+		err := tenant.scan(rows)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
@@ -170,7 +184,7 @@ func (r *TenantRepository) Insert(tenant *repositories.Tenant) {
 }
 
 func (r *TenantRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, tenant *repositories.Tenant) error {
-	pgTenant := newPostgresTenant(tenant)
+	mapped := mapTenant(tenant)
 
 	s := sqlbuilder.InsertInto("tenants").
 		Cols(
@@ -186,16 +200,16 @@ func (r *TenantRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, tenant
 			"oidc_role_mapping",
 		).
 		Values(
-			pgTenant.id,
-			pgTenant.createdAt,
-			pgTenant.updatedAt,
-			pgTenant.slug,
-			pgTenant.displayName,
-			pgTenant.oidcClient,
-			pgTenant.oidcIssuer,
-			pgTenant.oidcRoleClaim,
-			pgTenant.oidcRoleClaimFormat,
-			pgTenant.oidcRoleMapping,
+			mapped.id,
+			mapped.createdAt,
+			mapped.updatedAt,
+			mapped.slug,
+			mapped.displayName,
+			mapped.oidcClient,
+			mapped.oidcIssuer,
+			mapped.oidcRoleClaim,
+			mapped.oidcRoleClaimFormat,
+			mapped.oidcRoleMapping,
 		)
 
 	s.Returning("xmin")
@@ -225,26 +239,26 @@ func (r *TenantRepository) ExecuteUpdate(ctx context.Context, tx *sql.Tx, tenant
 		return nil
 	}
 
+	mapped := mapTenant(tenant)
+
 	s := sqlbuilder.Update("tenants")
 	s.Where(s.Equal("id", tenant.GetId()))
 	s.Where(s.Equal("xmin", tenant.GetVersion()))
 
-	pgTenant := newPostgresTenant(tenant)
-
 	for _, field := range tenant.GetChanges() {
 		switch field {
 		case repositories.TenantChangeOidcClient:
-			s.SetMore(s.Assign("oidc_client", pgTenant.oidcClient))
+			s.SetMore(s.Assign("oidc_client", mapped.oidcClient))
 		case repositories.TenantChangeOidcIssuer:
-			s.SetMore(s.Assign("oidc_issuer", pgTenant.oidcIssuer))
+			s.SetMore(s.Assign("oidc_issuer", mapped.oidcIssuer))
 		case repositories.TenantChangeOidcRoleMapping:
-			s.SetMore(s.Assign("oidc_role_mapping", pgTenant.oidcRoleMapping))
+			s.SetMore(s.Assign("oidc_role_mapping", mapped.oidcRoleMapping))
 		case repositories.TenantChangeOidcRoleClaim:
-			s.SetMore(s.Assign("oidc_role_claim", pgTenant.oidcRoleClaim))
+			s.SetMore(s.Assign("oidc_role_claim", mapped.oidcRoleClaim))
 		case repositories.TenantChangeOidcRoleClaimFormat:
-			s.SetMore(s.Assign("oidc_role_claim_format", pgTenant.oidcRoleClaimFormat))
+			s.SetMore(s.Assign("oidc_role_claim_format", mapped.oidcRoleClaimFormat))
 		case repositories.TenantChangeDisplayName:
-			s.SetMore(s.Assign("display_name", pgTenant.displayName))
+			s.SetMore(s.Assign("display_name", mapped.displayName))
 
 		default:
 			panic(fmt.Errorf("unknown tenant change: %d", field))
