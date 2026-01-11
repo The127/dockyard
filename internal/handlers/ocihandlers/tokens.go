@@ -141,9 +141,9 @@ func checkAccessForUserAndRepository(
 	if userId == uuid.Nil {
 		if repository.GetIsPublic() && accessType == ociAuthentication.PullAccess {
 			return true, nil
-		} else {
-			return false, nil
 		}
+
+		return false, nil
 	}
 
 	repositoryAccessFilter = repositories.NewRepositoryAccessFilter().

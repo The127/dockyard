@@ -10,60 +10,60 @@ import (
 	"github.com/the127/dockyard/internal/logging"
 )
 
-type OciErrorCode string
+type ErrorCode string
 
 const (
 	// BlobUnknown code-1: blob unknown to registry
-	BlobUnknown OciErrorCode = "BLOB_UNKNOWN"
+	BlobUnknown ErrorCode = "BLOB_UNKNOWN"
 
 	// BlobUploadInvalid code-2: blob upload invalid
-	BlobUploadInvalid OciErrorCode = "BLOB_UPLOAD_INVALID"
+	BlobUploadInvalid ErrorCode = "BLOB_UPLOAD_INVALID"
 
 	// BlobUploadUnknown code-3: blob upload unknown to registry
-	BlobUploadUnknown OciErrorCode = "BLOB_UPLOAD_UNKNOWN"
+	BlobUploadUnknown ErrorCode = "BLOB_UPLOAD_UNKNOWN"
 
 	// DigestInvalid code-4: provided digest did not match uploaded content
-	DigestInvalid OciErrorCode = "DIGEST_INVALID"
+	DigestInvalid ErrorCode = "DIGEST_INVALID"
 
 	// ManifestBlobUnknown code-5: manifest references a manifest or blob unknown to registry
-	ManifestBlobUnknown OciErrorCode = "MANIFEST_BLOB_UNKNOWN"
+	ManifestBlobUnknown ErrorCode = "MANIFEST_BLOB_UNKNOWN"
 
 	// ManifestInvalid code-6: manifest invalid
-	ManifestInvalid OciErrorCode = "MANIFEST_INVALID"
+	ManifestInvalid ErrorCode = "MANIFEST_INVALID"
 
 	// ManifestUnknown code-7: manifest unknown to registry
-	ManifestUnknown OciErrorCode = "MANIFEST_UNKNOWN"
+	ManifestUnknown ErrorCode = "MANIFEST_UNKNOWN"
 
 	// NameInvalid code-8: invalid repository name
-	NameInvalid OciErrorCode = "NAME_INVALID"
+	NameInvalid ErrorCode = "NAME_INVALID"
 
 	// NameUnknown code-9: repository name not known to registry
-	NameUnknown OciErrorCode = "NAME_UNKNOWN"
+	NameUnknown ErrorCode = "NAME_UNKNOWN"
 
 	// SizeInvalid code-10: provided length did not match content length
-	SizeInvalid OciErrorCode = "SIZE_INVALID"
+	SizeInvalid ErrorCode = "SIZE_INVALID"
 
 	// Unauthorized code-11: authentication required
-	Unauthorized OciErrorCode = "UNAUTHORIZED"
+	Unauthorized ErrorCode = "UNAUTHORIZED"
 
 	// Denied code-12: requested access to the resource is denied
-	Denied OciErrorCode = "DENIED"
+	Denied ErrorCode = "DENIED"
 
 	// Unsupported code-13: the operation is unsupported
-	Unsupported OciErrorCode = "UNSUPPORTED"
+	Unsupported ErrorCode = "UNSUPPORTED"
 
 	// TooManyRequests code-14: too many requests
-	TooManyRequests OciErrorCode = "TOO_MANY_REQUESTS"
+	TooManyRequests ErrorCode = "TOO_MANY_REQUESTS"
 )
 
 type OciError struct {
-	HttpCode int          `json:"-"`
-	Code     OciErrorCode `json:"code"`
-	Message  string       `json:"message,omitempty"`
+	HttpCode int       `json:"-"`
+	Code     ErrorCode `json:"code"`
+	Message  string    `json:"message,omitempty"`
 	Headers  map[string]string
 }
 
-func NewOciError(code OciErrorCode) *OciError {
+func NewOciError(code ErrorCode) *OciError {
 	return &OciError{
 		HttpCode: http.StatusBadRequest,
 		Code:     code,

@@ -17,7 +17,7 @@ import (
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
 
-func OciAuthenticationMiddleware() mux.MiddlewareFunc {
+func AuthenticationMiddleware() mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			currentUser, err := getOciCurrentUser(r)
