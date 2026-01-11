@@ -129,7 +129,7 @@ func mapApi(r *mux.Router) {
 
 func mapOciApi(r *mux.Router) {
 	v2Router := r.PathPrefix("/v2").Subrouter()
-	v2Router.Use(ociAuthentication.OciAuthenticationMiddleware())
+	v2Router.Use(ociAuthentication.AuthenticationMiddleware())
 
 	v2Router.HandleFunc("/token", ocihandlers.Tokens).Methods(http.MethodPost, http.MethodGet, http.MethodOptions)
 
