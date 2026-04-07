@@ -89,7 +89,7 @@ func (r *Repository) GetDescription() *string {
 }
 
 func (r *Repository) SetDescription(description *string) {
-	if r.description == description {
+	if pointer.Equal(r.description, description) {
 		return
 	}
 
@@ -102,7 +102,7 @@ func (r *Repository) GetReadmeFileId() *uuid.UUID {
 }
 
 func (r *Repository) SetReadmeFileId(readmeFileId *uuid.UUID) {
-	if r.readmeFileId == readmeFileId {
+	if pointer.Equal(r.readmeFileId, readmeFileId) {
 		return
 	}
 
