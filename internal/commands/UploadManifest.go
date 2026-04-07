@@ -41,14 +41,14 @@ func HandleUploadManifest(ctx context.Context, command UploadManifest) (*UploadM
 		return nil, err
 	}
 
+	if strings.HasPrefix(command.Reference, "sha256:") && command.Reference != command.Digest {
+		return nil, ociError.NewOciError(ociError.DigestInvalid)
+	}
+
 	manifest := repositories.NewManifest(command.RepositoryId, blob.GetId(), uploadResponse.Digest)
 	dbContext.Manifests().Insert(manifest)
 
-	if strings.HasPrefix(command.Reference, "sha256:") {
-		if command.Reference != command.Digest {
-			return nil, ociError.NewOciError(ociError.DigestInvalid)
-		}
-	} else {
+	if !strings.HasPrefix(command.Reference, "sha256:") {
 		dbContext.Tags().Insert(repositories.NewTag(command.RepositoryId, manifest.GetId(), command.Reference))
 	}
 

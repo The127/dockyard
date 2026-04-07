@@ -168,7 +168,7 @@ func (s *OciErrorTestSuite) TestHandleHttpError_OciError_JsonBodyShape() {
 	// assert
 	var wrapper Wrapper
 	decodeErr := json.NewDecoder(w.Body).Decode(&wrapper)
-	s.NoError(decodeErr)
+	s.Require().NoError(decodeErr)
 	s.Len(wrapper.Errors, 1)
 	s.Equal(DigestInvalid, wrapper.Errors[0].Code)
 	s.Equal("bad digest", wrapper.Errors[0].Message)
@@ -248,7 +248,7 @@ func (s *OciErrorTestSuite) TestHandleHttpError_PlainError_NonProduction_BodyCon
 	// assert
 	var body string
 	decodeErr := json.NewDecoder(w.Body).Decode(&body)
-	s.NoError(decodeErr)
+	s.Require().NoError(decodeErr)
 	s.Equal("something broke", body)
 }
 
