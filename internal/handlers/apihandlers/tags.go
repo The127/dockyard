@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/The127/ioc"
 	"github.com/The127/mediatr"
 	"github.com/gorilla/mux"
 	"github.com/the127/dockyard/internal/handlers"
@@ -28,8 +27,7 @@ func ListTags(w http.ResponseWriter, r *http.Request) {
 	repositorySlug := vars["repository"]
 
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	tags, err := mediatr.Send[*queries.ListTagsResponse](ctx, mediator, queries.ListTags{
 		TenantSlug:     tenantSlug,

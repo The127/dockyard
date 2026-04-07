@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/The127/ioc"
 	"github.com/The127/mediatr"
 	"github.com/gorilla/mux"
 	"github.com/the127/dockyard/internal/middlewares"
@@ -22,8 +21,7 @@ func GetTenantOidcInfo(w http.ResponseWriter, r *http.Request) {
 	tenantSlug := vars["tenant"]
 
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	oidcInfo, err := mediatr.Send[*queries.GetTenantOidcInfoResponse](ctx, mediator, queries.GetTenantOidcInfo{
 		TenantSlug: tenantSlug,

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/The127/ioc"
 	"github.com/the127/dockyard/internal/config"
@@ -57,8 +58,11 @@ func Serve(root *ioc.DependencyProvider, serverConfig config.ServerConfig, hostB
 	addr := fmt.Sprintf("%s:%d", serverConfig.Host, serverConfig.Port)
 	logging.Logger.Infof("Starting server on %s", addr)
 	srv := &http.Server{
-		Addr:    addr,
-		Handler: r,
+		Addr:              addr,
+		Handler:           r,
+		ReadHeaderTimeout: 30 * time.Second,
+		WriteTimeout:      10 * time.Minute,
+		IdleTimeout:       120 * time.Second,
 	}
 
 	go serve(srv)

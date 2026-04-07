@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/The127/ioc"
 	"github.com/The127/mediatr"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -40,8 +39,7 @@ func CreateTenant(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	_, err = mediatr.Send[*commands.CreateTenantResponse](ctx, mediator, commands.CreateTenant{
 		Slug:        dto.Slug,
@@ -66,8 +64,7 @@ type ListTenantsResponseItem struct {
 
 func ListTenants(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	tenants, err := mediatr.Send[*queries.ListTenantsResponse](ctx, mediator, queries.ListTenants{})
 	if err != nil {
@@ -104,8 +101,7 @@ type GetTenantResponse struct {
 
 func GetTenant(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	vars := mux.Vars(r)
 	tenantSlug := vars["tenant"]

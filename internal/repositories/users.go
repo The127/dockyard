@@ -61,7 +61,7 @@ func (u *User) GetDisplayName() *string {
 }
 
 func (u *User) SetDisplayName(displayName *string) {
-	if u.displayName == displayName {
+	if pointer.Equal(u.displayName, displayName) {
 		return
 	}
 
@@ -74,7 +74,7 @@ func (u *User) GetEmail() *string {
 }
 
 func (u *User) SetEmail(email *string) {
-	if u.email == email {
+	if pointer.Equal(u.email, email) {
 		return
 	}
 

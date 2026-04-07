@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/The127/ioc"
 	"github.com/The127/mediatr"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -43,8 +42,7 @@ func CreateProject(w http.ResponseWriter, r *http.Request) {
 	tenantSlug := vars["tenant"]
 
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	currentUser := authentication.GetCurrentUser(ctx)
 
@@ -82,8 +80,7 @@ func ListProjects(w http.ResponseWriter, r *http.Request) {
 	tenantSlug := vars["tenant"]
 
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	projects, err := mediatr.Send[*queries.ListProjectsResponse](ctx, mediator, queries.ListProjects{
 		TenantSlug: tenantSlug,
@@ -129,8 +126,7 @@ func GetProject(w http.ResponseWriter, r *http.Request) {
 	projectSlug := vars["project"]
 
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	project, err := mediatr.Send[*queries.GetProjectResponse](ctx, mediator, queries.GetProject{
 		TenantSlug:  tenantSlug,

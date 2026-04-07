@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/The127/ioc"
 	"github.com/The127/mediatr"
 	"github.com/google/uuid"
 	"github.com/the127/dockyard/internal/commands"
@@ -40,9 +39,8 @@ func CreatePat(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
 	currentUser := authentication.GetCurrentUser(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	pat, err := mediatr.Send[*commands.CreatePatResponse](ctx, mediator, commands.CreatePat{
 		UserId:      currentUser.UserId,
@@ -75,9 +73,8 @@ type ListPatsResponseItem struct {
 
 func ListPats(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
 	currentUser := authentication.GetCurrentUser(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	pats, err := mediatr.Send[*queries.ListPatsResponse](ctx, mediator, queries.ListPats{
 		UserId: currentUser.UserId,

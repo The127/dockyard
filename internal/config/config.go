@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
+
 
 	"github.com/the127/dockyard/internal/args"
 
@@ -202,6 +204,16 @@ func setServerDefaultsOrPanic() {
 		}
 
 		C.Server.ExternalDomain = externalUrl.Hostname()
+	}
+
+	if len(C.Server.AllowedOrigins) == 0 {
+		if args.IsProduction() {
+			panic("Server.AllowedOrigins must be explicitly set to specific origins in production.")
+		}
+
+		C.Server.AllowedOrigins = []string{"*"}
+	} else if slices.Contains(C.Server.AllowedOrigins, "*") && args.IsProduction() {
+		panic("Server.AllowedOrigins must be explicitly set to specific origins in production.")
 	}
 }
 

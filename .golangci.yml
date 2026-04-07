@@ -20,13 +20,12 @@ linters:
     - nakedret       # naked returns
     - prealloc       # slice/map preallocation
     - misspell       # typos
-    - dupl           # duplicate code
     - testifylint    # test hygiene
   disable:
     - funlen         # disable too strict function length
     - depguard       # optional dependency guard
     - lll            # line length, IDEs usually handle it
-    - dupl           #
+    - dupl           # handler boilerplate creates unavoidable repetition
   settings:
     revive:
       severity: warning

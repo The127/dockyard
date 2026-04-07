@@ -74,7 +74,7 @@ func (p *Project) GetDescription() *string {
 }
 
 func (p *Project) SetDescription(description *string) {
-	if p.description == description {
+	if pointer.Equal(p.description, description) {
 		return
 	}
 
