@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/The127/ioc"
 	"github.com/The127/mediatr"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -46,8 +45,7 @@ func CreateRepository(w http.ResponseWriter, r *http.Request) {
 	projectSlug := vars["project"]
 
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	currentUser := authentication.GetCurrentUser(ctx)
 
@@ -83,8 +81,7 @@ func ListRepositories(w http.ResponseWriter, r *http.Request) {
 	projectSlug := vars["project"]
 
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	repos, err := mediatr.Send[*queries.ListRepositoriesResponse](ctx, mediator, queries.ListRepositories{
 		TenantSlug:  tenantSlug,
@@ -134,8 +131,7 @@ func GetRepository(w http.ResponseWriter, r *http.Request) {
 	repositorySlug := vars["repository"]
 
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	repo, err := mediatr.Send[*queries.GetRepositoryResponse](ctx, mediator, queries.GetRepository{
 		TenantSlug:     tenantSlug,
@@ -190,8 +186,7 @@ func PatchRepository(w http.ResponseWriter, r *http.Request) {
 	repositorySlug := vars["repository"]
 
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	_, err = mediatr.Send[*commands.PatchRepositoryResponse](ctx, mediator, commands.PatchRepository{
 		TenantSlug:     tenantSlug,
@@ -219,8 +214,7 @@ func GetRepositoryReadme(w http.ResponseWriter, r *http.Request) {
 	repositorySlug := vars["repository"]
 
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	readme, err := mediatr.Send[*queries.GetRepositoryReadmeResponse](ctx, mediator, queries.GetRepositoryReadme{
 		TenantSlug:     tenantSlug,
@@ -279,8 +273,7 @@ func UpdateRepositoryReadme(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := r.Context()
-	scope := middlewares.GetScope(ctx)
-	mediator := ioc.GetDependency[mediatr.Mediator](scope)
+	mediator := middlewares.GetMediator(ctx)
 
 	_, err = mediatr.Send[*commands.UpdateRepositoryReadmeResponse](ctx, mediator, commands.UpdateRepositoryReadme{
 		TenantSlug:     tenantSlug,

@@ -47,7 +47,7 @@ func ManifestsDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	med := ioc.GetDependency[mediatr.Mediator](scope)
+	med := middlewares.GetMediator(ctx)
 	result, err := mediatr.Send[*queries.GetManifestByReferenceResponse](ctx, med, queries.GetManifestByReference{
 		RepositoryId: repository.GetId(),
 		Reference:    reference,
@@ -95,7 +95,7 @@ func ManifestsExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	med := ioc.GetDependency[mediatr.Mediator](scope)
+	med := middlewares.GetMediator(ctx)
 	result, err := mediatr.Send[*queries.GetManifestByReferenceResponse](ctx, med, queries.GetManifestByReference{
 		RepositoryId: repository.GetId(),
 		Reference:    reference,
@@ -152,7 +152,7 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	reference := vars["reference"]
 
-	med := ioc.GetDependency[mediatr.Mediator](scope)
+	med := middlewares.GetMediator(ctx)
 	result, err := mediatr.Send[*commands.UploadManifestResponse](ctx, med, commands.UploadManifest{
 		RepositoryId: repository.GetId(),
 		Reference:    reference,

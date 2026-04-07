@@ -46,7 +46,7 @@ func BlobsDownload(w http.ResponseWriter, r *http.Request) {
 		ociError.HandleHttpError(w, r, err)
 	}
 
-	med := ioc.GetDependency[mediatr.Mediator](scope)
+	med := middlewares.GetMediator(ctx)
 	result, err := mediatr.Send[*queries.GetRepositoryBlobResponse](ctx, med, queries.GetRepositoryBlob{
 		RepositoryId: repository.GetId(),
 		Digest:       digest,
@@ -93,7 +93,7 @@ func BlobExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	med := ioc.GetDependency[mediatr.Mediator](scope)
+	med := middlewares.GetMediator(ctx)
 	result, err := mediatr.Send[*queries.GetRepositoryBlobResponse](ctx, med, queries.GetRepositoryBlob{
 		RepositoryId: repository.GetId(),
 		Digest:       digest,
@@ -318,7 +318,7 @@ func FinishUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	med := ioc.GetDependency[mediatr.Mediator](scope)
+	med := middlewares.GetMediator(ctx)
 	_, err = mediatr.Send[*commands.FinishUploadResponse](ctx, med, commands.FinishUpload{
 		RepositoryId:   completeResponse.RepositoryId,
 		ComputedDigest: completeResponse.ComputedDigest,

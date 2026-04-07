@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/The127/ioc"
+	"github.com/The127/mediatr"
 	"github.com/gorilla/mux"
 	"github.com/the127/dockyard/internal/utils"
 )
@@ -29,4 +30,8 @@ func ContextWithScope(ctx context.Context, scope *ioc.DependencyProvider) contex
 
 func GetScope(ctx context.Context) *ioc.DependencyProvider {
 	return ctx.Value(scopeKeyType("scope")).(*ioc.DependencyProvider)
+}
+
+func GetMediator(ctx context.Context) mediatr.Mediator {
+	return ioc.GetDependency[mediatr.Mediator](GetScope(ctx))
 }
