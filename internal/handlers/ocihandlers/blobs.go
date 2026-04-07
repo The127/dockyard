@@ -1,48 +1,23 @@
 package ocihandlers
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/The127/ioc"
-	"github.com/google/uuid"
+	"github.com/The127/mediatr"
 	"github.com/gorilla/mux"
+	"github.com/google/uuid"
+	"github.com/the127/dockyard/internal/commands"
 	"github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/jsontypes"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/middlewares/ociAuthentication"
-	"github.com/the127/dockyard/internal/repositories"
+	"github.com/the127/dockyard/internal/queries"
 	"github.com/the127/dockyard/internal/services/blobStorage"
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
-
-func getRepositoryBlob(ctx context.Context, dbContext database.Context, repositoryId uuid.UUID, digest string) (*repositories.RepositoryBlob, *repositories.Blob, error) { // nolint:unparam
-	blob, err := dbContext.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(digest))
-	if err != nil {
-		return nil, nil, err
-	}
-	if blob == nil {
-		err := ociError.NewOciError(ociError.BlobUnknown).
-			WithMessage(fmt.Sprintf("blob '%s' does not exist", digest)).
-			WithHttpCode(http.StatusNotFound)
-		return nil, nil, err
-	}
-
-	repositoryBlob, err := dbContext.RepositoryBlobs().First(ctx, repositories.NewRepositoryBlobFilter().ByBlobId(blob.GetId()).ByRepositoryId(repositoryId))
-	if err != nil {
-		return nil, nil, err
-	}
-	if repositoryBlob == nil {
-		err := ociError.NewOciError(ociError.BlobUnknown).
-			WithMessage(fmt.Sprintf("blob '%s' does not exist", digest)).
-			WithHttpCode(http.StatusNotFound)
-		return nil, nil, err
-	}
-
-	return repositoryBlob, blob, nil
-}
 
 func BlobsDownload(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -71,13 +46,17 @@ func BlobsDownload(w http.ResponseWriter, r *http.Request) {
 		ociError.HandleHttpError(w, r, err)
 	}
 
-	_, blob, err := getRepositoryBlob(ctx, dbContext, repository.GetId(), digest)
+	med := ioc.GetDependency[mediatr.Mediator](scope)
+	result, err := mediatr.Send[*queries.GetRepositoryBlobResponse](ctx, med, queries.GetRepositoryBlob{
+		RepositoryId: repository.GetId(),
+		Digest:       digest,
+	})
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 	}
 
 	blobService := ioc.GetDependency[blobStorage.Service](scope)
-	redirectUri, err := blobService.GetBlobDownloadLink(ctx, blob.GetDigest())
+	redirectUri, err := blobService.GetBlobDownloadLink(ctx, result.Blob.GetDigest())
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -114,14 +93,18 @@ func BlobExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, blob, err := getRepositoryBlob(ctx, dbContext, repository.GetId(), digest)
+	med := ioc.GetDependency[mediatr.Mediator](scope)
+	result, err := mediatr.Send[*queries.GetRepositoryBlobResponse](ctx, med, queries.GetRepositoryBlob{
+		RepositoryId: repository.GetId(),
+		Digest:       digest,
+	})
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Docker-Content-Digest", blob.GetDigest())
-	w.Header().Set("Content-Length", strconv.FormatInt(blob.GetSize(), 10))
+	w.Header().Set("Docker-Content-Digest", result.Blob.GetDigest())
+	w.Header().Set("Content-Length", strconv.FormatInt(result.Blob.GetSize(), 10))
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -333,26 +316,12 @@ func FinishUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	dbFactory := ioc.GetDependency[database.Factory](scope)
-	dbContext, err := dbFactory.NewDbContext(ctx)
-	if err != nil {
-		ociError.HandleHttpError(w, r, err)
-		return
-	}
-
-	blob, err := dbContext.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(digest))
-	if err != nil {
-		ociError.HandleHttpError(w, r, err)
-		return
-	}
-	if blob == nil {
-		blob = repositories.NewBlob(completeResponse.ComputedDigest, completeResponse.Size)
-		dbContext.Blobs().Insert(blob)
-	}
-
-	dbContext.RepositoryBlobs().Insert(repositories.NewRepositoryBlob(completeResponse.RepositoryId, blob.GetId()))
-
-	err = dbContext.SaveChanges(ctx)
+	med := ioc.GetDependency[mediatr.Mediator](scope)
+	_, err = mediatr.Send[*commands.FinishUploadResponse](ctx, med, commands.FinishUpload{
+		RepositoryId:   completeResponse.RepositoryId,
+		ComputedDigest: completeResponse.ComputedDigest,
+		Size:           completeResponse.Size,
+	})
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return

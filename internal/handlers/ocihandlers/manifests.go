@@ -1,66 +1,23 @@
 package ocihandlers
 
 import (
-	"bytes"
-	"context"
 	"crypto/sha256"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/The127/ioc"
-	"github.com/google/uuid"
+	"github.com/The127/mediatr"
 	"github.com/gorilla/mux"
+	"github.com/the127/dockyard/internal/commands"
 	"github.com/the127/dockyard/internal/database"
 	"github.com/the127/dockyard/internal/middlewares"
 	"github.com/the127/dockyard/internal/middlewares/ociAuthentication"
-	"github.com/the127/dockyard/internal/repositories"
+	"github.com/the127/dockyard/internal/queries"
 	"github.com/the127/dockyard/internal/services/blobStorage"
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
-
-func getManifestByReference(ctx context.Context, dbContext database.Context, repositoryId uuid.UUID, reference string) (*repositories.Manifest, *repositories.Blob, error) { // nolint:unparam
-	var manifestFilter *repositories.ManifestFilter
-	if !strings.HasPrefix(reference, "sha256:") {
-		tag, err := dbContext.Tags().First(ctx, repositories.NewTagFilter().ByRepositoryId(repositoryId).ByName(reference))
-		if err != nil {
-			return nil, nil, err
-		}
-		if tag == nil {
-			err := ociError.NewOciError(ociError.ManifestUnknown).
-				WithMessage(fmt.Sprintf("tag '%s' does not exist", reference))
-			return nil, nil, err
-		}
-
-		manifestFilter = repositories.NewManifestFilter().ById(tag.GetRepositoryManifestId())
-	} else {
-		manifestFilter = repositories.NewManifestFilter().ByRepositoryId(repositoryId).ByDigest(reference)
-	}
-
-	manifest, err := dbContext.Manifests().First(ctx, manifestFilter)
-	if err != nil {
-		return nil, nil, err
-	}
-	if manifest == nil {
-		err := ociError.NewOciError(ociError.ManifestUnknown).
-			WithMessage(fmt.Sprintf("manifest '%s' does not exist", reference))
-		return nil, nil, err
-	}
-
-	blob, err := dbContext.Blobs().First(ctx, repositories.NewBlobFilter().ById(manifest.GetBlobId()))
-	if err != nil {
-		return nil, nil, err
-	}
-	if blob == nil {
-		err := ociError.NewOciError(ociError.BlobUnknown).
-			WithMessage(fmt.Sprintf("blob '%s' does not exist", manifest.GetBlobId()))
-		return nil, nil, err
-	}
-
-	return manifest, blob, nil
-}
 
 func ManifestsDownload(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -90,14 +47,18 @@ func ManifestsDownload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, blob, err := getManifestByReference(ctx, dbContext, repository.GetId(), reference)
+	med := ioc.GetDependency[mediatr.Mediator](scope)
+	result, err := mediatr.Send[*queries.GetManifestByReferenceResponse](ctx, med, queries.GetManifestByReference{
+		RepositoryId: repository.GetId(),
+		Reference:    reference,
+	})
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
 	blobService := ioc.GetDependency[blobStorage.Service](scope)
-	redirectUri, err := blobService.GetBlobDownloadLink(ctx, blob.GetDigest())
+	redirectUri, err := blobService.GetBlobDownloadLink(ctx, result.Blob.GetDigest())
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
@@ -134,14 +95,18 @@ func ManifestsExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, blob, err := getManifestByReference(ctx, dbContext, repository.GetId(), reference)
+	med := ioc.GetDependency[mediatr.Mediator](scope)
+	result, err := mediatr.Send[*queries.GetManifestByReferenceResponse](ctx, med, queries.GetManifestByReference{
+		RepositoryId: repository.GetId(),
+		Reference:    reference,
+	})
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
 
-	w.Header().Set("Docker-Content-Digest", blob.GetDigest())
-	w.Header().Set("Content-Length", strconv.FormatInt(blob.GetSize(), 10))
+	w.Header().Set("Docker-Content-Digest", result.Blob.GetDigest())
+	w.Header().Set("Content-Length", strconv.FormatInt(result.Blob.GetSize(), 10))
 	w.WriteHeader(http.StatusOK)
 }
 
@@ -184,40 +149,22 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 	sum256 := sha256.Sum256(bodyBytes)
 	digest := "sha256:" + fmt.Sprintf("%x", sum256)
 
-	blobs := ioc.GetDependency[blobStorage.Service](scope)
-	uploadResponse, err := blobs.UploadCompleteBlob(ctx, digest, bytes.NewReader(bodyBytes), blobStorage.BlobContentTypeManifest)
-	if err != nil {
-		ociError.HandleHttpError(w, r, err)
-		return
-	}
-
-	blob, err := dbContext.Blobs().First(ctx, repositories.NewBlobFilter().ByDigest(uploadResponse.Digest))
-	if err != nil {
-		ociError.HandleHttpError(w, r, err)
-		return
-	}
-	if blob == nil {
-		blob = repositories.NewBlob(uploadResponse.Digest, int64(len(bodyBytes)))
-		dbContext.Blobs().Insert(blob)
-	}
-
-	manifest := repositories.NewManifest(repository.GetId(), blob.GetId(), uploadResponse.Digest)
-	dbContext.Manifests().Insert(manifest)
-
 	vars := mux.Vars(r)
 	reference := vars["reference"]
 
-	if strings.HasPrefix(reference, "sha256:") {
-		// if it's a reference, check if the digest matches
-		if reference != digest {
-			ociError.HandleHttpError(w, r, ociError.NewOciError(ociError.DigestInvalid))
-		}
-	} else {
-		// if it's a tag, insert it into the database
-		dbContext.Tags().Insert(repositories.NewTag(repository.GetId(), manifest.GetId(), reference))
+	med := ioc.GetDependency[mediatr.Mediator](scope)
+	result, err := mediatr.Send[*commands.UploadManifestResponse](ctx, med, commands.UploadManifest{
+		RepositoryId: repository.GetId(),
+		Reference:    reference,
+		Digest:       digest,
+		Body:         bodyBytes,
+	})
+	if err != nil {
+		ociError.HandleHttpError(w, r, err)
+		return
 	}
 
-	location := fmt.Sprintf("/v2/%s/%s/manifests/%s", repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, uploadResponse.Digest)
+	location := fmt.Sprintf("/v2/%s/%s/manifests/%s", repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, result.Digest)
 
 	w.Header().Set("Location", location)
 	w.WriteHeader(http.StatusCreated)
