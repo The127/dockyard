@@ -241,6 +241,7 @@ func UploadChunk(w http.ResponseWriter, r *http.Request) {
 	scope := middlewares.GetScope(ctx)
 	blobService := ioc.GetDependency[blobStorage.Service](scope)
 
+	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024*512) // max 512 MB
 	uploadResponse, err := blobService.UploadWriteChunk(ctx, sessionId, r.Body)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
@@ -275,6 +276,7 @@ func FinishUpload(w http.ResponseWriter, r *http.Request) {
 	scope := middlewares.GetScope(ctx)
 	blobService := ioc.GetDependency[blobStorage.Service](scope)
 
+	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024*512) // max 512 MB
 	/*lengthHeader := r.Header.Get("Content-Length")
 	if lengthHeader != "" {
 		if r.Header.Get("Content-Type") != "application/octet-stream" {

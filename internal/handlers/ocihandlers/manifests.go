@@ -135,7 +135,7 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024*1024*4) // max 4 MB
+	r.Body = http.MaxBytesReader(w, r.Body, 1024*1024*4) // max 4 MB
 	bodyBytes, err := io.ReadAll(r.Body)
 	if err != nil {
 		err := ociError.NewOciError(ociError.BlobUploadInvalid).

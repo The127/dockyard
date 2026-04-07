@@ -101,6 +101,13 @@ type Wrapper struct {
 func HandleHttpError(w http.ResponseWriter, r *http.Request, err error) {
 	var message string
 	var ociError *OciError
+	var maxBytesError *http.MaxBytesError
+
+	if errors.As(err, &maxBytesError) {
+		err = NewOciError(BlobUploadInvalid).
+			WithHttpCode(http.StatusRequestEntityTooLarge).
+			WithMessage("request body too large")
+	}
 
 	if errors.As(err, &ociError) {
 		wrapper := Wrapper{
