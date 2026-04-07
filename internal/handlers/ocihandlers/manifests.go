@@ -2,6 +2,7 @@ package ocihandlers
 
 import (
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -18,6 +19,13 @@ import (
 	"github.com/the127/dockyard/internal/services/blobStorage"
 	"github.com/the127/dockyard/internal/utils/ociError"
 )
+
+var validManifestMediaTypes = map[string]bool{
+	"application/vnd.oci.image.manifest.v1+json":               true,
+	"application/vnd.oci.image.index.v1+json":                  true,
+	"application/vnd.docker.distribution.manifest.v2+json":     true,
+	"application/vnd.docker.distribution.manifest.list.v2+json": true,
+}
 
 func ManifestsDownload(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
@@ -144,7 +152,22 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: validate manifest
+	var manifest struct {
+		MediaType     string `json:"mediaType"`
+		SchemaVersion int    `json:"schemaVersion"`
+	}
+	if jsonErr := json.Unmarshal(bodyBytes, &manifest); jsonErr != nil {
+		ociError.HandleHttpError(w, r, ociError.NewOciError(ociError.ManifestInvalid).WithMessage("manifest is not valid JSON"))
+		return
+	}
+	if manifest.MediaType != "" && !validManifestMediaTypes[manifest.MediaType] {
+		ociError.HandleHttpError(w, r, ociError.NewOciError(ociError.ManifestInvalid).WithMessage("manifest mediaType is unsupported"))
+		return
+	}
+	if manifest.SchemaVersion != 2 {
+		ociError.HandleHttpError(w, r, ociError.NewOciError(ociError.ManifestInvalid).WithMessage("manifest schemaVersion must be 2"))
+		return
+	}
 
 	sum256 := sha256.Sum256(bodyBytes)
 	digest := "sha256:" + fmt.Sprintf("%x", sum256)
