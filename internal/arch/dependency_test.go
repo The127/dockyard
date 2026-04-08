@@ -1,8 +1,10 @@
 package arch_test
 
 import (
+	"go/ast"
 	"go/parser"
 	"go/token"
+	"maps"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -126,4 +128,95 @@ func (s *DependencyArchTestSuite) TestCommandsAndQueriesMustNotImportHandlers() 
 		[]string{"github.com/the127/dockyard/internal/handlers"},
 		nil,
 	)
+}
+
+// handleFuncsInDir returns all top-level function names starting with "Handle"
+// in non-test .go files directly under dir (non-recursive), keyed as "pkg.Name".
+func (s *DependencyArchTestSuite) handleFuncsInDir(dir string, pkg string) map[string]bool {
+	entries, err := os.ReadDir(dir)
+	s.Require().NoError(err, "reading dir %s", dir)
+
+	result := make(map[string]bool, len(entries))
+	fset := token.NewFileSet()
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		absPath := filepath.Join(dir, name)
+		f, err := parser.ParseFile(fset, absPath, nil, 0)
+		s.Require().NoError(err, "parsing %s", absPath)
+
+		for _, decl := range f.Decls {
+			funcDecl, ok := decl.(*ast.FuncDecl)
+			if !ok || funcDecl.Recv != nil {
+				continue
+			}
+			if strings.HasPrefix(funcDecl.Name.Name, "Handle") {
+				result[pkg+"."+funcDecl.Name.Name] = true
+			}
+		}
+	}
+	return result
+}
+
+// TestAllHandlersRegisteredWithMediator verifies that every Handle* function in
+// internal/commands/ and internal/queries/ is registered via
+// mediatr.RegisterHandler in internal/setup/mediator.go.
+func (s *DependencyArchTestSuite) TestAllHandlersRegisteredWithMediator() {
+	commandsDir := filepath.Join(s.internalDir, "commands")
+	queriesDir := filepath.Join(s.internalDir, "queries")
+	mediatorFile := filepath.Join(s.internalDir, "setup", "mediator.go")
+
+	// Collect all Handle* functions declared in commands and queries.
+	declared := make(map[string]bool)
+	maps.Copy(declared, s.handleFuncsInDir(commandsDir, "commands"))
+	maps.Copy(declared, s.handleFuncsInDir(queriesDir, "queries"))
+
+	// Parse mediator.go and collect all RegisterHandler call arguments.
+	fset := token.NewFileSet()
+	f, err := parser.ParseFile(fset, mediatorFile, nil, 0)
+	s.Require().NoError(err, "parsing %s", mediatorFile)
+
+	registered := make(map[string]bool)
+	ast.Inspect(f, func(n ast.Node) bool {
+		callExpr, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		// The call may be RegisterHandler[T, U](...) which wraps the selector in
+		// an IndexExpr or IndexListExpr. Unwrap to find the selector name.
+		fun := callExpr.Fun
+		switch idx := fun.(type) {
+		case *ast.IndexExpr:
+			fun = idx.X
+		case *ast.IndexListExpr:
+			fun = idx.X
+		}
+		sel, ok := fun.(*ast.SelectorExpr)
+		if !ok || sel.Sel.Name != "RegisterHandler" {
+			return true
+		}
+		// Second argument is the handler function reference, e.g. commands.HandleFoo.
+		if len(callExpr.Args) < 2 {
+			return true
+		}
+		argSel, ok := callExpr.Args[1].(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+		pkgIdent, ok := argSel.X.(*ast.Ident)
+		if !ok {
+			return true
+		}
+		registered[pkgIdent.Name+"."+argSel.Sel.Name] = true
+		return true
+	})
+
+	for name := range declared {
+		s.True(registered[name], "handler %q is declared but not registered with the mediator in setup/mediator.go", name)
+	}
+	for name := range registered {
+		s.True(declared[name], "handler %q is registered in setup/mediator.go but not declared in commands/ or queries/", name)
+	}
 }
