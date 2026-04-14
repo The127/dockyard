@@ -43,8 +43,8 @@ func (u *postgresUser) Map() *repositories.User {
 	)
 }
 
-func (u *postgresUser) scan(row RowScanner) error {
-	return row.Scan(
+func (u *postgresUser) scan(row RowScanner, extra ...any) error {
+	dests := []any{
 		&u.id,
 		&u.createdAt,
 		&u.updatedAt,
@@ -53,7 +53,8 @@ func (u *postgresUser) scan(row RowScanner) error {
 		&u.subject,
 		&u.displayName,
 		&u.email,
-	)
+	}
+	return row.Scan(append(dests, extra...)...)
 }
 
 type UserRepository struct {
@@ -145,7 +146,7 @@ func (r *UserRepository) List(ctx context.Context, filter *repositories.UserFilt
 
 	for rows.Next() {
 		user := &postgresUser{}
-		err := user.scan(rows)
+		err := user.scan(rows, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

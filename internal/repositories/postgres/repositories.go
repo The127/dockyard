@@ -49,8 +49,8 @@ func (r *postgresRepository) Map() *repositories.Repository {
 	)
 }
 
-func (r *postgresRepository) scan(row RowScanner) error {
-	return row.Scan(
+func (r *postgresRepository) scan(row RowScanner, extra ...any) error {
+	dests := []any{
 		&r.id,
 		&r.createdAt,
 		&r.updatedAt,
@@ -61,7 +61,8 @@ func (r *postgresRepository) scan(row RowScanner) error {
 		&r.description,
 		&r.readmeFileId,
 		&r.isPublic,
-	)
+	}
+	return row.Scan(append(dests, extra...)...)
 }
 
 type RepositoryRepository struct {
@@ -154,7 +155,7 @@ func (r *RepositoryRepository) List(ctx context.Context, filter *repositories.Re
 	var totalCount int
 	for rows.Next() {
 		repository := &postgresRepository{}
-		err := repository.scan(rows)
+		err := repository.scan(rows, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

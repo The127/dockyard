@@ -43,8 +43,8 @@ func (p *postgresProject) Map() *repositories.Project {
 	)
 }
 
-func (p *postgresProject) scan(row RowScanner) error {
-	return row.Scan(
+func (p *postgresProject) scan(row RowScanner, extra ...any) error {
+	dests := []any{
 		&p.id,
 		&p.createdAt,
 		&p.updatedAt,
@@ -53,7 +53,8 @@ func (p *postgresProject) scan(row RowScanner) error {
 		&p.slug,
 		&p.displayName,
 		&p.description,
-	)
+	}
+	return row.Scan(append(dests, extra...)...)
 }
 
 type ProjectRepository struct {
@@ -144,7 +145,7 @@ func (r *ProjectRepository) List(ctx context.Context, filter *repositories.Proje
 	var totalCount int
 	for rows.Next() {
 		project := &postgresProject{}
-		err := project.scan(rows)
+		err := project.scan(rows, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

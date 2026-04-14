@@ -40,8 +40,8 @@ func (pa *postgresProjectAccess) Map() *repositories.ProjectAccess {
 	)
 }
 
-func (pa *postgresProjectAccess) scan(row RowScanner) error {
-	return row.Scan(
+func (pa *postgresProjectAccess) scan(row RowScanner, extra ...any) error {
+	dests := []any{
 		&pa.id,
 		&pa.createdAt,
 		&pa.updatedAt,
@@ -49,7 +49,8 @@ func (pa *postgresProjectAccess) scan(row RowScanner) error {
 		&pa.projectId,
 		&pa.userId,
 		&pa.role,
-	)
+	}
+	return row.Scan(append(dests, extra...)...)
 }
 
 type ProjectAccessRepository struct {
@@ -124,7 +125,7 @@ func (r *ProjectAccessRepository) List(ctx context.Context, filter *repositories
 	var totalCount int
 	for rows.Next() {
 		projectAccess := &postgresProjectAccess{}
-		err := projectAccess.scan(rows)
+		err := projectAccess.scan(rows, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

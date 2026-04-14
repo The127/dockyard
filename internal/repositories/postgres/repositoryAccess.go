@@ -40,16 +40,17 @@ func (ra *postgresRepositoryAccess) Map() *repositories.RepositoryAccess {
 	)
 }
 
-func (ra *postgresRepositoryAccess) scan(row RowScanner) error {
-	return row.Scan(
-		&ra.xmin,
+func (ra *postgresRepositoryAccess) scan(row RowScanner, extra ...any) error {
+	dests := []any{
 		&ra.id,
 		&ra.createdAt,
 		&ra.updatedAt,
+		&ra.xmin,
 		&ra.repositoryId,
 		&ra.userId,
 		&ra.role,
-	)
+	}
+	return row.Scan(append(dests, extra...)...)
 }
 
 type RepositoryAccessRepository struct {
@@ -124,7 +125,7 @@ func (r *RepositoryAccessRepository) List(ctx context.Context, filter *repositor
 	var totalCount int
 	for rows.Next() {
 		repositoryAccess := &postgresRepositoryAccess{}
-		err := repositoryAccess.scan(rows)
+		err := repositoryAccess.scan(rows, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

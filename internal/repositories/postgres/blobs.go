@@ -37,15 +37,16 @@ func (b *postgresBlob) Map() *repositories.Blob {
 	)
 }
 
-func (b *postgresBlob) scan(row RowScanner) error {
-	return row.Scan(
+func (b *postgresBlob) scan(row RowScanner, extra ...any) error {
+	dests := []any{
 		&b.id,
 		&b.createdAt,
 		&b.updatedAt,
 		&b.xmin,
 		&b.digest,
 		&b.size,
-	)
+	}
+	return row.Scan(append(dests, extra...)...)
 }
 
 type BlobRepository struct {
@@ -130,7 +131,7 @@ func (r *BlobRepository) List(ctx context.Context, filter *repositories.BlobFilt
 	var totalCount int
 	for rows.Next() {
 		blob := &postgresBlob{}
-		err := blob.scan(rows)
+		err := blob.scan(rows, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
