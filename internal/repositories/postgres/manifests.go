@@ -22,7 +22,8 @@ type postgresManifest struct {
 	repositoryId uuid.UUID
 	blobId       uuid.UUID
 
-	digest string
+	digest    string
+	mediaType string
 }
 
 func mapManifest(m *repositories.Manifest) *postgresManifest {
@@ -31,6 +32,7 @@ func mapManifest(m *repositories.Manifest) *postgresManifest {
 		repositoryId:      m.GetRepositoryId(),
 		blobId:            m.GetBlobId(),
 		digest:            m.GetDigest(),
+		mediaType:         m.GetMediaType(),
 	}
 }
 
@@ -39,18 +41,21 @@ func (m *postgresManifest) Map() *repositories.Manifest {
 		m.repositoryId,
 		m.blobId,
 		m.digest,
+		m.mediaType,
 		m.MapBase(),
 	)
 }
 
 func (m *postgresManifest) scan(row RowScanner) error {
 	return row.Scan(
+		&m.xmin,
 		&m.id,
 		&m.createdAt,
 		&m.updatedAt,
-		&m.xmin,
 		&m.repositoryId,
 		&m.blobId,
+		&m.digest,
+		&m.mediaType,
 	)
 }
 
@@ -77,6 +82,7 @@ func (r *ManifestRepository) selectQuery(filter *repositories.ManifestFilter) *s
 		"manifests.repository_id",
 		"manifests.blob_id",
 		"manifests.digest",
+		"manifests.media_type",
 	).From("manifests")
 
 	if filter.HasDigest() {
@@ -170,6 +176,7 @@ func (r *ManifestRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, mani
 			"repository_id",
 			"blob_id",
 			"digest",
+			"media_type",
 		).
 		Values(
 			mapped.id,
@@ -178,6 +185,7 @@ func (r *ManifestRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, mani
 			mapped.repositoryId,
 			mapped.blobId,
 			mapped.digest,
+			mapped.mediaType,
 		)
 
 	s.Returning("xmin")

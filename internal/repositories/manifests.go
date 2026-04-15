@@ -13,24 +13,27 @@ type Manifest struct {
 	repositoryId uuid.UUID
 	blobId       uuid.UUID
 
-	digest string
+	digest    string
+	mediaType string
 }
 
-func NewManifest(repositoryId uuid.UUID, blobId uuid.UUID, reference string) *Manifest {
+func NewManifest(repositoryId uuid.UUID, blobId uuid.UUID, reference string, mediaType string) *Manifest {
 	return &Manifest{
 		BaseModel:    NewBaseModel(),
 		repositoryId: repositoryId,
 		blobId:       blobId,
 		digest:       reference,
+		mediaType:    mediaType,
 	}
 }
 
-func NewManifestFromDB(repositoryId uuid.UUID, blobId uuid.UUID, reference string, base BaseModel) *Manifest {
+func NewManifestFromDB(repositoryId uuid.UUID, blobId uuid.UUID, reference string, mediaType string, base BaseModel) *Manifest {
 	return &Manifest{
 		BaseModel:    base,
 		repositoryId: repositoryId,
 		blobId:       blobId,
 		digest:       reference,
+		mediaType:    mediaType,
 	}
 }
 
@@ -44,6 +47,10 @@ func (m *Manifest) GetDigest() string {
 
 func (m *Manifest) GetBlobId() uuid.UUID {
 	return m.blobId
+}
+
+func (m *Manifest) GetMediaType() string {
+	return m.mediaType
 }
 
 type ManifestFilter struct {

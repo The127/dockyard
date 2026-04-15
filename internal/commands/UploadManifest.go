@@ -19,6 +19,7 @@ type UploadManifest struct {
 	RepositoryId uuid.UUID
 	Reference    string
 	Digest       string
+	MediaType    string
 	Body         []byte
 }
 
@@ -45,7 +46,7 @@ func HandleUploadManifest(ctx context.Context, command UploadManifest) (*UploadM
 		return nil, ociError.NewOciError(ociError.DigestInvalid)
 	}
 
-	manifest := repositories.NewManifest(command.RepositoryId, blob.GetId(), uploadResponse.Digest)
+	manifest := repositories.NewManifest(command.RepositoryId, blob.GetId(), uploadResponse.Digest, command.MediaType)
 	dbContext.Manifests().Insert(manifest)
 
 	if !strings.HasPrefix(command.Reference, "sha256:") {

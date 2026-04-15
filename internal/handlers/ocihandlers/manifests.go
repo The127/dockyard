@@ -66,13 +66,15 @@ func ManifestsDownload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	blobService := ioc.GetDependency[blobStorage.Service](scope)
-	redirectUri, err := blobService.GetBlobDownloadLink(ctx, result.Blob.GetDigest())
-	if err != nil {
+
+	w.Header().Set("Content-Type", result.Manifest.GetMediaType())
+	w.Header().Set("Docker-Content-Digest", result.Blob.GetDigest())
+	w.Header().Set("Content-Length", strconv.FormatInt(result.Blob.GetSize(), 10))
+
+	if err := blobService.DownloadBlob(ctx, w, result.Blob.GetDigest()); err != nil {
 		ociError.HandleHttpError(w, r, err)
 		return
 	}
-
-	http.Redirect(w, r, redirectUri, http.StatusTemporaryRedirect)
 }
 
 func ManifestsExists(w http.ResponseWriter, r *http.Request) {
@@ -113,6 +115,7 @@ func ManifestsExists(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Content-Type", result.Manifest.GetMediaType())
 	w.Header().Set("Docker-Content-Digest", result.Blob.GetDigest())
 	w.Header().Set("Content-Length", strconv.FormatInt(result.Blob.GetSize(), 10))
 	w.WriteHeader(http.StatusOK)
@@ -160,7 +163,11 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 		ociError.HandleHttpError(w, r, ociError.NewOciError(ociError.ManifestInvalid).WithMessage("manifest is not valid JSON"))
 		return
 	}
-	if manifest.MediaType != "" && !validManifestMediaTypes[manifest.MediaType] {
+	mediaType := manifest.MediaType
+	if mediaType == "" {
+		mediaType = r.Header.Get("Content-Type")
+	}
+	if !validManifestMediaTypes[mediaType] {
 		ociError.HandleHttpError(w, r, ociError.NewOciError(ociError.ManifestInvalid).WithMessage("manifest mediaType is unsupported"))
 		return
 	}
@@ -180,6 +187,7 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 		RepositoryId: repository.GetId(),
 		Reference:    reference,
 		Digest:       digest,
+		MediaType:    mediaType,
 		Body:         bodyBytes,
 	})
 	if err != nil {
@@ -190,5 +198,6 @@ func UploadManifest(w http.ResponseWriter, r *http.Request) {
 	location := fmt.Sprintf("/v2/%s/%s/manifests/%s", repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, result.Digest)
 
 	w.Header().Set("Location", location)
+	w.Header().Set("Docker-Content-Digest", result.Digest)
 	w.WriteHeader(http.StatusCreated)
 }
