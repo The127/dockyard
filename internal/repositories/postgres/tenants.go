@@ -79,6 +79,8 @@ func (t *postgresTenant) scan(row RowScanner) error {
 		&t.oidcClient,
 		&t.oidcIssuer,
 		&t.oidcRoleClaim,
+		&t.oidcRoleClaimFormat,
+		&t.oidcRoleMapping,
 	)
 }
 
