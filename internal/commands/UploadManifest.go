@@ -42,6 +42,8 @@ func HandleUploadManifest(ctx context.Context, command UploadManifest) (*UploadM
 		return nil, err
 	}
 
+	dbContext.RepositoryBlobs().Insert(repositories.NewRepositoryBlob(command.RepositoryId, blob.GetId()))
+
 	if strings.HasPrefix(command.Reference, "sha256:") && command.Reference != command.Digest {
 		return nil, ociError.NewOciError(ociError.DigestInvalid)
 	}
