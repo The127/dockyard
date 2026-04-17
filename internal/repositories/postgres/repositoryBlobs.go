@@ -171,6 +171,7 @@ func (r *RepositoryBlobRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx
 			mapped.blobId,
 		)
 
+	s.SQL("ON CONFLICT (repository_id, blob_id) DO NOTHING")
 	s.Returning("xmin")
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
@@ -180,7 +181,10 @@ func (r *RepositoryBlobRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx
 	var xmin uint32
 
 	err := row.Scan(&xmin)
-	if err != nil {
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return nil
+	case err != nil:
 		return fmt.Errorf("inserting repository blob: %w", err)
 	}
 
