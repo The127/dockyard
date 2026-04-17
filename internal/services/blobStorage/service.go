@@ -46,6 +46,7 @@ type UploadWriteChunkResponse struct {
 
 type UploadCompleteBlobResponse struct {
 	Digest string
+	Size   int64
 }
 
 type BlobContentType string
@@ -270,10 +271,9 @@ func (s *service) UploadCompleteBlob(ctx context.Context, digest string, reader 
 	}
 
 	hash := sha256.New()
+	cr := &countReader{Reader: io.TeeReader(reader, hash)}
 
-	teeReader := io.TeeReader(reader, hash)
-
-	uploadState, err = s.backend.UploadAddChunk(ctx, uploadState, teeReader)
+	uploadState, err = s.backend.UploadAddChunk(ctx, uploadState, cr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to upload chunk: %w", err)
 	}
@@ -297,6 +297,7 @@ func (s *service) UploadCompleteBlob(ctx context.Context, digest string, reader 
 
 	return &UploadCompleteBlobResponse{
 		Digest: digest,
+		Size:   cr.count,
 	}, nil
 }
 

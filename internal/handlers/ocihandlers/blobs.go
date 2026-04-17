@@ -44,6 +44,7 @@ func BlobsDownload(w http.ResponseWriter, r *http.Request) {
 	_, _, repository, err := getRepositoryByIdentifier(ctx, dbContext, repoIdentifier)
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
+		return
 	}
 
 	med := middlewares.GetMediator(ctx)
@@ -53,6 +54,7 @@ func BlobsDownload(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		ociError.HandleHttpError(w, r, err)
+		return
 	}
 
 	blobService := ioc.GetDependency[blobStorage.Service](scope)
@@ -135,11 +137,31 @@ func BlobsUploadStart(w http.ResponseWriter, r *http.Request) {
 
 	digest := r.URL.Query().Get("digest")
 	if digest != "" {
-		err := ociError.NewOciError(ociError.Unsupported).
-			WithMessage("single post upload is not supported")
-		ociError.HandleHttpError(w, r, err)
+		blobService := ioc.GetDependency[blobStorage.Service](scope)
+		r.Body = http.MaxBytesReader(w, r.Body, 1024*1024*512)
+		uploadResponse, err := blobService.UploadCompleteBlob(ctx, digest, r.Body, blobStorage.BlobContentTypeOctetStream)
+		if err != nil {
+			ociError.HandleHttpError(w, r, err)
+			return
+		}
+
+		med := middlewares.GetMediator(ctx)
+		_, err = mediatr.Send[*commands.FinishUploadResponse](ctx, med, commands.FinishUpload{
+			RepositoryId:   repository.GetId(),
+			ComputedDigest: uploadResponse.Digest,
+			Size:           uploadResponse.Size,
+		})
+		if err != nil {
+			ociError.HandleHttpError(w, r, err)
+			return
+		}
+
+		location := fmt.Sprintf("/v2/%s/%s/blobs/%s", repoIdentifier.ProjectSlug, repoIdentifier.RepositorySlug, digest)
+		w.Header().Set("Location", location)
+		w.Header().Set("Docker-Content-Digest", digest)
+		w.WriteHeader(http.StatusCreated)
 		return
-	} // check if it is a monolithic single post upload
+	}
 
 	var uploadMode jsontypes.BlobUploadMode
 	contentLength := r.Header.Get("Content-Length")
