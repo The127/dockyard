@@ -55,7 +55,7 @@ func (t *postgresTag) Map() *repositories.Tag {
 	return tag
 }
 
-func (t *postgresTag) scan(row RowScanner, filter *repositories.TagFilter) error {
+func (t *postgresTag) scan(row RowScanner, filter *repositories.TagFilter, totalCount *int) error {
 	ptrs := []any{
 		&t.id,
 		&t.createdAt,
@@ -69,6 +69,10 @@ func (t *postgresTag) scan(row RowScanner, filter *repositories.TagFilter) error
 	if filter.GetIncludeManifestInfo() {
 		t.manifestInfo = &tagManifestInfo{}
 		ptrs = append(ptrs, &t.manifestInfo.digest)
+	}
+
+	if totalCount != nil {
+		ptrs = append(ptrs, totalCount)
 	}
 
 	return row.Scan(ptrs...)
@@ -132,7 +136,7 @@ func (r *TagRepository) First(ctx context.Context, filter *repositories.TagFilte
 	row := r.db.QueryRowContext(ctx, query, args...)
 
 	tag := &postgresTag{}
-	err := tag.scan(row, filter)
+	err := tag.scan(row, filter, nil)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -171,7 +175,7 @@ func (r *TagRepository) List(ctx context.Context, filter *repositories.TagFilter
 
 	for rows.Next() {
 		tag := &postgresTag{}
-		err := tag.scan(rows, filter)
+		err := tag.scan(rows, filter, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

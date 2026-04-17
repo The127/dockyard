@@ -46,8 +46,8 @@ func (m *postgresManifest) Map() *repositories.Manifest {
 	)
 }
 
-func (m *postgresManifest) scan(row RowScanner) error {
-	return row.Scan(
+func (m *postgresManifest) scan(row RowScanner, totalCount *int) error {
+	ptrs := []any{
 		&m.xmin,
 		&m.id,
 		&m.createdAt,
@@ -56,7 +56,11 @@ func (m *postgresManifest) scan(row RowScanner) error {
 		&m.blobId,
 		&m.digest,
 		&m.mediaType,
-	)
+	}
+	if totalCount != nil {
+		ptrs = append(ptrs, totalCount)
+	}
+	return row.Scan(ptrs...)
 }
 
 type ManifestRepository struct {
@@ -113,7 +117,7 @@ func (r *ManifestRepository) First(ctx context.Context, filter *repositories.Man
 	row := r.db.QueryRowContext(ctx, query, args...)
 
 	manifest := &postgresManifest{}
-	err := manifest.scan(row)
+	err := manifest.scan(row, nil)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -151,7 +155,7 @@ func (r *ManifestRepository) List(ctx context.Context, filter *repositories.Mani
 	var totalCount int
 	for rows.Next() {
 		manifest := &postgresManifest{}
-		err := manifest.scan(rows)
+		err := manifest.scan(rows, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

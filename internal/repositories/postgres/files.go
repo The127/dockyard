@@ -42,8 +42,8 @@ func (f *postgresFile) Map() *repositories.File {
 	)
 }
 
-func (f *postgresFile) scan(row RowScanner) error {
-	return row.Scan(
+func (f *postgresFile) scan(row RowScanner, totalCount *int) error {
+	ptrs := []any{
 		&f.id,
 		&f.createdAt,
 		&f.updatedAt,
@@ -52,7 +52,11 @@ func (f *postgresFile) scan(row RowScanner) error {
 		&f.contentType,
 		&f.data,
 		&f.size,
-	)
+	}
+	if totalCount != nil {
+		ptrs = append(ptrs, totalCount)
+	}
+	return row.Scan(ptrs...)
 }
 
 type FileRepository struct {
@@ -101,7 +105,7 @@ func (r *FileRepository) First(ctx context.Context, filter *repositories.FileFil
 	row := r.db.QueryRowContext(ctx, query, args...)
 
 	file := &postgresFile{}
-	err := file.scan(row)
+	err := file.scan(row, nil)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -139,7 +143,7 @@ func (r *FileRepository) List(ctx context.Context, filter *repositories.FileFilt
 	var totalCount int
 	for rows.Next() {
 		file := &postgresFile{}
-		err := file.scan(rows)
+		err := file.scan(rows, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
