@@ -191,20 +191,21 @@ func (r *ManifestRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, mani
 			mapped.digest,
 			mapped.mediaType,
 		)
-
-	s.Returning("xmin")
+	s.SQL("ON CONFLICT (repository_id, digest) DO UPDATE SET updated_at = manifests.updated_at")
+	s.Returning("id", "xmin")
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
 	logging.Logger.Debugf("query: %s, args: %+v", query, args)
 	row := tx.QueryRowContext(ctx, query, args...)
 
+	var id uuid.UUID
 	var xmin uint32
-
-	err := row.Scan(&xmin)
+	err := row.Scan(&id, &xmin)
 	if err != nil {
 		return fmt.Errorf("inserting manifest: %w", err)
 	}
 
+	manifest.SetId(id)
 	manifest.SetVersion(xmin)
 	return nil
 }

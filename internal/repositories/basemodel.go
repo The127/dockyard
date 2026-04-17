@@ -53,3 +53,9 @@ func (b *BaseModel) GetVersion() any {
 func (b *BaseModel) SetVersion(version any) {
 	b.version = version
 }
+
+// SetId is used to update the id of the model after an upsert resolves to an existing row.
+// This function should only be called by the repositories.
+func (b *BaseModel) SetId(id uuid.UUID) {
+	b.id = id
+}
