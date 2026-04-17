@@ -16,6 +16,7 @@ import (
 var noTrackChangeAllowlist = map[string]bool{
 	"Tag.SetManifestInfo":  true,
 	"BaseModel.SetVersion": true,
+	"BaseModel.SetId":      true,
 }
 
 // insertDeleteOnlyEntities are structs that embed BaseModel but intentionally
