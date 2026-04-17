@@ -68,8 +68,8 @@ func (t *postgresTenant) Map() *repositories.Tenant {
 	)
 }
 
-func (t *postgresTenant) scan(row RowScanner) error {
-	return row.Scan(
+func (t *postgresTenant) scan(row RowScanner, totalCount *int) error {
+	ptrs := []any{
 		&t.id,
 		&t.createdAt,
 		&t.updatedAt,
@@ -81,7 +81,11 @@ func (t *postgresTenant) scan(row RowScanner) error {
 		&t.oidcRoleClaim,
 		&t.oidcRoleClaimFormat,
 		&t.oidcRoleMapping,
-	)
+	}
+	if totalCount != nil {
+		ptrs = append(ptrs, totalCount)
+	}
+	return row.Scan(ptrs...)
 }
 
 type TenantRepository struct {
@@ -133,7 +137,7 @@ func (r *TenantRepository) First(ctx context.Context, filter *repositories.Tenan
 	row := r.db.QueryRowContext(ctx, query, args...)
 
 	tenant := &postgresTenant{}
-	err := tenant.scan(row)
+	err := tenant.scan(row, nil)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -171,7 +175,7 @@ func (r *TenantRepository) List(ctx context.Context, filter *repositories.Tenant
 	var totalCount int
 	for rows.Next() {
 		tenant := &postgresTenant{}
-		err := tenant.scan(rows)
+		err := tenant.scan(rows, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}

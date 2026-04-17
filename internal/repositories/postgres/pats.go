@@ -40,8 +40,8 @@ func (p *postgresPat) Map() *repositories.Pat {
 	)
 }
 
-func (p *postgresPat) scan(row RowScanner) error {
-	return row.Scan(
+func (p *postgresPat) scan(row RowScanner, totalCount *int) error {
+	ptrs := []any{
 		&p.id,
 		&p.createdAt,
 		&p.updatedAt,
@@ -49,7 +49,11 @@ func (p *postgresPat) scan(row RowScanner) error {
 		&p.userId,
 		&p.displayName,
 		&p.hashedSecret,
-	)
+	}
+	if totalCount != nil {
+		ptrs = append(ptrs, totalCount)
+	}
+	return row.Scan(ptrs...)
 }
 
 type PatRepository struct {
@@ -97,7 +101,7 @@ func (r *PatRepository) First(ctx context.Context, filter *repositories.PatFilte
 	row := r.db.QueryRowContext(ctx, query, args...)
 
 	pat := &postgresPat{}
-	err := pat.scan(row)
+	err := pat.scan(row, nil)
 	switch {
 	case errors.Is(err, sql.ErrNoRows):
 		return nil, nil
@@ -135,7 +139,7 @@ func (r *PatRepository) List(ctx context.Context, filter *repositories.PatFilter
 	var totalCount int
 	for rows.Next() {
 		pat := &postgresPat{}
-		err := pat.scan(rows)
+		err := pat.scan(rows, &totalCount)
 		if err != nil {
 			return nil, 0, fmt.Errorf("scanning row: %w", err)
 		}
