@@ -32,7 +32,7 @@ func HandleUploadManifest(ctx context.Context, command UploadManifest) (*UploadM
 	dbContext := ioc.GetDependency[db.Context](scope)
 
 	blobService := ioc.GetDependency[blobStorage.Service](scope)
-	uploadResponse, err := blobService.UploadCompleteBlob(ctx, command.Digest, bytes.NewReader(command.Body), blobStorage.BlobContentTypeManifest)
+	uploadResponse, err := blobService.UploadCompleteBlob(ctx, command.Digest, bytes.NewReader(command.Body), blobStorage.BlobContentType(command.MediaType))
 	if err != nil {
 		return nil, fmt.Errorf("uploading blob: %w", err)
 	}
