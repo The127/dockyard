@@ -209,7 +209,7 @@ func (r *TagRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, tag *repo
 			mapped.manifestId,
 			mapped.name,
 		)
-
+	s.SQL("ON CONFLICT (repository_id, name) DO UPDATE SET manifest_id = EXCLUDED.manifest_id, updated_at = EXCLUDED.updated_at")
 	s.Returning("xmin")
 
 	query, args := s.BuildWithFlavor(sqlbuilder.PostgreSQL)
@@ -217,7 +217,6 @@ func (r *TagRepository) ExecuteInsert(ctx context.Context, tx *sql.Tx, tag *repo
 	row := tx.QueryRowContext(ctx, query, args...)
 
 	var xmin uint32
-
 	err := row.Scan(&xmin)
 	if err != nil {
 		return fmt.Errorf("inserting tag: %w", err)
