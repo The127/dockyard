@@ -46,8 +46,14 @@ func HandleUploadManifest(ctx context.Context, command UploadManifest) (*UploadM
 		return nil, ociError.NewOciError(ociError.DigestInvalid)
 	}
 
-	manifest := repositories.NewManifest(command.RepositoryId, blob.GetId(), uploadResponse.Digest, command.MediaType)
-	dbContext.Manifests().Insert(manifest)
+	manifest, err := dbContext.Manifests().First(ctx, repositories.NewManifestFilter().ByRepositoryId(command.RepositoryId).ByDigest(uploadResponse.Digest))
+	if err != nil {
+		return nil, fmt.Errorf("getting manifest: %w", err)
+	}
+	if manifest == nil {
+		manifest = repositories.NewManifest(command.RepositoryId, blob.GetId(), uploadResponse.Digest, command.MediaType)
+		dbContext.Manifests().Insert(manifest)
+	}
 
 	if !strings.HasPrefix(command.Reference, "sha256:") {
 		dbContext.Tags().Insert(repositories.NewTag(command.RepositoryId, manifest.GetId(), command.Reference))
