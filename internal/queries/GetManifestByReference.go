@@ -3,6 +3,7 @@ package queries
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"strings"
 
 	"github.com/The127/ioc"
@@ -35,7 +36,8 @@ func HandleGetManifestByReference(ctx context.Context, query GetManifestByRefere
 		}
 		if tag == nil {
 			return nil, ociError.NewOciError(ociError.ManifestUnknown).
-				WithMessage(fmt.Sprintf("tag '%s' does not exist", query.Reference))
+				WithMessage(fmt.Sprintf("tag '%s' does not exist", query.Reference)).
+				WithHttpCode(http.StatusNotFound)
 		}
 
 		manifestFilter = repositories.NewManifestFilter().ById(tag.GetRepositoryManifestId())
@@ -49,7 +51,8 @@ func HandleGetManifestByReference(ctx context.Context, query GetManifestByRefere
 	}
 	if manifest == nil {
 		return nil, ociError.NewOciError(ociError.ManifestUnknown).
-			WithMessage(fmt.Sprintf("manifest '%s' does not exist", query.Reference))
+			WithMessage(fmt.Sprintf("manifest '%s' does not exist", query.Reference)).
+			WithHttpCode(http.StatusNotFound)
 	}
 
 	blob, err := dbContext.Blobs().First(ctx, repositories.NewBlobFilter().ById(manifest.GetBlobId()))
