@@ -18,7 +18,7 @@ COPY . .
 RUN go build -o dockyard ./cmd/dockyard
 
 # ---- Runtime stage ----
-FROM alpine:3.22.1 AS runtime
+FROM alpine:3.24.1 AS runtime
 
 WORKDIR /app
 
