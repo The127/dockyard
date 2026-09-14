@@ -1,12 +1,12 @@
 module github.com/the127/dockyard
 
-go 1.25.0
+go 1.26
 
 require (
 	github.com/The127/go-clock v0.0.0-20251223175028-de53998b7f1b
 	github.com/The127/ioc v0.0.0-20251110122812-609720f03d90
 	github.com/The127/mediatr v0.0.0-20251110111536-44e365a25098
-	github.com/The127/signr v0.0.1
+	github.com/The127/signr v0.0.3
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/coreos/go-oidc/v3 v3.21.0
 	github.com/go-playground/validator/v10 v10.30.4
