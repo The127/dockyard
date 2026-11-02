@@ -1,6 +1,6 @@
 module github.com/the127/dockyard
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/The127/go-clock v0.0.0-20251223175028-de53998b7f1b
@@ -9,7 +9,7 @@ require (
 	github.com/The127/signr v0.0.1
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/coreos/go-oidc/v3 v3.21.0
-	github.com/go-playground/validator/v10 v10.30.4
+	github.com/go-playground/validator/v10 v10.30.5
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/handlers v1.5.2
@@ -49,8 +49,8 @@ require (
 	go.uber.org/atomic v1.11.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
+	golang.org/x/sys v0.48.0 // indirect
+	golang.org/x/text v0.42.0 // indirect
 )
